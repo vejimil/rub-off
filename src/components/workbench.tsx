@@ -6,6 +6,7 @@ import { PatternPreview } from "@/components/pattern-preview";
 import { PhotoOverlay } from "@/components/photo-overlay";
 import { SizePanel } from "@/components/size-panel";
 import { resizeToJpeg } from "@/lib/client/resize";
+import { combineMeasurements } from "@/lib/measure/combine";
 import type { FailedRun, OkRun, PhotoView } from "@/lib/client/types";
 import { draft, REQUIRED } from "@/lib/pattern/draft";
 import { layOut } from "@/lib/pattern/layout";
@@ -60,57 +61,77 @@ export interface WorkbenchProps {
   initialEdits?: Record<string, string>; // e.g. tape-measured values for a sample
 }
 
+interface Shot {
+  photo: PhotoView;
+  file?: Blob;
+  run?: OkRun;
+  failure?: string;
+  missingA4?: boolean;
+}
+
+const SIDE_KO = { front: "앞면", back: "뒷면", unclear: "앞뒤 불분명" } as const;
+const WRINKLE_KO = { flat: "평평함", "some wrinkles": "주름 조금", "heavily wrinkled or bunched": "많이 구겨짐" } as const;
+const SLEEVE_KO = { "spread flat": "펴짐", "folded over the body": "몸판 위로 접힘", "folded under or hidden": "아래로 접혀 안 보임", "bent or twisted": "굽음", "not a sleeve": "소매 아님" } as const;
+
 export function Workbench({ live, initial, sampleTable, initialEdits }: WorkbenchProps) {
   const [garment, setGarment] = useState<GarmentKind>(initial?.garment ?? "t-shirt");
   const [fabric, setFabric] = useState<Fabric>(initial?.fabric ?? "woven");
-  const [photo, setPhoto] = useState<PhotoView | null>(initial?.photo ?? null);
-  const [file, setFile] = useState<Blob | null>(null);
-  const [run, setRun] = useState<OkRun | null>(initial?.run ?? null);
-  const [failure, setFailure] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [shots, setShots] = useState<Shot[]>(initial ? [{ photo: initial.photo, run: initial.run }] : []);
+  const [busy, setBusy] = useState<number | null>(null);
+  const [ref, setRef] = useState<{ key: string; cm: string }>({ key: "chest", cm: "" });
   const [edits, setEdits] = useState<Record<string, string>>(initialEdits ?? {});
   const [baseSize, setBaseSize] = useState("M");
   const [steps, setSteps] = useState(0);
 
+  const update = (i: number, s: Partial<Shot>) => setShots((all) => all.map((x, j) => (j === i ? { ...x, ...s } : x)));
+
   async function choose(f: File) {
     const r = await resizeToJpeg(f);
-    setPhoto({ src: r.url, width: r.width, height: r.height });
-    setFile(r.blob);
-    setRun(null);
-    setFailure(null);
-    setEdits({});
+    setShots((all) => [...all, { photo: { src: r.url, width: r.width, height: r.height }, file: r.blob }]);
   }
 
-  async function analyse() {
-    if (!file) return;
-    setBusy(true);
-    setFailure(null);
+  async function analyse(i: number) {
+    const shot = shots[i];
+    if (!shot?.file) return;
+    setBusy(i);
+    update(i, { failure: undefined });
     const form = new FormData();
-    form.set("photo", file, "photo.jpg");
+    form.set("photo", shot.file, "photo.jpg");
     form.set("garment", garment);
     form.set("fabric", fabric);
+    if (ref.cm) {
+      form.set("refKey", ref.key);
+      form.set("refCm", ref.cm);
+    }
     try {
       const res = await fetch("/api/photo", { method: "POST", body: form });
       const body = await res.json();
-      if (!res.ok) setFailure(RUN_ERRORS[body.error] ?? "사진을 분석하지 못했습니다.");
-      else if (!body.run.ok) setFailure(`${STAGE_KO[(body.run as FailedRun).stage]} 단계에서 멈췄습니다: ${(body.run as FailedRun).detail}`);
-      else setRun(body.run);
+      if (!res.ok) update(i, { failure: RUN_ERRORS[body.error] ?? "사진을 분석하지 못했습니다." });
+      else if (!body.run.ok) {
+        const f = body.run as FailedRun;
+        update(i, { failure: `${STAGE_KO[f.stage]} 단계에서 멈췄습니다: ${f.detail}`, missingA4: f.missingA4, run: undefined });
+      } else update(i, { run: body.run, failure: undefined, missingA4: false });
     } catch {
-      setFailure("서버에 연결하지 못했습니다.");
+      update(i, { failure: "서버에 연결하지 못했습니다." });
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
-  // Each value: what the user typed, else the photo's, else a typical default, else missing.
+  // Several photos of the same garment: each value from the photo that measured it most surely.
+  const okRuns = shots.flatMap((s) => (s.run && s.run.garment === garment ? [s.run] : []));
+  const combined = useMemo(() => combineMeasurements(okRuns.map((r) => r.measured.values)), [okRuns]);
+
+  // Each value: what the user typed, else the photos', else a typical default, else missing.
   const rows = KEYS[garment].map((key) => {
-    const measured = run?.garment === garment ? (run.measured.values as Record<string, { cm: number; plusMinusCm: number; bound?: string }>)[key] : undefined;
-    const refused = run?.garment === garment ? run.measured.refused.find((r) => r.key === key) : undefined;
+    const measured = combined.values[key] as { cm: number; plusMinusCm: number; bound?: string } | undefined;
+    const refused = measured ? undefined : okRuns.flatMap((r) => r.measured.refused).find((r) => r.key === key);
+    const conflict = combined.conflicts.find((c) => c.key === key);
     const fallback = (DEFAULTS[garment] as Record<string, number>)[key];
     const typed = edits[key];
     const value = typed !== undefined && typed !== "" ? Number(typed) : measured ? Math.round(measured.cm * 10) / 10 : fallback;
     const source: Source = typed !== undefined && typed !== "" ? "edited" : measured ? "photo" : fallback !== undefined ? "default" : "missing";
-    return { key, measured, refused, value, source, required: REQUIRED[garment].includes(key) };
+    return { key, measured, refused, conflict, value, source, required: REQUIRED[garment].includes(key) };
   });
   const measures = Object.fromEntries(rows.filter((r) => r.value !== undefined && Number.isFinite(r.value)).map((r) => [r.key, r.value]));
   const missing = rows.filter((r) => r.required && r.source === "missing");
@@ -150,7 +171,7 @@ export function Workbench({ live, initial, sampleTable, initialEdits }: Workbenc
       <section className="space-y-4">
         <h2 className="text-xl font-semibold">1. 사진</h2>
         <p className="text-sm text-muted">
-          단색 바닥에 옷을 앞면이 위로, 목이 사진 위쪽으로 오게 펴고 소매와 다리는 몸판에서 떨어뜨리십시오. A4 용지를 옆에 두고, 네 모서리가 모두 보이게 위에서 수직으로 찍으십시오.
+          단색 바닥에 옷을 펴고, 목이 사진 위쪽으로 오게, 소매와 다리는 몸판에서 떨어뜨려 펴십시오. A4 용지를 옆에 두고, 옷 전체와 A4 네 모서리가 모두 보이게 위에서 수직으로 찍으십시오. 앞면과 뒷면을 한 장씩 찍으면 서로 보완합니다.
         </p>
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <select value={garment} onChange={(e) => setGarment(e.target.value as GarmentKind)} className="rounded-md border border-line bg-card px-2 py-2">
@@ -165,35 +186,66 @@ export function Workbench({ live, initial, sampleTable, initialEdits }: Workbenc
             <option value="knit">니트 (편물)</option>
           </select>
           {live ? (
-            <>
-              <label className="cursor-pointer rounded-md border border-line bg-card px-3 py-2 hover:border-ink">
-                사진 고르기
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && choose(e.target.files[0])} />
-              </label>
-              <button onClick={analyse} disabled={!file || busy} className="rounded-md bg-ink px-4 py-2 text-paper disabled:opacity-40">
-                {busy ? "SAM 3.1이 옷과 A4를 찾는 중…" : "치수 재기"}
-              </button>
-            </>
+            <label className="cursor-pointer rounded-md border border-line bg-card px-3 py-2 hover:border-ink">
+              {shots.length ? "사진 추가 (뒷면 등)" : "사진 고르기"}
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && choose(e.target.files[0])} />
+            </label>
           ) : (
             <span className="text-muted">공개 데모에서는 샘플 사진만 분석해 둔 결과로 보여 드립니다.</span>
           )}
         </div>
-        {failure && <p className="rounded-md bg-mark-soft p-3 text-sm">{failure}</p>}
-        {photo && (
-          <div className="max-w-xl">
-            <PhotoOverlay photo={photo} run={run?.garment === garment ? run : undefined} />
-          </div>
-        )}
-        {run?.garment === garment && (
-          <ul className="space-y-1 text-sm text-muted">
-            <li>
-              A4 기준 {run.scale.pxPerCm.toFixed(1)} px/cm, 비율 {run.scale.aspect.toFixed(3)} (A4 1.414), 스케일 오차 ±{(run.scale.relError * 100).toFixed(1)}%
-            </li>
-            {run.measured.notes.map((n) => (
-              <li key={n}>{n}</li>
-            ))}
-          </ul>
-        )}
+        <div className="grid gap-6 sm:grid-cols-2">
+          {shots.map((shot, i) => (
+            <div key={shot.photo.src} className="space-y-2">
+              <PhotoOverlay photo={shot.photo} run={shot.run?.garment === garment ? shot.run : undefined} />
+              {shot.file && (
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <button onClick={() => analyse(i)} disabled={busy !== null} className="rounded-md bg-ink px-3 py-1.5 text-paper disabled:opacity-40">
+                    {busy === i ? "SAM 3.1과 Muse Spark가 보는 중…" : shot.run ? "다시 재기" : "치수 재기"}
+                  </button>
+                  <button onClick={() => setShots((all) => all.filter((_, j) => j !== i))} className="text-muted underline">
+                    빼기
+                  </button>
+                </div>
+              )}
+              {shot.failure && <p className="rounded-md bg-mark-soft p-2 text-sm">{shot.failure}</p>}
+              {shot.missingA4 && (
+                <div className="flex flex-wrap items-center gap-2 rounded-md bg-warn-soft p-2 text-sm">
+                  A4 없이 재려면 줄자로 잰 치수 하나:
+                  <select value={ref.key} onChange={(e) => setRef({ ...ref, key: e.target.value })} className="rounded border border-line bg-card">
+                    {KEYS[garment].filter((k) => REQUIRED[garment].includes(k)).map((k) => (
+                      <option key={k} value={k}>
+                        {MEASURE_KO[k]}
+                      </option>
+                    ))}
+                  </select>
+                  <input inputMode="decimal" value={ref.cm} onChange={(e) => setRef({ ...ref, cm: e.target.value })} className="w-16 rounded border border-line bg-card px-1" /> cm
+                  <button onClick={() => analyse(i)} disabled={!ref.cm || busy !== null} className="rounded bg-ink px-2 py-1 text-paper disabled:opacity-40">
+                    이 값으로 재기
+                  </button>
+                </div>
+              )}
+              {shot.run?.garment === garment && (
+                <ul className="space-y-1 text-xs text-muted">
+                  <li>
+                    {shot.run.scale.source === "a4"
+                      ? `A4 기준 ${shot.run.scale.pxPerCm.toFixed(1)} px/cm, 비율 ${shot.run.scale.aspect.toFixed(3)} (A4 1.414), 스케일 오차 ±${(shot.run.scale.relError * 100).toFixed(1)}%`
+                      : `줄자 값 기준, 스케일 오차 ±${(shot.run.scale.relError * 100).toFixed(1)}%`}
+                  </li>
+                  {shot.run.layout && (
+                    <li>
+                      Muse Spark 확인: {SIDE_KO[shot.run.layout.side]}, {WRINKLE_KO[shot.run.layout.wrinkles]}
+                      {shot.run.layout.sleeves.length > 0 && `, 소매 ${shot.run.layout.sleeves.map((s) => `${s.number}: ${SLEEVE_KO[s.state]}`).join(" / ")}`}
+                    </li>
+                  )}
+                  {shot.run.measured.notes.map((n) => (
+                    <li key={n}>{n}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="space-y-4">
@@ -216,6 +268,7 @@ export function Workbench({ live, initial, sampleTable, initialEdits }: Workbenc
                 </td>
                 <td className="border-b border-line p-2 text-muted">
                   {r.source === "photo" && r.measured && `사진 ${r.measured.bound === "max" ? "≤ " : r.measured.bound === "min" ? "≥ " : ""}${r.measured.cm.toFixed(1)} ± ${r.measured.plusMinusCm.toFixed(1)}`}
+                  {r.conflict && ` (사진마다 다름: ${r.conflict.values.map((x) => x.toFixed(1)).join(" / ")})`}
                   {r.source === "edited" && (r.measured ? `직접 입력 (사진 ${r.measured.cm.toFixed(1)})` : "직접 입력")}
                   {r.source === "default" && "보통 값 (사진으로 못 잼)"}
                   {r.source === "missing" && (r.refused ? `사진 값 ${r.refused.cm.toFixed(1)}이 가능 범위 밖이라 버렸습니다` : "재단 전 측정 필요")}

@@ -64,7 +64,7 @@ export interface PhotoRunInput {
 }
 
 export type PhotoRun =
-  | { ok: false; stage: "cost" | "segment" | "scale" | "measure" | "draft"; detail: string; pendingConcepts?: string[]; usd?: number }
+  | { ok: false; stage: "cost" | "segment" | "scale" | "measure" | "draft"; detail: string; pendingConcepts?: string[]; usd?: number; missingA4?: boolean }
   | {
       ok: true;
       garment: GarmentKind;
@@ -159,7 +159,7 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
     if ("ok" in s) return { ok: false, stage: "scale", detail: s.detail };
     shape = s;
   } else {
-    return { ok: false, stage: "scale", detail: `${why} A4를 옆에 두고 다시 찍거나, 줄자로 잰 치수 하나를 입력해 주십시오.` };
+    return { ok: false, stage: "scale", detail: `${why} A4를 옆에 두고 다시 찍거나, 줄자로 잰 치수 하나를 입력해 주십시오.`, missingA4: true };
   }
 
   const parts = partsFor(shape);

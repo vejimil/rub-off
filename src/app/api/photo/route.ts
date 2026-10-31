@@ -26,7 +26,10 @@ export async function POST(request: Request) {
   } catch {
     return Response.json({ error: "bad_image" }, { status: 400 });
   }
-  const input = { photo, garment: garment as GarmentKind, fabric: fabric as Fabric, cacheRoot: path.join(CACHE_BASE, "photos") };
+  // No A4 in the photo: one tape-measured value may set the scale instead.
+  const refKey = String(form.get("refKey") ?? ""), refCm = Number(form.get("refCm"));
+  const reference = /^[a-zA-Z]+$/.test(refKey) && refCm > 0 && refCm < 200 ? { key: refKey, cm: refCm } : undefined;
+  const input = { photo, garment: garment as GarmentKind, fabric: fabric as Fabric, cacheRoot: path.join(CACHE_BASE, "photos"), reference };
   // A photo already segmented costs nothing and doesn't count against the limits.
   let run = await runPhoto({ ...input, allowApi: false });
   if (!run.ok && run.stage === "cost") {
