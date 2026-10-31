@@ -74,7 +74,10 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
       const xs = crossings(poly, y);
       let best: [number, number] | null = null;
       for (let i = 0; i + 1 < xs.length; i += 2) if (!best || xs[i + 1] - xs[i] > best[1] - best[0]) best = [xs[i], xs[i + 1]];
-      if (best) [lefts.push(best[0]), rights.push(best[1])];
+      if (best) {
+        lefts.push(best[0]);
+        rights.push(best[1]);
+      }
     }
     if (!lefts.length) return null;
     const med = (a: number[]) => [...a].sort((p, q) => p - q)[a.length >> 1];
@@ -210,8 +213,6 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
   for (const [k, sd] of [["L", L], ["R", R]] as const) if (sd) Object.assign(landmarks, { [`pit${k}`]: sd.pit, [`sp${k}`]: sd.sp, [`cuffTop${k}`]: sd.cuffTop, [`cuffBottom${k}`]: sd.cuffBottom });
   return { values: kept, refused, landmarks, segments, outline, frame: m, notes: [...shape.notes, ...notes] };
 }
-
-const near = (poly: readonly Pt[], p: Pt) => -Math.min(...poly.map((q) => dist(p, q)));
 
 const CORNER_TURN = (40 * Math.PI) / 180;
 
