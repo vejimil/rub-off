@@ -3,7 +3,9 @@ import { gunzipSync, gzipSync } from "node:zlib";
 import path from "node:path";
 
 // Every paid API result is written here before use, so a rerun on the same photo costs nothing.
-export const CACHE_ROOT = path.resolve(process.cwd(), ".cache", "runs");
+// On Vercel only /tmp is writable, and it lasts as long as the instance.
+export const CACHE_BASE = process.env.VERCEL ? path.join("/tmp", "rub-off") : path.resolve(process.cwd(), ".cache");
+export const CACHE_ROOT = path.join(CACHE_BASE, "runs");
 
 export function runDir(sha256: string): string {
   return path.join(CACHE_ROOT, sha256);

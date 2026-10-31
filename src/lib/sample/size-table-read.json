@@ -1,0 +1,60 @@
+{
+  "basis": "flat",
+  "columns": [
+    {
+      "header": "총장",
+      "meaning": "length"
+    },
+    {
+      "header": "어깨너비",
+      "meaning": "shoulder"
+    },
+    {
+      "header": "가슴단면",
+      "meaning": "chest"
+    },
+    {
+      "header": "소매길이",
+      "meaning": "sleeve"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        "66",
+        "44",
+        "50",
+        "59"
+      ],
+      "label": "S"
+    },
+    {
+      "cells": [
+        "68",
+        "46",
+        "53",
+        "60"
+      ],
+      "label": "M"
+    },
+    {
+      "cells": [
+        "70",
+        "48",
+        "56",
+        "61"
+      ],
+      "label": "L"
+    },
+    {
+      "cells": [
+        "72",
+        "50",
+        "59",
+        "62"
+      ],
+      "label": "XL"
+    }
+  ],
+  "unit": "cm"
+}

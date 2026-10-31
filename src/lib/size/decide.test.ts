@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { decideSize, toFlatCm, type SizeTable } from "./decide.ts";
-import { toSizeTable } from "./read-table.ts";
+import { toSizeTable } from "./table.ts";
 
 const TABLE: SizeTable = {
   unit: "cm",
@@ -50,4 +50,10 @@ test("cells Spark copied are parsed; anything that isn't a number is handed back
   assert.equal(table.unit, "cm");
   assert.deepEqual(table.sizes[0].values, { length: 68, chest: 53.5 });
   assert.deepEqual(unreadable, [{ row: "L", header: "총장", cell: "7O" }]);
+});
+
+test("a trouser table's 총장 is compared with the outseam", () => {
+  const d = decideSize({ waist: { cm: 39.7 }, outseam: { cm: 46.6 } }, { unit: "cm", basis: "flat", sizes: [{ label: "M", values: { waist: 39, length: 46 } }] }, "woven", "same");
+  assert.ok(d.ok);
+  assert.deepEqual(d.best.checks.map((c) => c.key).sort(), ["outseam", "waist"]);
 });

@@ -62,6 +62,10 @@ export function decideSize(mine: Partial<Record<SizeKey, Mine>>, table: SizeTabl
     return { ok: false, reason: "ask-basis", detail: "The table does not say whether widths are flat (단면) or around the body (둘레)." };
   }
   const flat = toFlatCm(table);
+  // On a trouser table 총장 is the outseam; Spark may file it under either.
+  if (mine.outseam && !mine.length) {
+    for (const s of flat.sizes) if (s.values.length !== undefined && s.values.outseam === undefined) [s.values.outseam, s.values.length] = [s.values.length, undefined];
+  }
   const all: SizeResult[] = flat.sizes.map((s) => {
     const checks: Check[] = [];
     for (const key of PRIORITY) {

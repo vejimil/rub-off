@@ -4,17 +4,9 @@
 // decision uses it, because OCR can misread a digit.
 
 import { image, sparkJson, text } from "../meta/spark.ts";
-import { SIZE_KEYS, type SizeKey } from "../rules/fit-tolerance.ts";
-import type { SizeTable } from "./decide.ts";
+import { COLUMN_MEANINGS, type ReadTable } from "./table.ts";
 
-const COLUMN_MEANINGS = [...SIZE_KEYS, "other"] as const;
-
-export interface ReadTable {
-  unit: "cm" | "inch" | "unknown";
-  basis: "flat" | "circumference" | "unknown";
-  columns: { header: string; meaning: (typeof COLUMN_MEANINGS)[number] }[];
-  rows: { label: string; cells: (string | null)[] }[];
-}
+export type { ReadTable };
 
 const SCHEMA = {
   name: "size_table",
@@ -70,22 +62,4 @@ Copy every number exactly as printed. Do not convert units, do not double or hal
 
 export async function readSizeTable(png: Buffer, mime: "image/png" | "image/jpeg" | "image/webp"): Promise<ReadTable> {
   return sparkJson<ReadTable>([text(PROMPT), image(png, mime)], SCHEMA);
-}
-
-// The read table as numbers, or the cells that aren't numbers (shown to the user to fix).
-export function toSizeTable(r: ReadTable): { table: SizeTable; unreadable: { row: string; header: string; cell: string }[] } {
-  const unreadable: { row: string; header: string; cell: string }[] = [];
-  const sizes = r.rows.map((row) => {
-    const values: Partial<Record<SizeKey, number>> = {};
-    r.columns.forEach((col, i) => {
-      const cell = row.cells[i];
-      if (col.meaning === "other" || cell === null || cell === undefined || cell.trim() === "") return;
-      const v = Number(cell.replace(",", ".").trim());
-      if (!Number.isFinite(v) || v <= 0) unreadable.push({ row: row.label, header: col.header, cell });
-      else values[col.meaning] = v;
-    });
-    return { label: row.label, values };
-  });
-  // A unit the table doesn't state: Korean shop tables are in cm.
-  return { table: { unit: r.unit === "inch" ? "inch" : "cm", basis: r.basis, sizes }, unreadable };
 }

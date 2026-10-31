@@ -1,0 +1,76 @@
+{
+  "basis": "flat",
+  "columns": [
+    {
+      "header": "허리단면",
+      "meaning": "waist"
+    },
+    {
+      "header": "엉덩이단면",
+      "meaning": "hip"
+    },
+    {
+      "header": "허벅지단면",
+      "meaning": "thigh"
+    },
+    {
+      "header": "밑위",
+      "meaning": "frontRise"
+    },
+    {
+      "header": "총장",
+      "meaning": "length"
+    },
+    {
+      "header": "밑단단면",
+      "meaning": "legOpening"
+    }
+  ],
+  "rows": [
+    {
+      "cells": [
+        "37",
+        "50",
+        "30",
+        "27",
+        "45",
+        "26"
+      ],
+      "label": "S"
+    },
+    {
+      "cells": [
+        "39",
+        "52",
+        "31.5",
+        "28",
+        "46",
+        "27"
+      ],
+      "label": "M"
+    },
+    {
+      "cells": [
+        "41",
+        "54",
+        "33",
+        "29",
+        "47",
+        "28"
+      ],
+      "label": "L"
+    },
+    {
+      "cells": [
+        "43",
+        "56",
+        "34.5",
+        "30",
+        "48",
+        "29"
+      ],
+      "label": "XL"
+    }
+  ],
+  "unit": "cm"
+}

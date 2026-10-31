@@ -4,6 +4,7 @@
 //   --concept=shorts   another SAM word for the garment     --fabric=knit
 //   --raw              send the file as is (already upright, ≤ 2000 px), e.g. to reuse an existing cache
 //   --tape=length:70,chest:54   tape-measured values, printed next to the photo's
+//   --json=src/lib/sample/x.json   also write a golden run for sample mode
 // Writes .cache/out/<name>-overlay.png and <name>-pattern.pdf.
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -73,6 +74,18 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${photo.width}" heig
 </svg>`;
 await sharp(photo.bytes).composite([{ input: Buffer.from(svg) }]).jpeg({ quality: 85 }).toFile(path.join(outDir, `${name}-overlay.jpg`));
 console.log(`wrote .cache/out/${name}-overlay.jpg`);
+
+// A golden run for sample mode: the photo goes to public/samples, the run (without the pattern,
+// which the browser drafts) next to it as JSON.
+const jsonOut = opt("json");
+if (jsonOut) {
+  const publicPhoto = `samples/${name}.jpg`;
+  await writeFile(path.resolve("public", publicPhoto), photo.bytes);
+  const { pattern: _pattern, ...rest } = run;
+  void _pattern;
+  await writeFile(jsonOut, JSON.stringify({ photo: { src: `/${publicPhoto}`, width: photo.width, height: photo.height }, run: rest }) + "\n");
+  console.log(`wrote ${jsonOut} and public/${publicPhoto}`);
+}
 
 if (run.pattern) {
   const { bytes, pages } = await patternPdf(run.pattern, { createdFor: path.basename(source) });

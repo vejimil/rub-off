@@ -10,7 +10,8 @@ import { readJson, writeJson } from "../src/lib/cache.ts";
 import type { Fabric } from "../src/lib/pattern/types.ts";
 import type { Fit, SizeKey } from "../src/lib/rules/fit-tolerance.ts";
 import { decideSize } from "../src/lib/size/decide.ts";
-import { readSizeTable, toSizeTable, type ReadTable } from "../src/lib/size/read-table.ts";
+import { readSizeTable, type ReadTable } from "../src/lib/size/read-table.ts";
+import { toSizeTable } from "../src/lib/size/table.ts";
 
 const args = process.argv.slice(2);
 const opt = (name: string) => args.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
