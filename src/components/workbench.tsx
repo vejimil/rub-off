@@ -20,6 +20,7 @@ import type { ReadTable } from "@/lib/size/table";
 export const GARMENT_KO: Record<GarmentKind, string> = {
   shirt: "셔츠",
   "t-shirt": "티셔츠",
+  hoodie: "후드 집업",
   pants: "고무줄 바지",
   skirt: "고무줄 스커트",
   "eco-bag": "에코백",
@@ -28,6 +29,7 @@ export const GARMENT_KO: Record<GarmentKind, string> = {
 const KEYS: Record<GarmentKind, string[]> = {
   shirt: ["length", "chest", "shoulder", "hem", "sleeve", "sleeveOpening", "bicep", "armholeDepth", "neckWidth", "shoulderDrop", "frontNeckDrop", "backNeckDrop"],
   "t-shirt": ["length", "chest", "shoulder", "hem", "sleeve", "sleeveOpening", "bicep", "armholeDepth", "neckWidth", "shoulderDrop", "frontNeckDrop", "backNeckDrop"],
+  hoodie: ["length", "chest", "shoulder", "hem", "sleeve", "sleeveOpening", "bicep", "armholeDepth", "neckWidth", "shoulderDrop", "frontNeckDrop", "backNeckDrop", "hoodHeight", "hoodDepth", "ribHeight"],
   pants: ["waist", "hip", "frontRise", "outseam", "thigh", "legOpening", "backRiseExtra"],
   skirt: ["length", "hem"],
   "eco-bag": ["width", "height", "handleLength", "handleWidth", "gusset"],

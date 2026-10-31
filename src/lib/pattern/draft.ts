@@ -21,8 +21,8 @@ export function draft<K extends GarmentKind>(input: DraftInput<K>): Pattern {
   const missing = REQUIRED[g].filter((k) => !(Number.isFinite(values[k]) && values[k] > 0));
   if (missing.length) throw new Error(`Missing measurements: ${missing.join(", ")}`);
   const out =
-    g === "shirt" || g === "t-shirt"
-      ? draftTop(g, measures as MeasuresOf["shirt"], input.fabric, unmeasured)
+    g === "shirt" || g === "t-shirt" || g === "hoodie"
+      ? draftTop(g, measures as MeasuresOf["hoodie"], input.fabric, unmeasured)
       : g === "pants"
         ? draftPants(measures as MeasuresOf["pants"], unmeasured, input.elasticCm)
         : g === "skirt"
@@ -37,6 +37,7 @@ export function draft<K extends GarmentKind>(input: DraftInput<K>): Pattern {
 export const REQUIRED: Record<GarmentKind, string[]> = {
   shirt: ["length", "chest", "shoulder", "hem", "sleeve", "sleeveOpening", "bicep", "armholeDepth"],
   "t-shirt": ["length", "chest", "shoulder", "hem", "sleeve", "sleeveOpening", "bicep", "armholeDepth"],
+  hoodie: ["length", "chest", "shoulder", "hem", "sleeve", "sleeveOpening", "bicep", "armholeDepth"],
   pants: ["waist", "hip", "frontRise", "outseam", "thigh", "legOpening"],
   skirt: ["length", "hem"],
   "eco-bag": ["width", "height", "handleLength"],

@@ -20,6 +20,12 @@ export interface TopMeasures {
   shoulderDrop: number; // high point of shoulder straight down to the shoulder point level
 }
 
+export interface HoodieMeasures extends TopMeasures {
+  hoodHeight: number; // neck seam at the shoulder to the top of the hood
+  hoodDepth: number; // face opening to the back of the hood, at its widest
+  ribHeight: number; // finished height of the rib bands at the hem and cuffs
+}
+
 export interface PantsMeasures {
   waist: number; // relaxed, flat (an elastic waist gathers; the pattern waist follows the hip)
   hip: number; // flat, across the widest part at crotch level
@@ -46,6 +52,7 @@ export interface BagMeasures {
 export interface MeasuresOf {
   shirt: TopMeasures;
   "t-shirt": TopMeasures;
+  hoodie: HoodieMeasures;
   pants: PantsMeasures;
   skirt: SkirtMeasures;
   "eco-bag": BagMeasures;
@@ -55,6 +62,7 @@ export interface MeasuresOf {
 export const DEFAULTS: { [K in GarmentKind]: Partial<MeasuresOf[K]> } = {
   shirt: { frontNeckDrop: 7.5, backNeckDrop: 2, shoulderDrop: 4, neckWidth: 17 },
   "t-shirt": { frontNeckDrop: 9, backNeckDrop: 2, shoulderDrop: 4, neckWidth: 18 },
+  hoodie: { frontNeckDrop: 8, backNeckDrop: 2, shoulderDrop: 4, neckWidth: 18, hoodHeight: 34, hoodDepth: 24, ribHeight: 6 },
   pants: { backRiseExtra: 4 },
   skirt: {},
   "eco-bag": { handleWidth: 3, gusset: 0 },
@@ -85,6 +93,9 @@ export const MEASURE_KO: Record<string, string> = {
   handleLength: "손잡이 길이",
   handleWidth: "손잡이 폭",
   gusset: "바닥 폭",
+  hoodHeight: "모자 높이",
+  hoodDepth: "모자 폭",
+  ribHeight: "시보리 높이",
 };
 
 export const MEASURE_EN: Record<string, string> = {
@@ -112,6 +123,9 @@ export const MEASURE_EN: Record<string, string> = {
   handleLength: "Handle length",
   handleWidth: "Handle width",
   gusset: "Gusset",
+  hoodHeight: "Hood height",
+  hoodDepth: "Hood depth",
+  ribHeight: "Rib height",
 };
 
 // Measured values, with defaults filled in for the missing ones and named.

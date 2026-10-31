@@ -25,6 +25,7 @@ const TOP: Increments<"shirt"> = {
 export const GRADE_STEP: { [K in GarmentKind]: Increments<K> } = {
   shirt: TOP,
   "t-shirt": TOP,
+  hoodie: { ...TOP, hoodHeight: 0.5, hoodDepth: 0.5 },
   pants: { waist: 2, hip: 2, frontRise: 0.5, backRiseExtra: 0.25, outseam: 1, thigh: 1, legOpening: 0.5 },
   skirt: { length: 1, hem: 2 },
   "eco-bag": {},

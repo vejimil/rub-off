@@ -104,3 +104,13 @@ test("layout keeps pieces apart and the PDF has a cover plus one page per tile",
   assert.deepEqual(pages, pagesFor(sheet.width, sheet.height));
   assert.equal((await PDFDocument.load(bytes)).getPageCount(), pages[0] * pages[1] + 1);
 });
+
+test("a hoodie's hood neck edge is solved to the half neckline, and its ribs use the measured bands", () => {
+  const p = draft({ garment: "hoodie", measures: { length: 70, chest: 58, shoulder: 50, hem: 48, sleeve: 62, sleeveOpening: 9, bicep: 21, armholeDepth: 26 }, fabric: "knit" });
+  const neckOf = (id: string) => polylineLength(p.pieces.find((x) => x.id === id)!.edges.find((e) => e.kind === "neck")!.pts);
+  assert.ok(Math.abs(neckOf("hood") - (neckOf("front") + neckOf("back"))) < 0.05);
+  const rib = bounds(p.pieces.find((x) => x.id === "hem-rib")!.edges.flatMap((e) => e.pts));
+  assert.ok(Math.abs(rib.maxX - rib.minX - 96) < 1e-6);
+  const front = p.pieces.find((x) => x.id === "front")!;
+  assert.deepEqual(front.cut, { count: 2, onFold: false, mirror: true });
+});

@@ -26,6 +26,8 @@ export const LONG_SIDE_PX = 2000;
 export const CONCEPTS: Record<GarmentKind, { garment: string; parts: string[] }> = {
   shirt: { garment: "shirt", parts: ["sleeve", "hood"] },
   "t-shirt": { garment: "t-shirt", parts: ["sleeve", "hood"] },
+  // "jacket" found nothing on the owner's zip hoodie; "hoodie" found it (0.92, 0.73).
+  hoodie: { garment: "hoodie", parts: ["sleeve", "hood"] },
   pants: { garment: "pants", parts: [] },
   skirt: { garment: "skirt", parts: [] },
   "eco-bag": { garment: "bag", parts: ["handle"] },
@@ -210,7 +212,7 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
 
 function measureOf(garment: GarmentKind, shape: Shape, parts: Pt[][], opts: TopOptions): Measured | { ok: false; detail: string } {
   const m =
-    garment === "shirt" || garment === "t-shirt"
+    garment === "shirt" || garment === "t-shirt" || garment === "hoodie"
       ? measureTop(shape, parts, opts)
       : garment === "pants"
         ? measurePants(shape)

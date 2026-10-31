@@ -56,6 +56,6 @@ export interface Pattern {
   notes: string[];
 }
 
-export type GarmentKind = "shirt" | "t-shirt" | "skirt" | "eco-bag" | "pants";
+export type GarmentKind = "shirt" | "t-shirt" | "hoodie" | "skirt" | "eco-bag" | "pants";
 
 export const seamLine = (p: Piece): Pt[] => p.edges.flatMap((e) => e.pts.slice(0, -1));

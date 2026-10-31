@@ -7,7 +7,7 @@
 
 import { mirrorX, type Pt } from "../../geom/point.ts";
 import { cubic, line, polylineLength, quad, solveIncreasing } from "../curves.ts";
-import type { TopMeasures } from "../measures.ts";
+import type { HoodieMeasures, TopMeasures } from "../measures.ts";
 import type { Edge, Fabric, Piece } from "../types.ts";
 import { pointAlong } from "../../geom/point.ts";
 
@@ -17,6 +17,11 @@ const FACING = 3; // folded back inside the stand
 const COLLAR_HEIGHT = 4; // finished
 const CUFF_HEIGHT = 6; // finished
 const CUFF_OVERLAP = 2;
+const ZIP_ALLOWANCE = 1;
+// [A] Hoodie rules, owner to confirm: the body above the hem rib is this share of the chest, and
+// the sleeve end above the cuff rib is this much wider than the relaxed cuff.
+const RIB_BODY_SHARE = 0.95;
+const RIB_SLEEVE_RATIO = 1.3;
 
 interface Body {
   edges: Edge[];
@@ -53,16 +58,22 @@ function body(m: TopMeasures, neckDrop: number, hemDepth: number): Body {
 // arrives at the top level, an S-curve.
 const halfCap = (b: number, h: number): Pt[] => cubic([-b, h], [-0.55 * b, h], [-0.45 * b, 0], [0, 0]);
 
-export function draftTop(kind: "shirt" | "t-shirt", m: TopMeasures, fabric: Fabric, unmeasured: string[]): { pieces: Piece[]; notes: string[] } {
+export function draftTop(kind: "shirt" | "t-shirt" | "hoodie", mIn: TopMeasures | HoodieMeasures, fabric: Fabric, unmeasured: string[]): { pieces: Piece[]; notes: string[] } {
   const notes: string[] = [];
   const shirt = kind === "shirt";
-  const front = body(m, m.frontNeckDrop, m.length);
-  const back = body(m, m.backNeckDrop, m.length);
+  const hoodie = kind === "hoodie";
+  const hm = mIn as HoodieMeasures;
+  // A hoodie's hem and cuffs are rib bands: the body and sleeve stop short of them, and the body
+  // above the band is as wide as the chest (the band gathers it in).
+  const rib = hoodie ? hm.ribHeight : 0;
+  const m: TopMeasures = hoodie ? { ...mIn, hem: Math.max(mIn.hem, RIB_BODY_SHARE * mIn.chest), sleeveOpening: RIB_SLEEVE_RATIO * mIn.sleeveOpening } : mIn;
+  const front = body(m, m.frontNeckDrop, m.length - rib);
+  const back = body(m, m.backNeckDrop, m.length - rib);
   const armholeTotal = polylineLength(front.armhole) + polylineLength(back.armhole);
 
   // Sleeve: cap height so that the cap seam = armholes + ease.
   const b = m.bicep; // half of the full sleeve width = the flat bicep
-  const sleeveLength = shirt ? m.sleeve - CUFF_HEIGHT : m.sleeve;
+  const sleeveLength = shirt ? m.sleeve - CUFF_HEIGHT : m.sleeve - rib;
   const target = armholeTotal + CAP_EASE[fabric];
   const capLen = (h: number) => 2 * polylineLength(halfCap(b, h));
   let capH = solveIncreasing(capLen, target, 0.5, Math.max(1, sleeveLength - 2));
@@ -83,7 +94,7 @@ export function draftTop(kind: "shirt" | "t-shirt", m: TopMeasures, fabric: Fabr
       { kind: "sleeve-cap", pts: left },
       { kind: "sleeve-cap", pts: right },
       { kind: "underarm", pts: line([b, capH], sleeveHemR) },
-      { kind: shirt ? "seam" : "sleeve-hem", pts: line(sleeveHemR, sleeveHemL) },
+      { kind: shirt || hoodie ? "seam" : "sleeve-hem", pts: line(sleeveHemR, sleeveHemL) },
       { kind: "underarm", pts: line(sleeveHemL, [-b, capH]) },
     ],
     grain: [[0, 0.25 * sleeveLength], [0, 0.85 * sleeveLength]],
@@ -117,7 +128,25 @@ export function draftTop(kind: "shirt" | "t-shirt", m: TopMeasures, fabric: Fabr
     frontPiece.marks = [...(frontPiece.marks ?? []), { kind: "placement", a: [0, m.frontNeckDrop], b: [0, m.length] }];
     notes.push(`Shirt front: ${BUTTON_STAND} cm button stand and ${FACING} cm facing are added past the centre front line.`);
   }
-  const pieces: Piece[] = [frontPiece, bodyPiece("back", back, 2), sleeve];
+  if (hoodie) {
+    // A zip front: two fronts, the centre front edge sewn to the zip tape.
+    frontPiece.cut = { count: 2, onFold: false, mirror: true };
+    frontPiece.edges = frontPiece.edges.map((e) => (e.kind === "fold" ? { kind: "seam", pts: e.pts, allowanceCm: ZIP_ALLOWANCE } : e));
+    frontPiece.edges = frontPiece.edges.map((e) => (e.kind === "hem" ? { ...e, kind: "seam" } : e));
+  }
+  const backPiece = bodyPiece("back", back, 2);
+  if (hoodie) backPiece.edges = backPiece.edges.map((e) => (e.kind === "hem" ? { ...e, kind: "seam" } : e));
+  const pieces: Piece[] = [frontPiece, backPiece, sleeve];
+
+  if (hoodie) {
+    const halfNeck = polylineLength(front.neck) + polylineLength(back.neck);
+    pieces.push(hood(hm, halfNeck, polylineLength(front.neck)));
+    // Rib bands: the measured hem and cuff are the bands' relaxed width, folded in half lengthwise.
+    pieces.push(rect("hem-rib", "Hem rib", "밑단 시보리", 2 * mIn.hem, 2 * rib, { count: 1, onFold: false, mirror: false }));
+    pieces.push(rect("cuff-rib", "Cuff rib", "소매 시보리", 2 * mIn.sleeveOpening, 2 * rib, { count: 2, onFold: false, mirror: false }));
+    notes.push(`Hoodie: zip front (${ZIP_ALLOWANCE} cm to the zip tape); body ${(m.length - rib).toFixed(1)} cm long above a ${rib} cm hem rib; rib bands fold lengthwise and stretch onto the body.`);
+    notes.push("Hood height and depth can't be read from a flat photo; measure them before cutting.");
+  }
 
   if (shirt) {
     const neckline = 2 * (polylineLength(front.neck) + polylineLength(back.neck));
@@ -129,6 +158,34 @@ export function draftTop(kind: "shirt" | "t-shirt", m: TopMeasures, fabric: Fabr
   }
   if (fabric === "knit") notes.push("Knit: a flat-laid knit may be stretched or relaxed; every width carries extra ±.");
   return { pieces, notes };
+}
+
+// Two-piece hood, one side panel: the face edge on the left, the neck edge along the bottom (its
+// length solved to the body's half neckline), the centre back seam curving over the crown.
+function hood(m: HoodieMeasures, halfNeck: number, frontNeck: number): Piece {
+  const H = m.hoodHeight, D = m.hoodDepth;
+  const rise = 2; // the neck edge rises toward the back
+  // The neck edge is a gentle curve; its chord is solved so its length is the half neckline.
+  const neckEdge = (w: number) => quad([0, H], [0.5 * w, H + 0.8], [w, H - rise]);
+  const w = solveIncreasing((x) => polylineLength(neckEdge(x)), halfNeck, 1, 3 * halfNeck) ?? halfNeck;
+  const depth = Math.max(D, w + 2);
+  const neck = neckEdge(w);
+  const backSeam = cubic([w, H - rise], [depth, 0.6 * H], [depth, 0], [0.45 * depth, 0]);
+  return {
+    id: "hood",
+    name: "Hood",
+    nameKo: "모자",
+    cut: { count: 2, onFold: false, mirror: true },
+    edges: [
+      { kind: "seam", pts: line([0, 0], [0.45 * depth, 0]) },
+      { kind: "seam", pts: [...backSeam].reverse() },
+      { kind: "neck", pts: [...neck].reverse() },
+      { kind: "hem", pts: line([0, H], [0, 0]) },
+    ],
+    grain: [[0.4 * depth, 0.25 * H], [0.4 * depth, 0.8 * H]],
+    // Shoulder seam on the neck edge, one notch.
+    notches: [{ at: pointAlong(neck, frontNeck), count: 1 }],
+  };
 }
 
 // A rectangle seamed on all sides (collar, cuff, waistband).
