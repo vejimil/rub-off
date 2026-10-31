@@ -9,11 +9,11 @@ Built for the [Meta Global AI Developer Hackathon](https://cerebralvalley.ai/e/m
 ## How it works
 
 1. **Photograph.** Lay the garment flat on a plain background next to an A4 sheet, all four corners in frame, and shoot from directly above.
-2. **Segment.** SAM 3.1 separates the garment, its parts (sleeves, collar, pockets) and the A4 sheet. Muse Spark reads the construction (garment type, set-in or raglan sleeves, knit or woven) from the coloured masks and picks from fixed options only.
-3. **Scale and measure.** The A4 sheet gives a centimetre scale with perspective correction. Measurements (length, chest, shoulder, sleeve, hem) come from geometry, each with a ± value. If the sheet is cut off or tilted, the app refuses to measure instead of guessing.
-4. **Pattern.** The outline is symmetrised and split into pattern pieces with seam allowance, grainline, notches and fold lines, then tiled onto A4 pages as a 1:1 PDF with a 10 cm test square. A grading table moves it up or down a size.
+2. **Segment.** SAM 3.1 separates the garment, its parts (sleeves, bag handles) and the A4 sheet, one short noun per request.
+3. **Scale and measure.** The A4 sheet's corners map the photo onto the floor plane in centimetres (perspective included). The points of measure (armpits, shoulder points, hem corners, crotch, cuffs) come from the outline's geometry, each value with a ±. If the sheet is cut off, covered or not A4, or a value falls outside what a garment can measure, the app refuses and asks you to measure instead of guessing.
+4. **Pattern.** The measurements draft the garment's pieces (front, back, sleeve with its cap solved to the armhole, collar, cuffs, legs, panels, bag body and handles) with per-edge seam allowance, grainline, notches and fold lines, tiled onto A4 pages as a 1:1 PDF with a 10 cm test square. Grading moves the measurements by a size step and drafts again.
 5. **Size decision.** Muse Spark reads a shop's measurement table from a screenshot into structured data; the app compares it point by point with your garment and recommends a size, showing which measurement is the problem.
-6. **Cutting layout.** SAM 3.1 segments your fabric scraps; a nesting step places the pattern pieces on them along the grain and says whether they fit.
+6. **Cutting layout.** SAM 3.1 segments your fabric scraps (or you type their sizes); a nesting step places the pattern pieces on them along the grain and says whether they fit, and by how much they don't.
 
 No number in the output comes from a language model. Every pattern says "confirm before cutting".
 
@@ -25,18 +25,21 @@ Everything in this repository was written during the hackathon. The commit histo
 | --- | --- |
 | Project setup, Meta Model API client, SAM image calls, Spark structured output (ported) | Done (Oct 31) |
 | A4 scale: corner fitting, perspective correction, refusal when the sheet is cut off, covered or not A4 (ported, adapted) | Done (Oct 31) |
-| Garment and part segmentation, measurements with ± | Planned |
-| Pattern pieces, seam allowance, notches, A4-tiled 1:1 PDF | Planned |
-| Size decision against a shop measurement table | Planned |
-| Grading table | Planned |
-| Cutting layout on fabric scraps | Planned |
-| Live deployment with sample mode | Planned |
+| Measurements from a flat-lay photo for tops, pants, skirts and bags: outline on the floor plane, points of measure, ± per value, refusal outside physical ranges (pants outline ported from Seated Tailor, the rest new) | Done (Oct 31), not yet checked against a tape measure |
+| Pattern drafting from flat measurements for five garments, per-edge seam allowance, grainline, notches, fold, sleeve cap solved to the armhole | Done (Oct 31) |
+| A4-tiled 1:1 PDF with a 10 cm test square, page map, overlaps and alignment lines | Done (Oct 31), not yet printed |
+| Grading by size steps (re-drafts from graded measurements) | Done (Oct 31), increments to be confirmed |
+| Size decision: Muse Spark copies a size table, code compares it with your garment | Done (Oct 31) |
+| Cutting layout on your own fabric (raster bottom-left fill along the grain) | Done (Oct 31) |
+| Web app with sample mode (no API calls) and live-run limits | Done (Oct 31), not deployed |
+| Muse Image fabric preview | Planned |
 
 ### Not built by me
 
 - [Next.js](https://nextjs.org) app scaffold (`create-next-app`), React, Tailwind CSS
 - [OpenAI Node SDK](https://github.com/openai/openai-node), used as the client for the OpenAI-compatible Meta Model API
 - [`@meta-sam/parser`](https://www.npmjs.com/package/@meta-sam/parser), Meta's parser for SAM 3.1 output and masks
+- [pdf-lib](https://pdf-lib.js.org) for writing the PDF, [clipper-lib](https://www.npmjs.com/package/clipper-lib) for polygon union in the seam allowance, [sharp](https://sharp.pixelplumbing.com) for preparing photos
 - Meta models via [Meta Model API](https://dev.meta.ai): Muse Spark, Muse Image, SAM 3.1
 
 ## Run locally
@@ -45,7 +48,15 @@ Everything in this repository was written during the hackathon. The commit histo
 npm install
 cp .env.example .env.local   # then add your MODEL_API_KEY
 npm run ping
-npm run dev                  # http://localhost:3000
+npm run dev                  # http://localhost:3000, /sample needs no key
+```
+
+Command-line tools (no API call unless `--yes`):
+
+```bash
+npm run pattern                                   # example PDFs for every garment in .cache/patterns/
+npm run photo -- shirt.jpg --garment=shirt        # measurements, overlay and pattern from a photo
+npm run size -- table.png --mine=chest:52.5,length:71   # read a size table and decide
 ```
 
 ## Privacy
