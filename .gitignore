@@ -1,0 +1,12 @@
+node_modules
+.next
+.env*
+!.env.example
+.cache
+.DS_Store
+*.tsbuildinfo
+.vercel
+/out
+/build
+coverage
+.omc
