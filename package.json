@@ -11,7 +11,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test 'src/**/*.test.ts'",
     "pattern": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/pattern.ts",
-    "size": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/size.ts"
+    "size": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/size.ts",
+    "photo": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/photo.ts"
   },
   "dependencies": {
     "@meta-sam/parser": "^0.1.0",
@@ -21,7 +22,8 @@
     "pdf-lib": "^1.17.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

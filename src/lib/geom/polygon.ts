@@ -133,3 +133,8 @@ export const compose = ([a2, b2, c2, d2, tx2, ty2]: Affine, [a1, b1, c1, d1, tx1
 ];
 export const rotation = (ang: number): Affine => [Math.cos(ang), -Math.sin(ang), Math.sin(ang), Math.cos(ang), 0, 0];
 export const translation = (tx: number, ty: number): Affine => [1, 0, 0, 1, tx, ty];
+export function invertAffine([a, b, c, d, tx, ty]: Affine): Affine {
+  const det = a * d - b * c;
+  const [ia, ib, ic, id] = [d / det, -b / det, -c / det, a / det];
+  return [ia, ib, ic, id, -(ia * tx + ib * ty), -(ic * tx + id * ty)];
+}

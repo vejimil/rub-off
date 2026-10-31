@@ -9,7 +9,7 @@
 // reference fit (measure.ts), with the hand and card cases removed.
 
 import { area, gridBox, largestComponent, traceOuter, type Box, type Grid } from "../geom/grid.ts";
-import { homography, planeDistance, type Mat3 } from "../geom/homography.ts";
+import { applyH, homography, planeDistance, type Mat3 } from "../geom/homography.ts";
 import { dist, type Pt } from "../geom/point.ts";
 import { convexHull, polygonArea, quadCorners } from "../geom/polygon.ts";
 
@@ -108,6 +108,43 @@ export function lengthCm(s: A4Scale, a: Pt, b: Pt): Length {
   if (s.h && reach <= HOMOGRAPHY_REACH) return { cm: planeDistance(s.h, a, b), rel: s.relError, perspective: true };
   const far = Math.min(0.15, FAR_REL_PER_DIAG * Math.max(0, reach - 1));
   return { cm: dist(a, b) / s.pxPerCm, rel: Math.hypot(s.relError, far, s.h ? 0 : NO_PERSPECTIVE_REL), perspective: false };
+}
+
+// The garment outline onto the floor plane, in cm. A flat-lay keeps the garment and the sheet on
+// one plane, so the homography holds across the garment; what grows with distance is the effect
+// of small corner errors, added to the ± per sheet diagonal of reach. As a guard against a
+// homography from bad corners, the garment's size through it and through the plain scale must
+// agree within PLANE_AGREEMENT, or the photo is refused as too tilted to trust.
+const PLANE_AGREEMENT = 0.1;
+
+export interface Plane {
+  toCm: (p: Pt) => Pt;
+  toPx: (p: Pt) => Pt;
+  rel: number; // relative uncertainty for lengths on this garment
+  perspective: boolean;
+}
+
+export function garmentPlane(s: A4Scale, pointsPx: readonly Pt[]): Plane | ScaleFailure {
+  const plain = (p: Pt): Pt => [p[0] / s.pxPerCm, p[1] / s.pxPerCm];
+  const plainPx = (p: Pt): Pt => [p[0] * s.pxPerCm, p[1] * s.pxPerCm];
+  const reach = Math.max(...pointsPx.map((p) => dist(p, s.center))) / s.diag;
+  const far = Math.min(0.15, FAR_REL_PER_DIAG * Math.max(0, reach - 1));
+  if (!s.h) return { toCm: plain, toPx: plainPx, rel: Math.hypot(s.relError, far, NO_PERSPECTIVE_REL), perspective: false };
+  const h = s.h;
+  const inv = homography(s.cornersPx.map((c) => applyH(h, c)), s.cornersPx);
+  const toCm = (p: Pt): Pt => applyH(h, p);
+  const toPx = (p: Pt): Pt => (inv ? applyH(inv, p) : plainPx(p));
+  // Compare the garment's extent both ways along its widest pair of points.
+  const span = (f: (p: Pt) => Pt) => {
+    const q = pointsPx.map(f);
+    const xs = q.map((p) => p[0]), ys = q.map((p) => p[1]);
+    return Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+  };
+  const a = span(toCm), b = span(plain);
+  if (Math.abs(a / b - 1) > PLANE_AGREEMENT) {
+    return { ok: false, reason: "paper-aspect", detail: `the photo is too tilted to measure (${(100 * Math.abs(a / b - 1)).toFixed(0)}% perspective); shoot from directly above` };
+  }
+  return { toCm, toPx, rel: Math.hypot(s.relError, far), perspective: true };
 }
 
 export type Confidence = "high" | "med" | "low";
