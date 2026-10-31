@@ -9,7 +9,7 @@ Built for the [Meta Global AI Developer Hackathon](https://cerebralvalley.ai/e/m
 ## How it works
 
 1. **Photograph.** Lay the garment flat on a plain background next to an A4 sheet, all four corners in frame, and shoot from directly above.
-2. **Segment.** SAM 3.1 separates the garment, its parts (sleeves, bag handles) and the A4 sheet, one short noun per request.
+2. **Segment and check.** SAM 3.1 separates the garment, its parts (sleeves, hood, bag handles) and the A4 sheet, one short noun per request. Muse Spark then sees the sleeve masks coloured and numbered and says, from fixed options, which sleeves are spread flat, folded or hidden, and how wrinkled the garment is; only sleeves the geometry and Spark both call spread are measured.
 3. **Scale and measure.** The A4 sheet's corners map the photo onto the floor plane in centimetres (perspective included). The points of measure (armpits, shoulder points, hem corners, crotch, cuffs) come from the outline's geometry, each value with a ±. If the sheet is cut off, covered or not A4, or a value falls outside what a garment can measure, the app refuses and asks you to measure instead of guessing.
 4. **Pattern.** The measurements draft the garment's pieces (front, back, sleeve with its cap solved to the armhole, collar, cuffs, legs, panels, bag body and handles) with per-edge seam allowance, grainline, notches and fold lines, tiled onto A4 pages as a 1:1 PDF with a 10 cm test square. Grading moves the measurements by a size step and drafts again.
 5. **Size decision.** Muse Spark reads a shop's measurement table from a screenshot into structured data; the app compares it point by point with your garment and recommends a size, showing which measurement is the problem.
@@ -32,6 +32,8 @@ Everything in this repository was written during the hackathon. The commit histo
 | Size decision: Muse Spark copies a size table, code compares it with your garment | Done (Oct 31) |
 | Cutting layout on your own fabric (raster bottom-left fill along the grain) | Done (Oct 31) |
 | Web app with sample mode (no API calls) and live-run limits | Done (Oct 31), not deployed |
+| Real-photo robustness: Muse Spark layout check (folded or hidden sleeves, wrinkles, hem), sleeves folded over the body left out and the other side mirrored, hood removed from the outline, photos turned 90°, garments cut off by the frame refused | Done (Oct 31), on the owner's T-shirt and hoodie |
+| Zip hoodie (two-piece hood, rib bands); front and back photos combined | Done (Oct 31) |
 | Muse Image fabric preview | Planned |
 
 ### Not built by me
