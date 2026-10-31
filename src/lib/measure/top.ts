@@ -44,7 +44,7 @@ export function measureTop(shape: Shape, sleeves: Pt[][]): Measured<TopKey> | { 
     return [side(-1), side(1)] as const;
   };
   const [pl0, pr0] = armpits(shape.outline, cx0, top0, height0);
-  if (!pl0 || !pr0) return { ok: false, detail: "could not find both armpits; spread the sleeves away from the body" };
+  if (!pl0 || !pr0) return { ok: false, detail: "양쪽 겨드랑이를 찾지 못했습니다. 소매를 몸판에서 떨어뜨려 펴 주십시오." };
 
   // Level the armpits and put the origin between them.
   const a = shape.outline[pl0.i], b = shape.outline[pr0.i];
@@ -57,20 +57,20 @@ export function measureTop(shape: Shape, sleeves: Pt[][]): Measured<TopKey> | { 
   const ys = outline.map((p) => p[1]);
   const top = Math.min(...ys), h = Math.max(...ys) - top;
   const [dl, dr] = armpits(outline, 0, top, h);
-  if (!dl || !dr) return { ok: false, detail: "could not find both armpits" };
+  if (!dl || !dr) return { ok: false, detail: "양쪽 겨드랑이를 찾지 못했습니다." };
   const pitL = outline[dl.i], pitR = outline[dr.i];
   const chestW = dist(pitL, pitR);
 
   // Hem corners: lowest outward points under the body, not a hanging cuff beside it.
   const underBody = (p: Pt) => p[1] > 0 && p[0] > pitL[0] - 0.15 * chestW && p[0] < pitR[0] + 0.15 * chestW;
   const hl = argBest(outline, ([x, y]) => -x + y, underBody), hr = argBest(outline, ([x, y]) => x + y, underBody);
-  if (hl < 0 || hr < 0) return { ok: false, detail: "could not find the hem" };
+  if (hl < 0 || hr < 0) return { ok: false, detail: "밑단을 찾지 못했습니다." };
   const hemL = outline[hl], hemR = outline[hr];
 
   // Side neck points: highest point either side of the middle, above the armpits.
   const nearNeck = (s: -1 | 1) => (p: Pt) => p[1] < 0 && s * p[0] > 0.5 && s * p[0] < 0.3 * chestW;
   const nl = argBest(outline, ([, y]) => -y, nearNeck(-1)), nr = argBest(outline, ([, y]) => -y, nearNeck(1));
-  if (nl < 0 || nr < 0) return { ok: false, detail: "could not find the neck" };
+  if (nl < 0 || nr < 0) return { ok: false, detail: "목둘레를 찾지 못했습니다. 목이 사진 위쪽으로 오게 펴 주십시오." };
   const snpL = outline[nl], snpR = outline[nr];
 
   // Each side: shoulder point, then the sleeve as the outline from the side neck point to the armpit.
@@ -100,8 +100,8 @@ export function measureTop(shape: Shape, sleeves: Pt[][]): Measured<TopKey> | { 
     return { sp, cuffTop, cuffBottom, sleeve: dist(sp, cuffTop), opening: dist(cuffTop, cuffBottom), bicep };
   };
   const L = side(nl, dl.i, -1), R = side(nr, dr.i, 1);
-  if (!L || !R) return { ok: false, detail: "could not find the sleeve ends; lay the sleeves out flat and straight" };
-  if (fallback) notes.push("No sleeve mask on one side: the shoulder point is taken from the outline's turn, with extra ±. Check the shoulder width.");
+  if (!L || !R) return { ok: false, detail: "소매 끝을 찾지 못했습니다. 소매를 곧게 펴 주십시오." };
+  if (fallback) notes.push("한쪽 소매를 SAM이 찾지 못해 어깨점을 윤곽이 꺾이는 곳으로 잡았습니다(± 큼). 어깨너비를 확인해 주십시오.");
 
   const hemYAt = (x: number) => hemL[1] + ((x - hemL[0]) / (hemR[0] - hemL[0] || 1)) * (hemR[1] - hemL[1]);
   const mean = (p: number, q: number) => (p + q) / 2;

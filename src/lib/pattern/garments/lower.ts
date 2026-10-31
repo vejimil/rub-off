@@ -51,7 +51,7 @@ export function draftPants(m: PantsMeasures, unmeasured: string[], elastic = ELA
           { kind: "inseam", pts: line(hemIn, crotch) },
           { kind: "crotch", pts: [...crotchCurve, waistC] },
         ],
-        grain: [[crease, crotchY + 5], [crease, m.outseam - 10]],
+        grain: [[crease, 0.15 * m.outseam], [crease, 0.85 * m.outseam]], // most of the leg's length, on the crease
         notches: [{ at: [hipW, crotchY], count: front ? 1 : 2 }],
         marks: [{ kind: "lengthen", a: [crease - hemW / 2, (crotchY + m.outseam) / 2], b: [crease + hemW / 2, (crotchY + m.outseam) / 2] }],
         unmeasured,

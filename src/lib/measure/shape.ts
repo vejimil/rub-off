@@ -47,8 +47,8 @@ export function shapeFromMasks(garment: Grid, paper: Grid, scale: A4Scale): Shap
   }
   const onGarment = inside / Math.max(1, paperArea) >= 0.5;
   const shape = onGarment ? fillHoles(union(filled, paper)) : filled;
-  if (onGarment) notes.push(`The A4 sheet lies on the garment (${Math.round((100 * inside) / paperArea)}% overlap); it is counted as garment.`);
-  if (area(shape) === 0) return { ok: false, reason: "no-paper", detail: "no garment found" };
+  if (onGarment) notes.push(`A4 용지가 옷 위에 놓여 있어(${Math.round((100 * inside) / paperArea)}% 겹침) 옷의 일부로 보고 윤곽을 잡았습니다.`);
+  if (area(shape) === 0) return { ok: false, reason: "no-paper", detail: "옷을 찾지 못했습니다." };
   const contourPx = traceOuter(largestComponent(shape));
   const plane = garmentPlane(scale, contourPx);
   if ("ok" in plane) return plane;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CuttingPanel } from "@/components/cutting-panel";
 import { PatternPreview } from "@/components/pattern-preview";
 import { PhotoOverlay } from "@/components/photo-overlay";
 import { SizePanel } from "@/components/size-panel";
@@ -54,9 +55,10 @@ export interface WorkbenchProps {
   live: boolean;
   initial?: { photo: PhotoView; run: OkRun; garment: GarmentKind; fabric: Fabric };
   sampleTable?: { read: ReadTable; src: string };
+  initialEdits?: Record<string, string>; // e.g. tape-measured values for a sample
 }
 
-export function Workbench({ live, initial, sampleTable }: WorkbenchProps) {
+export function Workbench({ live, initial, sampleTable, initialEdits }: WorkbenchProps) {
   const [garment, setGarment] = useState<GarmentKind>(initial?.garment ?? "t-shirt");
   const [fabric, setFabric] = useState<Fabric>(initial?.fabric ?? "woven");
   const [photo, setPhoto] = useState<PhotoView | null>(initial?.photo ?? null);
@@ -64,7 +66,7 @@ export function Workbench({ live, initial, sampleTable }: WorkbenchProps) {
   const [run, setRun] = useState<OkRun | null>(initial?.run ?? null);
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [edits, setEdits] = useState<Record<string, string>>({});
+  const [edits, setEdits] = useState<Record<string, string>>(initialEdits ?? {});
   const [baseSize, setBaseSize] = useState("M");
   const [steps, setSteps] = useState(0);
 
@@ -257,7 +259,13 @@ export function Workbench({ live, initial, sampleTable }: WorkbenchProps) {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold">4. 쇼핑몰 사이즈 고르기</h2>
+        <h2 className="text-xl font-semibold">4. 내 원단에 배치</h2>
+        <p className="text-sm text-muted">가진 원단(자투리 포함)에 이 패턴이 들어가는지, 어디에 놓고 자를지 보여 드립니다.</p>
+        {pattern ? <CuttingPanel pattern={pattern} live={live} /> : <p className="text-sm text-muted">패턴이 만들어지면 배치할 수 있습니다.</p>}
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold">5. 쇼핑몰 사이즈 고르기</h2>
         <p className="text-sm text-muted">잘 맞는 이 옷을 기준으로, 쇼핑몰 실측표에서 어느 사이즈가 같은 핏인지 비교합니다.</p>
         {Object.keys(mine).length === 0 ? (
           <p className="text-sm text-muted">먼저 사진으로 재거나 치수를 입력해 주십시오.</p>

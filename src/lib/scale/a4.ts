@@ -57,24 +57,24 @@ export function a4Scale(paperMask: Grid): ScaleResult {
   const shape = largestComponent(paperMask);
   const contour = traceOuter(shape);
   const box = gridBox(shape);
-  if (contour.length < 20 || !box) return { ok: false, reason: "no-paper", detail: "no A4 sheet was found in the photo" };
+  if (contour.length < 20 || !box) return { ok: false, reason: "no-paper", detail: "사진에서 A4 용지를 찾지 못했습니다." };
   if (box[0] <= EDGE_PX || box[1] <= EDGE_PX || box[2] >= paperMask.width - EDGE_PX || box[3] >= paperMask.height - EDGE_PX) {
-    return { ok: false, reason: "paper-edge", detail: "the A4 sheet touches the photo edge; all four corners must be in the frame" };
+    return { ok: false, reason: "paper-edge", detail: "A4 용지가 사진 가장자리에 걸렸습니다. 네 모서리가 모두 보이게 다시 찍어 주십시오." };
   }
   const rough = quadCorners(convexHull(contour));
-  if (!rough) return { ok: false, reason: "paper-corners", detail: "could not find the sheet's four corners" };
+  if (!rough) return { ok: false, reason: "paper-corners", detail: "A4 용지의 네 모서리를 찾지 못했습니다." };
   const corners = refineCorners(contour, rough) ?? rough;
 
   // Below 1: something covers part of it. Above 1: a corner is missing, so the corners found aren't its.
   const fill = area(shape) / polygonArea(corners);
   if (!(Math.abs(1 - fill) <= 1 - MIN_FILL)) {
-    return { ok: false, reason: "paper-covered", detail: `the sheet fills ${(fill * 100).toFixed(0)}% of its outline; something covers it or it is folded` };
+    return { ok: false, reason: "paper-covered", detail: `A4 용지가 가려졌거나 접혀 있습니다(윤곽의 ${(fill * 100).toFixed(0)}%만 보임). 용지 위를 비워 주십시오.` };
   }
   const [tl, tr, br, bl] = corners;
   const across = dist(tl, tr) + dist(br, bl), down = dist(tr, br) + dist(bl, tl);
   const aspect = Math.max(across, down) / Math.min(across, down);
   if (Math.abs(aspect / A4_ASPECT - 1) > ASPECT_TOLERANCE) {
-    return { ok: false, reason: "paper-aspect", detail: `the sheet's sides are ${aspect.toFixed(2)} : 1, not A4's 1.41 : 1; it is not A4 or the photo is tilted` };
+    return { ok: false, reason: "paper-aspect", detail: `용지 비율이 ${aspect.toFixed(2)} : 1로 A4(1.41 : 1)가 아닙니다. A4가 아니거나 사진이 기울었습니다.` };
   }
 
   // The longer pair of opposite sides is the long edge.
@@ -142,7 +142,7 @@ export function garmentPlane(s: A4Scale, pointsPx: readonly Pt[]): Plane | Scale
   };
   const a = span(toCm), b = span(plain);
   if (Math.abs(a / b - 1) > PLANE_AGREEMENT) {
-    return { ok: false, reason: "paper-aspect", detail: `the photo is too tilted to measure (${(100 * Math.abs(a / b - 1)).toFixed(0)}% perspective); shoot from directly above` };
+    return { ok: false, reason: "paper-aspect", detail: `사진이 너무 기울어 잴 수 없습니다(원근 ${(100 * Math.abs(a / b - 1)).toFixed(0)}%). 바로 위에서 찍어 주십시오.` };
   }
   return { toCm, toPx, rel: Math.hypot(s.relError, far), perspective: true };
 }

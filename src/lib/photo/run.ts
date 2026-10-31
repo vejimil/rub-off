@@ -89,8 +89,8 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
     const ms = masksOf(i);
     return ms.length ? unionAll(ms.map((m) => rasterize(m, photo.width, photo.height)), photo.width, photo.height) : emptyGrid(photo.width, photo.height);
   };
-  if (masksOf(0).length === 0) return { ok: false, stage: "segment", detail: `SAM 3.1 found no "${words.garment}" in the photo` };
-  if (masksOf(1).length === 0) return { ok: false, stage: "segment", detail: "SAM 3.1 found no A4 sheet (\"paper\") in the photo" };
+  if (masksOf(0).length === 0) return { ok: false, stage: "segment", detail: `SAM 3.1이 사진에서 "${words.garment}"를 찾지 못했습니다.` };
+  if (masksOf(1).length === 0) return { ok: false, stage: "segment", detail: "SAM 3.1이 사진에서 A4 용지를 찾지 못했습니다." };
 
   // The sheet: the most confident "paper" that fits as A4.
   const papers = masksOf(1).sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));

@@ -55,7 +55,7 @@ export function measureSkirt(shape: Shape): Measured<SkirtKey> | { ok: false; de
   m = compose(translation(-(poly[c.wl][0] + poly[c.wr][0]) / 2, -(poly[c.wl][1] + poly[c.wr][1]) / 2), m);
   poly = transform(m, shape.outline);
   c = corners(poly);
-  if (new Set([c.wl, c.wr, c.hl, c.hr]).size < 4) return { ok: false, detail: "could not find the waist and hem corners" };
+  if (new Set([c.wl, c.wr, c.hl, c.hr]).size < 4) return { ok: false, detail: "허리와 밑단 모서리를 찾지 못했습니다." };
   const [wl, wr, hl, hr] = [poly[c.wl], poly[c.wr], poly[c.hl], poly[c.hr]];
   const hemY = (hl[1] + hr[1]) / 2;
   const v = (cm: number): Value => valueOf(cm, shape);
@@ -116,6 +116,6 @@ export function measureBag(shape: Shape, handles: Pt[][]): Measured<BagKey> | { 
     segments: w ? [{ key: "width", a: [w.left, height / 2], b: [w.right, height / 2] }, { key: "height", a: [(w.left + w.right) / 2, 0], b: [(w.left + w.right) / 2, height] }] : [],
     outline: poly,
     frame: m,
-    notes: [...shape.notes, ...(straps.length ? ["Handle length and width are estimated from the handle mask's area; measure them before cutting."] : ["No handle found: enter the handle length."])],
+    notes: [...shape.notes, ...(straps.length ? ["손잡이 길이와 폭은 손잡이 마스크 넓이로 추정했습니다. 재단 전에 재 주십시오."] : ["손잡이를 찾지 못했습니다. 손잡이 길이를 입력해 주십시오."])],
   };
 }

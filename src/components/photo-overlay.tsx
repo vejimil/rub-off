@@ -22,8 +22,8 @@ export function PhotoOverlay({ photo, run }: { photo: PhotoView; run?: OkRun }) 
             <g key={s.key}>
               <line x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke="var(--mark)" strokeWidth={fs / 4} strokeLinecap="round" />
               <text
-                x={(s.a[0] + s.b[0]) / 2}
-                y={(s.a[1] + s.b[1]) / 2 - fs / 2}
+                x={Math.min(photo.width - 4 * fs, Math.max(4 * fs, (s.a[0] + s.b[0]) / 2))}
+                y={Math.min(photo.height - fs, Math.max(1.5 * fs, (s.a[1] + s.b[1]) / 2 - fs / 2))}
                 fontSize={fs}
                 textAnchor="middle"
                 fill="#fff"

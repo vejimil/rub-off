@@ -55,7 +55,7 @@ export function measurePants(shape: Shape): Measured<PantsKey> | { ok: false; de
     const score = depth - legGapDepth(flipped, 0.25);
     if (!best || score > best.score) best = { m, score, depth };
   }
-  if (!best || best.depth < 2) return { ok: false, detail: "no gap between two legs at either end; lay the legs a little apart" };
+  if (!best || best.depth < 2) return { ok: false, detail: "두 다리 사이 틈을 찾지 못했습니다. 다리를 조금 벌려 펴 주십시오." };
 
   // Level the waist: rotate so the two waist corners sit on one horizontal line, twice to settle.
   const waistCorners = (poly: Pt[]) => {
@@ -80,12 +80,12 @@ export function measurePants(shape: Shape): Measured<PantsKey> | { ok: false; de
   const [wl, wr] = waistCorners(outline);
   const hl = argBest(outline, ([x, y]) => -x + y);
   const hr = argBest(outline, ([x, y]) => x + y);
-  if (new Set([wl, wr, hl, hr]).size < 4) return { ok: false, detail: "waist and hem corners coincide" };
+  if (new Set([wl, wr, hl, hr]).size < 4) return { ok: false, detail: "허리와 밑단 모서리를 구분하지 못했습니다." };
 
   // The crotch is the highest point between the two outer hem corners, on the side away from the waist.
   const bottom = arc(n, hl, hr, wl);
   const crotchIdx = bottom.reduce((bi, i) => (outline[i][1] < outline[bi][1] ? i : bi), bottom[0]);
-  if (crotchIdx === hl || crotchIdx === hr) return { ok: false, detail: "no crotch between the legs" };
+  if (crotchIdx === hl || crotchIdx === hr) return { ok: false, detail: "가랑이 위치를 찾지 못했습니다." };
   const crotch = outline[crotchIdx];
 
   const leg = (outerIdx: number, waistIdx: number) => {
@@ -101,7 +101,7 @@ export function measurePants(shape: Shape): Measured<PantsKey> | { ok: false; de
   const left = leg(hl, wl), right = leg(hr, wr);
   const hemY = (left.outerHem[1] + right.outerHem[1]) / 2;
   const hidden = crotch[1] > CROTCH_HIDDEN_RATIO * hemY;
-  if (hidden) notes.push("The legs touch in the photo, so the crotch is hidden: the rise is an upper bound and the inseam a lower bound. Lay the legs apart.");
+  if (hidden) notes.push("사진에서 두 다리가 붙어 가랑이가 가려졌습니다. 밑위는 최대값, 인심은 최소값으로만 읽었습니다. 다리를 벌려 다시 찍으면 정확해집니다.");
 
   const v = (cm: number, bound?: Value["bound"]) => valueOf(cm, shape, bound);
   const mean = (a: number, b: number) => (a + b) / 2;
@@ -130,7 +130,7 @@ export function measurePants(shape: Shape): Measured<PantsKey> | { ok: false; de
     values.thigh = v(mean(xs[1] - xs[0], xs[3] - xs[2]));
     segments.push({ key: "thigh", a: [xs[2], thighY], b: [xs[3], thighY] });
   }
-  if (hidden) notes.push("Hip and thigh are not measured: the crotch is hidden.");
+  if (hidden) notes.push("가랑이가 가려져 엉덩이·허벅지 단면은 재지 않았습니다.");
 
   const { values: kept, refused } = inRange(values, RANGES);
   return {
