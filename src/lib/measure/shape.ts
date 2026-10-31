@@ -27,7 +27,7 @@ export interface Measured<K extends string = string> {
   values: Partial<Record<K, Value>>;
   // Points and segments in the outline's cm frame, after the garment's own rotation, for drawing.
   landmarks: Record<string, Pt>;
-  segments: { key: K; a: Pt; b: Pt }[];
+  segments: { key: K; a: Pt; b: Pt; mirrored?: boolean }[]; // mirrored: an end drawn from the other side
   outline: Pt[]; // the same frame
   frame: Affine; // floor-plane cm → this frame
   refused: { key: K; cm: number; range: [number, number] }[]; // out of physical range, not shown
@@ -54,6 +54,16 @@ export function shapeFromMasks(garment: Grid, paper: Grid, scale: A4Scale): Shap
   if ("ok" in plane) return plane;
   const outline = simplifyClosed(contourPx.map(plane.toCm), SIMPLIFY_CM);
   return { outline, plane, pxPerCm: scale.pxPerCm, notes };
+}
+
+// No A4 in the photo: a plain scale of `pxPerCm`, with no perspective correction, so `rel` must
+// carry that.
+export function shapeWithPlainScale(garment: Grid, pxPerCm: number, rel: number, notes: string[] = []): Shape | null {
+  const shape = fillHoles(largestComponent(garment));
+  if (area(shape) === 0) return null;
+  const contourPx = traceOuter(shape);
+  const plane: Plane = { toCm: ([x, y]) => [x / pxPerCm, y / pxPerCm], toPx: ([x, y]) => [x * pxPerCm, y * pxPerCm], rel, perspective: false };
+  return { outline: simplifyClosed(contourPx.map(plane.toCm), SIMPLIFY_CM), plane, pxPerCm, notes };
 }
 
 // A part mask (sleeve, handle) as a cm polygon on the same plane.

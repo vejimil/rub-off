@@ -85,3 +85,29 @@ test("a tote's body is the wide part under the handles", () => {
   close(m.values.handleLength?.cm, 63, 0.5);
   close(m.values.handleWidth?.cm, 2.86, 0.2);
 });
+
+test("a sleeve folded over the body is not used; the other side is mirrored", () => {
+  // The right sleeve is folded across the front: the outline has no right sleeve sticking out,
+  // and its mask lies over the body.
+  const folded: Pt[] = [
+    [-9, 0], [-5, 2], [0, 2.5], [5, 2], [9, 0],
+    [23.5, 4], [27, 23], // right side: shoulder straight down the side seam
+    [26.5, 70], [-26.5, 70],
+    [-27, 23], [-31, 26], [-36, 15], [-23.5, 4],
+  ];
+  const overBody: Pt[] = [[23.5, 4], [26, 10], [5, 30], [0, 24]];
+  const m = measureTop(shapeOf(folded), [SLEEVES[1], overBody]);
+  assert.ok(!("ok" in m), JSON.stringify(m));
+  close(m.values.chest?.cm, 54);
+  close(m.values.shoulder?.cm, 47);
+  close(m.values.sleeve?.cm, Math.hypot(36 - 23.5, 15 - 4));
+  assert.ok(m.notes.some((x) => x.includes("접혀")), m.notes.join("\n"));
+  assert.ok(m.values.chest!.plusMinusCm > 0.6, "mirrored values carry more ±");
+});
+
+test("a sleeve the layout check rejects is not used", () => {
+  const m = measureTop(shapeOf(TEE), SLEEVES, { sleeveUsable: [true, false] });
+  assert.ok(!("ok" in m));
+  close(m.values.chest?.cm, 54);
+  assert.ok(m.notes.some((x) => x.includes("Muse Spark")));
+});

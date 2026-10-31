@@ -138,3 +138,17 @@ export function invertAffine([a, b, c, d, tx, ty]: Affine): Affine {
   const [ia, ib, ic, id] = [d / det, -b / det, -c / det, a / det];
   return [ia, ib, ic, id, -(ia * tx + ib * ty), -(ic * tx + id * ty)];
 }
+
+// Area centroid (not the vertex average, which leans toward wherever the outline has many points).
+export function polygonCentroid(pts: readonly Pt[]): Pt {
+  let a = 0, cx = 0, cy = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [x0, y0] = pts[i], [x1, y1] = pts[(i + 1) % pts.length];
+    const c = x0 * y1 - x1 * y0;
+    a += c;
+    cx += (x0 + x1) * c;
+    cy += (y0 + y1) * c;
+  }
+  if (Math.abs(a) < 1e-9) return pts.length ? [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length] : [0, 0];
+  return [cx / (3 * a), cy / (3 * a)];
+}

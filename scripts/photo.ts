@@ -4,6 +4,7 @@
 //   --concept=shorts   another SAM word for the garment     --fabric=knit
 //   --raw              send the file as is (already upright, ≤ 2000 px), e.g. to reuse an existing cache
 //   --tape=length:70,chest:54   tape-measured values, printed next to the photo's
+//   --ref=chest:54     no A4 in the photo: this tape value sets the scale
 //   --json=src/lib/sample/x.json   also write a golden run for sample mode
 // Writes .cache/out/<name>-overlay.png and <name>-pattern.pdf.
 
@@ -37,6 +38,7 @@ const run = await runPhoto({
   cacheRoot: path.resolve(".cache", "photos"),
   allowApi: args.includes("--yes"),
   garmentConcept: opt("concept"),
+  reference: opt("ref") ? { key: opt("ref")!.split(":")[0], cm: Number(opt("ref")!.split(":")[1]) } : undefined,
 });
 if (!run.ok) {
   if (run.stage === "cost") console.log(`SAM would run ${run.pendingConcepts!.length} concept(s) [${run.pendingConcepts!.join(", ")}] for about $${run.usd!.toFixed(4)}. Rerun with --yes.`);
@@ -45,7 +47,7 @@ if (!run.ok) {
 }
 
 const tape = Object.fromEntries((opt("tape") ?? "").split(",").filter(Boolean).map((kv) => [kv.split(":")[0], Number(kv.split(":")[1])]));
-console.log(`scale ${run.scale.pxPerCm.toFixed(2)} px/cm, A4 aspect ${run.scale.aspect.toFixed(3)}, fill ${(run.scale.fill * 100).toFixed(1)}%, ±${(run.scale.relError * 100).toFixed(1)}%`);
+console.log(`scale (${run.scale.source}) ${run.scale.pxPerCm.toFixed(2)} px/cm, A4 aspect ${run.scale.aspect.toFixed(3)}, fill ${(run.scale.fill * 100).toFixed(1)}%, ±${(run.scale.relError * 100).toFixed(1)}%`);
 for (const [k, v] of Object.entries(run.measured.values)) {
   if (!v) continue;
   const b = v.bound === "max" ? "≤ " : v.bound === "min" ? "≥ " : "";
@@ -64,7 +66,7 @@ const o = run.overlay;
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${photo.width}" height="${photo.height}">
   <path d="${svgPath(o.outlinePx, true)}" fill="none" stroke="#00e0ff" stroke-width="4"/>
   ${o.partsPx.map((p) => `<path d="${svgPath(p, true)}" fill="rgba(255,200,0,0.25)" stroke="#ffc800" stroke-width="3"/>`).join("")}
-  <path d="${svgPath(run.scale.cornersPx, true)}" fill="none" stroke="#ff3070" stroke-width="4"/>
+  ${run.scale.source === "a4" ? `<path d="${svgPath(run.scale.cornersPx, true)}" fill="none" stroke="#ff3070" stroke-width="4"/>` : ""}
   ${o.segmentsPx
     .map(
       (s) => `<line x1="${s.a[0]}" y1="${s.a[1]}" x2="${s.b[0]}" y2="${s.b[1]}" stroke="#ff2020" stroke-width="5"/>

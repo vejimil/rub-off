@@ -1,17 +1,22 @@
-// Shirts and T-shirts lying flat, front up, neck toward the top of the photo, sleeves spread out.
-// Points of measure from the outline:
-//   armpits    the deepest dents between sleeve and body (convexity defects)
-//   hem        the lowest corners under the body
-//   side neck  the highest point either side of the neck
-//   shoulder   where the SAM sleeve mask starts nearest the side neck point; without a sleeve
-//              mask, the sharpest turn between the shoulder line and the sleeve (less certain)
+// Shirts, T-shirts and hoodies lying flat, neck toward the top of the photo. Points of measure
+// from the outline, side by side:
+//   hem        the lowest corners of the widest run near the bottom; the hem levels the garment
+//              and its middle is the centre line
+//   sleeves    each SAM sleeve mask is assigned to the side it hangs from (its highest point).
+//              A sleeve whose middle lies over the body is folded over it and is not used; so is
+//              one the layout check (Muse Spark) calls folded, hidden, bent or not a sleeve
+//   armpits    on a side with a usable sleeve, the deepest dent next to that sleeve
+//   side neck  the highest point either side of the centre line (a hood is removed beforehand)
+//   shoulder   where the usable sleeve mask starts nearest the side neck point
 //   sleeve     the outline from the shoulder point round the cuff to the armpit
-// Neck drops can't be seen from the outline; they stay unmeasured and the draft says so.
+// With one usable side, widths are that side mirrored across the centre line, and the note says
+// so. With none, sleeve-side values are left to the tape measure. Neck drops can't be seen from
+// the outline; they stay unmeasured and the draft says so.
 
 import type { Pt } from "../geom/point.ts";
-import { rotation, simplify, translation } from "../geom/polygon.ts";
+import { polygonCentroid, rotation, simplify, translation } from "../geom/polygon.ts";
 import type { TopMeasures } from "../pattern/measures.ts";
-import { arc, argBest, compose, defects, dist, inRange, transform, valueOf, type Measured, type Shape, type Value } from "./shape.ts";
+import { arc, argBest, compose, crossings, defects, dist, inRange, transform, valueOf, type Measured, type Shape, type Value } from "./shape.ts";
 
 export type TopKey = Exclude<keyof TopMeasures, "frontNeckDrop" | "backNeckDrop">;
 
@@ -29,56 +34,116 @@ const RANGES: Record<TopKey, [number, number]> = {
 };
 
 const MIN_ARMPIT_DEPTH = 2; // cm into the hull
+const ARMPIT_NEAR_SLEEVE = 4; // cm: the armpit is where the sleeve meets the body
 const SHOULDER_FALLBACK_REL = 0.05;
+const MIRRORED_REL = 0.05; // one side doubled: the centre line comes from the hem, and the garment may not lie symmetric (13% front-back gap on the owner's hoodie, 10/31)
+const FOLDED_SHARE = 0.75; // a sleeve whose middle is within this share of the half hem is over the body
 
-export function measureTop(shape: Shape, sleeves: Pt[][]): Measured<TopKey> | { ok: false; detail: string } {
+export interface TopOptions {
+  // Per sleeve mask, in the same order: false when the layout check says it isn't a usable sleeve.
+  sleeveUsable?: boolean[];
+  hood?: Pt[] | null; // the hood's polygon, which points to the top of the garment
+  extraRel?: number; // wrinkles seen by the layout check
+}
+
+type SideName = "left" | "right";
+
+export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {}): Measured<TopKey> | { ok: false; detail: string } {
   const notes: string[] = [];
-  const ys0 = shape.outline.map((p) => p[1]), xs0 = shape.outline.map((p) => p[0]);
-  const top0 = Math.min(...ys0), height0 = Math.max(...ys0) - top0;
-  const cx0 = (Math.min(...xs0) + Math.max(...xs0)) / 2;
 
-  // Armpits: the deepest dent on each side, below the neck.
-  const armpits = (poly: readonly Pt[], cx: number, top: number, h: number) => {
-    const ds = defects(poly).filter((d) => d.depth >= MIN_ARMPIT_DEPTH && poly[d.i][1] > top + 0.12 * h);
-    const side = (s: -1 | 1) => ds.filter((d) => s * (poly[d.i][0] - cx) > 0).sort((a, b) => b.depth - a.depth)[0];
-    return [side(-1), side(1)] as const;
+  // Hem corners: ends of the widest run of outline near the bottom, then the lowest-outward points there.
+  // Which way is up: toward the hood, else toward the sleeves (they hang from the top of the
+  // body), else the photo's own up. Then the nearest quarter turn stands the garment upright.
+  const centre = polygonCentroid;
+  const gc = centre(shape.outline);
+  const hint = opts.hood?.length ? centre(opts.hood) : sleeves.length >= 2 ? centre(sleeves.map(centre)) : null;
+  let turn = rotation(0);
+  if (hint && Math.hypot(hint[0] - gc[0], hint[1] - gc[1]) > 2) {
+    const up: Pt = [hint[0] - gc[0], hint[1] - gc[1]];
+    const best = [0, 1, 2, 3].map((k) => rotation((k * Math.PI) / 2)).sort((p, q) => transform(p, [up])[0][1] - transform(q, [up])[0][1])[0];
+    turn = best;
+  }
+  const upright = transform(turn, shape.outline);
+
+  // `band`: how far up from the bottom to look; deeper before the garment is levelled.
+  const hemCorners = (poly: readonly Pt[], band: number) => {
+    const ys = poly.map((p) => p[1]);
+    const top = Math.min(...ys), bottom = Math.max(...ys), h = bottom - top;
+    const lefts: number[] = [], rights: number[] = [];
+    for (let y = bottom - band * h; y < bottom - 0.02 * h; y += 0.01 * h) {
+      const xs = crossings(poly, y);
+      let best: [number, number] | null = null;
+      for (let i = 0; i + 1 < xs.length; i += 2) if (!best || xs[i + 1] - xs[i] > best[1] - best[0]) best = [xs[i], xs[i + 1]];
+      if (best) [lefts.push(best[0]), rights.push(best[1])];
+    }
+    if (!lefts.length) return null;
+    const med = (a: number[]) => [...a].sort((p, q) => p - q)[a.length >> 1];
+    const [l, r] = [med(lefts), med(rights)];
+    const near = (p: Pt) => p[1] > bottom - band * h && p[0] > l - 3 && p[0] < r + 3;
+    const hl = argBest(poly, ([x, y]) => -x + y, near), hr = argBest(poly, ([x, y]) => x + y, near);
+    return hl < 0 || hr < 0 ? null : { hl, hr, top, h };
   };
-  const [pl0, pr0] = armpits(shape.outline, cx0, top0, height0);
-  if (!pl0 || !pr0) return { ok: false, detail: "양쪽 겨드랑이를 찾지 못했습니다. 소매를 몸판에서 떨어뜨려 펴 주십시오." };
+  const h0 = hemCorners(upright, 0.3);
+  if (!h0) return { ok: false, detail: "밑단을 찾지 못했습니다." };
 
-  // Level the armpits and put the origin between them.
-  const a = shape.outline[pl0.i], b = shape.outline[pr0.i];
-  let m = rotation(-Math.atan2(b[1] - a[1], b[0] - a[0]));
-  const mid = transform(m, [[(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]])[0];
+  // Level the hem; the origin is the middle of the hem.
+  const a = upright[h0.hl], b = upright[h0.hr];
+  let m = compose(rotation(-Math.atan2(b[1] - a[1], b[0] - a[0])), turn);
+  const mid = transform(rotation(-Math.atan2(b[1] - a[1], b[0] - a[0])), [[(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]])[0];
   m = compose(translation(-mid[0], -mid[1]), m);
   const outline = transform(m, shape.outline);
-  const sleevesF = sleeves.map((s) => transform(m, s));
   const n = outline.length;
-  const ys = outline.map((p) => p[1]);
-  const top = Math.min(...ys), h = Math.max(...ys) - top;
-  const [dl, dr] = armpits(outline, 0, top, h);
-  if (!dl || !dr) return { ok: false, detail: "양쪽 겨드랑이를 찾지 못했습니다." };
-  const pitL = outline[dl.i], pitR = outline[dr.i];
-  const chestW = dist(pitL, pitR);
+  const hc = hemCorners(outline, 0.12);
+  if (!hc) return { ok: false, detail: "밑단을 찾지 못했습니다." };
+  const hemL = outline[hc.hl], hemR = outline[hc.hr];
+  const half = (hemR[0] - hemL[0]) / 2;
+  const cx = (hemL[0] + hemR[0]) / 2;
 
-  // Hem corners: lowest outward points under the body, not a hanging cuff beside it.
-  const underBody = (p: Pt) => p[1] > 0 && p[0] > pitL[0] - 0.15 * chestW && p[0] < pitR[0] + 0.15 * chestW;
-  const hl = argBest(outline, ([x, y]) => -x + y, underBody), hr = argBest(outline, ([x, y]) => x + y, underBody);
-  if (hl < 0 || hr < 0) return { ok: false, detail: "밑단을 찾지 못했습니다." };
-  const hemL = outline[hl], hemR = outline[hr];
+  // Sleeves: which side each hangs from, and whether it is spread out or folded over the body.
+  const sleevesF = sleeves.map((s) => transform(m, s));
+  const usableBy: Record<SideName, Pt[] | null> = { left: null, right: null };
+  const sleeveSeen: Record<SideName, boolean> = { left: false, right: false };
+  sleevesF.forEach((sl, i) => {
+    if (sl.length < 3) return;
+    const attach = sl.reduce((bp, p) => (p[1] < bp[1] ? p : bp), sl[0]);
+    const side: SideName = attach[0] < cx ? "left" : "right";
+    sleeveSeen[side] = true;
+    const c = polygonCentroid(sl);
+    const folded = Math.abs(c[0] - cx) < FOLDED_SHARE * half;
+    const vetoed = opts.sleeveUsable?.[i] === false;
+    if (folded) notes.push(`${side === "left" ? "왼쪽" : "오른쪽"}(사진 기준) 소매가 몸판 위로 접혀 있어 그쪽은 재지 않았습니다.`);
+    else if (vetoed) notes.push(`Muse Spark가 ${side === "left" ? "왼쪽" : "오른쪽"}(사진 기준) 소매를 펴진 소매가 아니라고 보아 그쪽은 재지 않았습니다.`);
+    else if (!usableBy[side]) usableBy[side] = sl;
+  });
+  // No sleeve masks at all: fall back to the outline on both sides (shoulder less certain).
+  const noMasks = !sleeveSeen.left && !sleeveSeen.right;
 
-  // Side neck points: highest point either side of the middle, above the armpits.
-  const nearNeck = (s: -1 | 1) => (p: Pt) => p[1] < 0 && s * p[0] > 0.5 && s * p[0] < 0.3 * chestW;
+  // Side neck points: highest point either side of the centre line.
+  const nearNeck = (s: -1 | 1) => (p: Pt) => p[1] < -0.4 * (hc.h) && s * (p[0] - cx) > 0.5 && s * (p[0] - cx) < 0.6 * half;
   const nl = argBest(outline, ([, y]) => -y, nearNeck(-1)), nr = argBest(outline, ([, y]) => -y, nearNeck(1));
   if (nl < 0 || nr < 0) return { ok: false, detail: "목둘레를 찾지 못했습니다. 목이 사진 위쪽으로 오게 펴 주십시오." };
   const snpL = outline[nl], snpR = outline[nr];
+  const snpY = (snpL[1] + snpR[1]) / 2;
 
-  // Each side: shoulder point, then the sleeve as the outline from the side neck point to the armpit.
+  // Armpits: deepest dent on that side between the neck and the hem, next to its sleeve.
+  const ds = defects(outline).filter((d) => d.depth >= MIN_ARMPIT_DEPTH && outline[d.i][1] > snpY + 0.1 * hc.h && outline[d.i][1] < -0.1 * hc.h);
+  const nearPoly = (p: Pt, poly: readonly Pt[]) => Math.min(...poly.map((q) => dist(p, q)));
+  const armpit = (side: SideName) => {
+    const s = side === "left" ? -1 : 1;
+    const mine = ds.filter((d) => s * (outline[d.i][0] - cx) > 0).sort((x, y) => y.depth - x.depth);
+    const sl = usableBy[side];
+    return (sl && mine.find((d) => nearPoly(outline[d.i], sl) <= ARMPIT_NEAR_SLEEVE)) ?? mine[0];
+  };
+
   let fallback = false;
-  const side = (snpIdx: number, pitIdx: number, s: -1 | 1) => {
-    const sleeveArc = arc(n, snpIdx, pitIdx, s < 0 ? hl : hr).map((i) => outline[i]);
-    const snp = outline[snpIdx], pit = outline[pitIdx];
-    const mask = sleevesF.filter((sl) => sl.some((p) => s * p[0] > 0)).sort((x, y) => near(y, snp) - near(x, snp))[0];
+  const measureSide = (side: SideName) => {
+    if (!usableBy[side] && !noMasks) return null;
+    const d = armpit(side);
+    if (!d) return null;
+    const snpIdx = side === "left" ? nl : nr;
+    const sleeveArc = arc(n, snpIdx, d.i, side === "left" ? hc.hl : hc.hr).map((i) => outline[i]);
+    const snp = outline[snpIdx], pit = outline[d.i];
+    const mask = usableBy[side];
     let sp: Pt;
     if (mask) {
       // The sleeve point nearest the side neck point is where the sleeve meets the shoulder; snap it to the outline.
@@ -97,46 +162,53 @@ export function measureTop(shape: Shape, sleeves: Pt[][]): Measured<TopKey> | { 
     // Bicep: from the armpit square across to the sleeve's top line.
     const u = [cuffTop[0] - sp[0], cuffTop[1] - sp[1]], ul = Math.hypot(u[0], u[1]) || 1;
     const bicep = Math.abs(u[0] * (pit[1] - sp[1]) - u[1] * (pit[0] - sp[0])) / ul;
-    return { sp, cuffTop, cuffBottom, sleeve: dist(sp, cuffTop), opening: dist(cuffTop, cuffBottom), bicep };
+    return { pit, sp, cuffTop, cuffBottom, sleeve: dist(sp, cuffTop), opening: dist(cuffTop, cuffBottom), bicep };
   };
-  const L = side(nl, dl.i, -1), R = side(nr, dr.i, 1);
-  if (!L || !R) return { ok: false, detail: "소매 끝을 찾지 못했습니다. 소매를 곧게 펴 주십시오." };
-  if (fallback) notes.push("한쪽 소매를 SAM이 찾지 못해 어깨점을 윤곽이 꺾이는 곳으로 잡았습니다(± 큼). 어깨너비를 확인해 주십시오.");
+  const L = measureSide("left"), R = measureSide("right");
+  if (fallback) notes.push("SAM이 소매를 찾지 못해 어깨점을 윤곽이 꺾이는 곳으로 잡았습니다(± 큼). 어깨너비를 확인해 주십시오.");
+  const sides = [L, R].filter((x): x is NonNullable<typeof x> => !!x);
+  if (sides.length === 1) notes.push("한쪽 소매만 쓸 수 있어 가슴단면·어깨너비는 그쪽을 중심선에 대칭시켜 쟀습니다(± 큼).");
+  if (sides.length === 0) notes.push("펴진 소매가 없어 가슴단면·어깨너비·소매 치수는 재지 않았습니다. 소매를 펴서 다시 찍거나 줄자로 재 주십시오.");
 
   const hemYAt = (x: number) => hemL[1] + ((x - hemL[0]) / (hemR[0] - hemL[0] || 1)) * (hemR[1] - hemL[1]);
-  const mean = (p: number, q: number) => (p + q) / 2;
-  const v = (cm: number, extra = 0) => valueOf(cm, shape, undefined, extra);
+  const avg = (xs: number[]) => xs.reduce((p, q) => p + q, 0) / xs.length;
+  const extra = opts.extraRel ?? 0;
+  const v = (cm: number, rel = 0) => valueOf(cm, shape, undefined, Math.hypot(rel, extra));
   const spRel = fallback ? SHOULDER_FALLBACK_REL : 0;
+  const both = L && R;
   const values: Partial<Record<TopKey, Value>> = {
-    length: v(mean(hemYAt(snpL[0]) - snpL[1], hemYAt(snpR[0]) - snpR[1])),
-    chest: v(chestW),
-    shoulder: v(dist(L.sp, R.sp), spRel),
+    length: v(avg([hemYAt(snpL[0]) - snpL[1], hemYAt(snpR[0]) - snpR[1]])),
     hem: v(dist(hemL, hemR)),
-    sleeve: v(mean(L.sleeve, R.sleeve), spRel),
-    sleeveOpening: v(mean(L.opening, R.opening)),
-    bicep: v(mean(L.bicep, R.bicep)),
     neckWidth: v(dist(snpL, snpR)),
-    armholeDepth: v(mean(pitL[1] - snpL[1], pitR[1] - snpR[1])),
-    shoulderDrop: v(Math.max(0, mean(L.sp[1] - snpL[1], R.sp[1] - snpR[1])), spRel),
   };
+  if (sides.length) {
+    values.chest = both ? v(dist(L.pit, R.pit)) : v(2 * Math.abs(sides[0].pit[0] - cx), MIRRORED_REL);
+    values.shoulder = both ? v(dist(L.sp, R.sp), spRel) : v(2 * Math.abs(sides[0].sp[0] - cx), Math.hypot(spRel, MIRRORED_REL));
+    values.sleeve = v(avg(sides.map((x) => x.sleeve)), spRel);
+    values.sleeveOpening = v(avg(sides.map((x) => x.opening)));
+    values.bicep = v(avg(sides.map((x) => x.bicep)));
+    values.armholeDepth = v(avg(sides.map((x) => x.pit[1])) - snpY);
+    values.shoulderDrop = v(Math.max(0, avg(sides.map((x) => x.sp[1])) - snpY), spRel);
+  }
   const { values: kept, refused } = inRange(values, RANGES);
-  return {
-    values: kept,
-    refused,
-    landmarks: { pitL, pitR, hemL, hemR, snpL, snpR, spL: L.sp, spR: R.sp, cuffTopR: R.cuffTop, cuffBottomR: R.cuffBottom },
-    segments: [
-      { key: "chest", a: pitL, b: pitR },
-      { key: "hem", a: hemL, b: hemR },
-      { key: "shoulder", a: L.sp, b: R.sp },
-      { key: "length", a: snpR, b: [snpR[0], hemYAt(snpR[0])] },
-      { key: "sleeve", a: R.sp, b: R.cuffTop },
-      { key: "sleeveOpening", a: R.cuffTop, b: R.cuffBottom },
-      { key: "neckWidth", a: snpL, b: snpR },
-    ],
-    outline,
-    frame: m,
-    notes: [...shape.notes, ...notes],
-  };
+  const show = R ?? L;
+  const segments: Measured<TopKey>["segments"] = [
+    { key: "hem", a: hemL, b: hemR },
+    { key: "length", a: snpR, b: [snpR[0], hemYAt(snpR[0])] },
+    { key: "neckWidth", a: snpL, b: snpR },
+  ];
+  if (show) {
+    const mirror = (p: Pt): Pt => [2 * cx - p[0], p[1]];
+    segments.push(
+      { key: "chest", a: L?.pit ?? mirror(show.pit), b: R?.pit ?? mirror(show.pit), mirrored: !both },
+      { key: "shoulder", a: L?.sp ?? mirror(show.sp), b: R?.sp ?? mirror(show.sp), mirrored: !both },
+    );
+    // Every side's own sleeve lines, so a cuff cut off by the photo edge is caught on either side.
+    for (const sd of sides) segments.push({ key: "sleeve", a: sd.sp, b: sd.cuffTop }, { key: "sleeveOpening", a: sd.cuffTop, b: sd.cuffBottom }, { key: "bicep", a: sd.pit, b: sd.pit });
+  }
+  const landmarks: Record<string, Pt> = { hemL, hemR, snpL, snpR };
+  for (const [k, sd] of [["L", L], ["R", R]] as const) if (sd) Object.assign(landmarks, { [`pit${k}`]: sd.pit, [`sp${k}`]: sd.sp, [`cuffTop${k}`]: sd.cuffTop, [`cuffBottom${k}`]: sd.cuffBottom });
+  return { values: kept, refused, landmarks, segments, outline, frame: m, notes: [...shape.notes, ...notes] };
 }
 
 const near = (poly: readonly Pt[], p: Pt) => -Math.min(...poly.map((q) => dist(p, q)));
