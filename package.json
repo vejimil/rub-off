@@ -9,8 +9,9 @@
     "lint": "eslint",
     "ping": "node --env-file-if-exists=.env.local scripts/ping.mjs",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test 'src/**/*.test.ts'",
-    "pattern": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/pattern.ts"
+    "test": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test 'src/**/*.test.ts'",
+    "pattern": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/pattern.ts",
+    "size": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/size.ts"
   },
   "dependencies": {
     "@meta-sam/parser": "^0.1.0",
