@@ -11,7 +11,7 @@ export function PhotoOverlay({ photo, run, onTap, taps = [] }: { photo: PhotoVie
   const fs = Math.round(Math.max(photo.width, photo.height) / 55);
   return (
     <figure
-      className={`relative overflow-hidden rounded-lg border bg-card ${onTap ? "cursor-crosshair border-chalk" : "border-line"}`}
+      className={`relative overflow-hidden rounded-2xl border bg-card ${onTap ? "cursor-crosshair border-chalk ring-2 ring-chalk/40" : "border-line"}`}
       onClick={(e) => {
         if (!onTap) return;
         const r = e.currentTarget.getBoundingClientRect();
@@ -29,23 +29,29 @@ export function PhotoOverlay({ photo, run, onTap, taps = [] }: { photo: PhotoVie
           <path d={svgPath(run.overlay.outlinePx, true)} fill="none" stroke="#fff" strokeWidth={fs / 3} opacity={0.8} />
           <path d={svgPath(run.overlay.outlinePx, true)} fill="none" stroke="var(--ink)" strokeWidth={fs / 7} />
           {run.overlay.segmentsPx.map((s) => (
-            <g key={s.key}>
-              <line x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke="var(--mark)" strokeWidth={fs / 4} strokeLinecap="round" />
-              <text
-                x={Math.min(photo.width - 4 * fs, Math.max(4 * fs, (s.a[0] + s.b[0]) / 2))}
-                y={Math.min(photo.height - fs, Math.max(1.5 * fs, (s.a[1] + s.b[1]) / 2 - fs / 2))}
-                fontSize={fs}
-                textAnchor="middle"
-                fill="#fff"
-                stroke="var(--ink)"
-                strokeWidth={fs / 6}
-                paintOrder="stroke"
-                fontWeight={600}
-              >
-                {MEASURE_KO[s.key] ?? s.key} {s.cm.toFixed(1)}
-              </text>
+            <g key={`${s.key}-${s.a[0]}`}>
+              <line x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke="#fff" strokeWidth={fs / 2.2} strokeLinecap="round" opacity={0.85} />
+              <line x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke="var(--mark)" strokeWidth={fs / 5} strokeLinecap="round" />
+              <circle cx={s.a[0]} cy={s.a[1]} r={fs / 3} fill="var(--mark)" stroke="#fff" strokeWidth={fs / 10} />
+              <circle cx={s.b[0]} cy={s.b[1]} r={fs / 3} fill="var(--mark)" stroke="#fff" strokeWidth={fs / 10} />
             </g>
           ))}
+          {/* Labels last, so no line crosses a label. */}
+          {dedupe(run.overlay.segmentsPx).map((s) => {
+            const label = `${MEASURE_KO[s.key] ?? s.key} ${s.cm.toFixed(1)}`;
+            const w = label.length * fs * 0.62 + fs;
+            const h = fs * 1.5;
+            const x = Math.min(photo.width - w / 2 - fs / 2, Math.max(w / 2 + fs / 2, (s.a[0] + s.b[0]) / 2));
+            const y = Math.min(photo.height - h, Math.max(h, (s.a[1] + s.b[1]) / 2));
+            return (
+              <g key={`label-${s.key}`}>
+                <rect x={x - w / 2} y={y - h / 2} width={w} height={h} rx={h / 2} fill="var(--ink)" opacity={0.88} />
+                <text x={x} y={y + fs * 0.36} fontSize={fs} textAnchor="middle" fill="#fff" fontWeight={600}>
+                  {label}
+                </text>
+              </g>
+            );
+          })}
         </svg>
       )}
       {taps.length > 0 && (
@@ -60,4 +66,10 @@ export function PhotoOverlay({ photo, run, onTap, taps = [] }: { photo: PhotoVie
       )}
     </figure>
   );
+}
+
+// One label per measurement, even when it is drawn on both sides.
+function dedupe<T extends { key: string }>(xs: readonly T[]): T[] {
+  const seen = new Set<string>();
+  return xs.filter((x) => (seen.has(x.key) ? false : (seen.add(x.key), true)));
 }

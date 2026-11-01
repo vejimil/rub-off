@@ -8,7 +8,7 @@ export function PatternPreview({ sheet }: { sheet: Sheet }) {
   const [cols, rows] = pagesFor(sheet.width, sheet.height);
   const W = (cols - 1) * A4_TILING.step[0] + A4_TILING.content[0], H = (rows - 1) * A4_TILING.step[1] + A4_TILING.content[1];
   return (
-    <svg viewBox={`-1 -1 ${W + 2} ${H + 2}`} className="h-auto w-full rounded-lg border border-line bg-card" role="img" aria-label="패턴 배치와 인쇄 페이지">
+    <svg viewBox={`-1 -1 ${W + 2} ${H + 2}`} className="h-auto w-full rounded-2xl border border-line bg-paper" role="img" aria-label="패턴 배치와 인쇄 페이지">
       {Array.from({ length: rows * cols }, (_, i) => {
         const r = Math.floor(i / cols), c = i % cols;
         return (

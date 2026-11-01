@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Fabric } from "@/lib/pattern/types";
 import { SIZE_KEY_KO, SIZE_KEYS, type Fit, type SizeKey } from "@/lib/rules/fit-tolerance";
+import { Badge, buttonGhost, Segmented } from "@/components/ui";
 import { decideSize, type Mine } from "@/lib/size/decide";
 import { toSizeTable, type ReadTable } from "@/lib/size/table";
 
@@ -48,8 +49,8 @@ export function SizePanel({ mine, fabric, sample }: { mine: Partial<Record<SizeK
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <label className="cursor-pointer rounded-md border border-line bg-card px-3 py-2 text-sm hover:border-ink">
-          실측표 스크린샷 올리기
+        <label className={`${buttonGhost} cursor-pointer`}>
+          {read ? "다른 실측표 올리기" : "실측표 스크린샷 올리기"}
           <input type="file" accept="image/*" className="hidden" disabled={busy} onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
         </label>
         {busy && <span className="text-sm text-muted">Muse Spark가 표를 읽는 중…</span>}
@@ -71,11 +72,11 @@ export function SizePanel({ mine, fabric, sample }: { mine: Partial<Record<SizeK
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr>
-                  <th className="border-b border-line p-2 text-left">사이즈</th>
+                  <th className="whitespace-nowrap border-b border-line p-2 text-left">사이즈</th>
                   {read.columns.map((col, c) => (
-                    <th key={c} className="border-b border-line p-2 text-left font-normal">
+                    <th key={c} className="whitespace-nowrap border-b border-line p-2 text-left font-normal">
                       <div className="font-semibold">{col.header}</div>
-                      <select value={col.meaning} onChange={(e) => setMeaning(c, e.target.value)} className="mt-1 rounded border border-line bg-card text-xs">
+                      <select value={col.meaning} onChange={(e) => setMeaning(c, e.target.value)} className="mt-1 rounded-md border border-line bg-paper px-1 py-0.5 text-xs">
                         {[...SIZE_KEYS, "other"].map((k) => (
                           <option key={k} value={k}>
                             {k === "other" ? "비교 안 함" : SIZE_KEY_KO[k as SizeKey]}
@@ -95,7 +96,7 @@ export function SizePanel({ mine, fabric, sample }: { mine: Partial<Record<SizeK
                         <input
                           value={cell ?? ""}
                           onChange={(e) => setCell(r, c, e.target.value)}
-                          className={`w-16 rounded border px-1 py-0.5 ${parsed.unreadable.some((u) => u.row === row.label && u.header === read.columns[c].header) ? "border-mark bg-mark-soft" : "border-line bg-card"}`}
+                          className={`w-12 rounded-lg border px-1.5 py-1 text-right tabular-nums ${parsed.unreadable.some((u) => u.row === row.label && u.header === read.columns[c].header) ? "border-mark bg-mark-soft" : "border-line bg-paper"}`}
                         />
                       </td>
                     ))}
@@ -121,42 +122,58 @@ export function SizePanel({ mine, fabric, sample }: { mine: Partial<Record<SizeK
                 <option value="unknown">표에 없음</option>
               </select>
             </label>
-            <label>
-              원하는 핏{" "}
-              <select value={fit} onChange={(e) => setFit(e.target.value as Fit)} className="rounded border border-line bg-card">
-                <option value="same">내 옷과 같게</option>
-                <option value="looser">조금 여유 있게</option>
-                <option value="tighter">조금 붙게</option>
-              </select>
-            </label>
+
+          </div>
+
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-muted">원하는 핏</span>
+            <Segmented
+              size="sm"
+              value={fit}
+              onChange={setFit}
+              options={[
+                { value: "tighter", label: "조금 붙게" },
+                { value: "same", label: "내 옷과 같게" },
+                { value: "looser", label: "조금 여유 있게" },
+              ]}
+            />
           </div>
 
           {decision && !decision.ok && <p className="rounded-md bg-warn-soft p-3 text-sm">{decision.reason === "ask-basis" ? "표의 폭이 단면인지 둘레인지 골라 주십시오." : "표와 내 옷에 같은 측정 항목이 없습니다."}</p>}
           {decision?.ok && (
-            <div className="space-y-3 rounded-lg border border-line bg-card p-4">
-              <p className="text-2xl font-semibold">
-                추천 사이즈 <span className="text-chalk">{decision.best.label}</span>
-              </p>
-              <ul className="space-y-1 text-sm">
-                {decision.sentences.map((s) => (
-                  <li key={s}>{s}</li>
-                ))}
-              </ul>
-              <table className="w-full text-sm">
-                <tbody>
-                  {decision.all.map((r) => (
-                    <tr key={r.label} className={r.label === decision.best.label ? "font-semibold" : "text-muted"}>
-                      <td className="py-1 pr-3">{r.label}</td>
-                      {r.checks.map((c) => (
-                        <td key={c.key} className="py-1 pr-3">
-                          <span className={c.verdict === "fits" ? "text-ok" : "text-mark"}>{c.verdict === "fits" ? "✓" : "✗"}</span> {SIZE_KEY_KO[c.key]} {c.diff > 0 ? "+" : c.diff < 0 ? "−" : ""}
-                          {Math.abs(c.diff)}
-                        </td>
-                      ))}
-                    </tr>
+            <div className="overflow-hidden rounded-2xl border border-line">
+              <div className="flex items-center gap-4 bg-ink p-5 text-paper">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-paper text-3xl font-semibold text-ink">{decision.best.label}</div>
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-paper/60">추천 사이즈</p>
+                  <p className="mt-1 text-sm">{decision.sentences[0]?.replace(/^[^:]+:\s*/, "")}</p>
+                </div>
+              </div>
+              {decision.sentences.length > 1 && (
+                <ul className="space-y-1 bg-warn-soft px-5 py-3 text-sm">
+                  {decision.sentences.slice(1).map((t) => (
+                    <li key={t}>{t}</li>
                   ))}
-                </tbody>
-              </table>
+                </ul>
+              )}
+              <div className="divide-y divide-line">
+                {decision.all.map((r) => (
+                  <div key={r.label} className={`flex items-center gap-3 px-5 py-2.5 text-sm ${r.label === decision.best.label ? "bg-chalk-soft" : ""}`}>
+                    <span className="w-10 font-semibold">{r.label}</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {r.checks.map((c) => (
+                        <Badge key={c.key} tone={c.verdict === "fits" ? "ok" : "mark"}>
+                          {c.verdict === "fits" ? "✓" : "✗"} {SIZE_KEY_KO[c.key]} {c.diff > 0 ? "+" : c.diff < 0 ? "−" : ""}
+                          {Math.abs(c.diff)}
+                        </Badge>
+                      ))}
+                    </div>
+                    <span className="ml-auto text-xs text-muted">
+                      {r.fits}/{r.checks.length}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </>

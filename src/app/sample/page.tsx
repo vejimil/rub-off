@@ -13,9 +13,9 @@ export const metadata: Metadata = { title: "샘플 · Rub-Off" };
 export default function SamplePage() {
   const sample = shorts as unknown as SampleRun;
   return (
-    <main className="mx-auto w-full max-w-4xl px-6 py-10">
-      <h1 className="text-3xl font-semibold tracking-tight">샘플: 반바지 한 벌</h1>
-      <p className="mb-8 mt-2 text-sm text-muted">실제 사진을 SAM 3.1로 한 번 분석해 저장해 둔 결과입니다. 이 페이지는 API를 부르지 않습니다.</p>
+    <main className="mx-auto w-full max-w-6xl px-5 py-8">
+      <h1 className="text-2xl font-semibold tracking-tight">샘플: 반바지 한 벌</h1>
+      <p className="mb-6 mt-1 text-sm text-muted">실제 사진을 SAM 3.1로 한 번 분석해 저장해 둔 결과입니다. 이 페이지는 API를 부르지 않습니다.</p>
       <Workbench
         live={liveAllowed()}
         initial={{ photo: sample.photo, run: sample.run, garment: "pants", fabric: "woven" }}

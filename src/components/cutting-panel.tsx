@@ -6,6 +6,7 @@ import { applyH, type Mat3 } from "@/lib/geom/homography";
 import type { Pt } from "@/lib/geom/point";
 import { svgPath } from "@/lib/geom/point";
 import { bounds } from "@/lib/geom/polygon";
+import { buttonGhost } from "@/components/ui";
 import { nest, piecesToCut } from "@/lib/nest/nest";
 import type { Pattern } from "@/lib/pattern/types";
 
@@ -69,10 +70,10 @@ export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolea
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <label>
           원단 크기(cm, 가로x세로, 여러 장은 쉼표){" "}
-          <input value={sizes} onChange={(e) => { setSizes(e.target.value); setPhoto(null); }} className="w-44 rounded border border-line bg-card px-2 py-1" />
+          <input value={sizes} onChange={(e) => { setSizes(e.target.value); setPhoto(null); }} className="w-44 rounded-lg border border-line bg-paper px-2 py-1" />
         </label>
         {live && (
-          <label className="cursor-pointer rounded-md border border-line bg-card px-3 py-2 hover:border-ink">
+          <label className={`${buttonGhost} cursor-pointer`}>
             {busy ? "SAM 3.1이 원단을 찾는 중…" : "원단 사진으로"}
             <input type="file" accept="image/*" className="hidden" disabled={busy} onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
           </label>
@@ -82,16 +83,16 @@ export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolea
         </label>
       </div>
       <p className="text-sm text-muted">원단의 식서(세로 방향)는 사진·입력의 세로입니다. 조각은 식서를 따라 0°·180°로만 돌리고, 원단 가장자리와 조각 사이에 1 cm 이상 띄웁니다.</p>
-      {error && <p className="rounded-md bg-mark-soft p-3 text-sm">{error}</p>}
+      {error && <p className="rounded-xl bg-mark-soft p-3 text-sm">{error}</p>}
 
       {result && (
         <>
           {result.unplaced.length === 0 ? (
-            <p className="rounded-md bg-ok-soft p-3 text-sm">
+            <p className="rounded-xl bg-ok-soft p-3 text-sm">
               조각 {result.placed.length}장이 모두 들어갑니다. 원단 사용률 {Math.round((100 * result.usedAreaCm2) / result.fabricAreaCm2)}%.
             </p>
           ) : (
-            <ul className="space-y-1 rounded-md bg-mark-soft p-3 text-sm">
+            <ul className="space-y-1 rounded-xl bg-mark-soft p-3 text-sm">
               {result.unplaced.map((u) => (
                 <li key={u.piece.id}>
                   {u.piece.nameKo}이(가) 들어가지 않습니다: 조각 {u.size[0].toFixed(0)} × {u.size[1].toFixed(0)} cm, 남은 가장 큰 빈 곳 {u.largestFree[0]} × {u.largestFree[1]} cm.
@@ -101,7 +102,7 @@ export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolea
             </ul>
           )}
           {photo ? (
-            <figure className="relative max-w-xl overflow-hidden rounded-lg border border-line">
+            <figure className="relative overflow-hidden rounded-2xl border border-line">
               {/* eslint-disable-next-line @next/next/no-img-element -- the user's own fabric photo */}
               <img src={photo.src} alt="원단" className="block h-auto w-full" />
               <svg viewBox={`0 0 ${photo.width} ${photo.height}`} className="absolute inset-0 h-full w-full" aria-hidden>
@@ -111,7 +112,7 @@ export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolea
               </svg>
             </figure>
           ) : (
-            <svg viewBox={`${fb.minX - 2} ${fb.minY - 2} ${fb.maxX - fb.minX + 4} ${fb.maxY - fb.minY + 4}`} className="h-auto w-full max-w-2xl rounded-lg border border-line bg-card" role="img" aria-label="원단 위 재단 배치">
+            <svg viewBox={`${fb.minX - 2} ${fb.minY - 2} ${fb.maxX - fb.minX + 4} ${fb.maxY - fb.minY + 4}`} className="h-auto w-full rounded-2xl border border-line bg-paper" role="img" aria-label="원단 위 재단 배치">
               {fabric.map((f, i) => (
                 <path key={i} d={svgPath(f, true)} fill="var(--warn-soft)" stroke="var(--warn)" strokeWidth={0.3} />
               ))}
