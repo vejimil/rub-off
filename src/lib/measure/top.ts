@@ -14,7 +14,7 @@
 // the outline; they stay unmeasured and the draft says so.
 
 import type { Pt } from "../geom/point.ts";
-import { polygonCentroid, rotation, simplify, translation } from "../geom/polygon.ts";
+import { applyAffine, invertAffine, polygonCentroid, rotation, simplify, translation } from "../geom/polygon.ts";
 import type { TopMeasures } from "../pattern/measures.ts";
 import { arc, argBest, compose, crossings, defects, dist, inRange, transform, valueOf, type Measured, type Shape, type Value } from "./shape.ts";
 
@@ -43,6 +43,8 @@ export interface TopOptions {
   // Per sleeve mask, in the same order: false when the layout check says it isn't a usable sleeve.
   sleeveUsable?: boolean[];
   hood?: Pt[] | null; // the hood's polygon, which points to the top of the garment
+  // True for a point (in the shape's cm) on the photo's edge: a cuff there is cut off by the frame.
+  clipped?: (p: Pt) => boolean;
   extraRel?: number; // wrinkles seen by the layout check
 }
 
@@ -162,16 +164,24 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
     const cuff = cuffCorners(rest);
     if (!cuff) return null;
     const [cuffTop, cuffBottom] = cuff;
+    // A cuff on the photo's edge is cut off: this side's sleeve can't be measured, the other side's can.
+    const back = invertAffine(m);
+    const cutOff = !!opts.clipped && [cuffTop, cuffBottom].some((p) => opts.clipped!(applyAffine(back, p)));
     // Bicep: from the armpit square across to the sleeve's top line.
     const u = [cuffTop[0] - sp[0], cuffTop[1] - sp[1]], ul = Math.hypot(u[0], u[1]) || 1;
     const bicep = Math.abs(u[0] * (pit[1] - sp[1]) - u[1] * (pit[0] - sp[0])) / ul;
-    return { pit, sp, cuffTop, cuffBottom, sleeve: dist(sp, cuffTop), opening: dist(cuffTop, cuffBottom), bicep };
+    return { pit, sp, cuffTop, cuffBottom, sleeve: dist(sp, cuffTop), opening: dist(cuffTop, cuffBottom), bicep, cutOff };
   };
   const L = measureSide("left"), R = measureSide("right");
   if (fallback) notes.push("SAM이 소매를 찾지 못해 어깨점을 윤곽이 꺾이는 곳으로 잡았습니다(± 큼). 어깨너비를 확인해 주십시오.");
   const sides = [L, R].filter((x): x is NonNullable<typeof x> => !!x);
   if (sides.length === 1) notes.push("한쪽 소매만 쓸 수 있어 가슴단면·어깨너비는 그쪽을 중심선에 대칭시켜 쟀습니다(± 큼).");
   if (sides.length === 0) notes.push("펴진 소매가 없어 가슴단면·어깨너비·소매 치수는 재지 않았습니다. 소매를 펴서 다시 찍거나 줄자로 재 주십시오.");
+  // Sleeve length and opening only from a side whose cuff is inside the photo.
+  const sleeveSides = sides.filter((x) => !x.cutOff);
+  if (sides.length && sleeveSides.length < sides.length) {
+    notes.push(sleeveSides.length ? "한쪽 소맷부리가 사진 가장자리에 잘려 소매길이·소매단면은 다른 쪽에서 쟀습니다." : "소맷부리가 사진 가장자리에 잘려 소매길이·소매단면은 재지 않았습니다. 옷 전체가 사진 안에 들어오게 찍어 주십시오.");
+  }
 
   const hemYAt = (x: number) => hemL[1] + ((x - hemL[0]) / (hemR[0] - hemL[0] || 1)) * (hemR[1] - hemL[1]);
   const avg = (xs: number[]) => xs.reduce((p, q) => p + q, 0) / xs.length;
@@ -187,8 +197,10 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
   if (sides.length) {
     values.chest = both ? v(dist(L.pit, R.pit)) : v(2 * Math.abs(sides[0].pit[0] - cx), MIRRORED_REL);
     values.shoulder = both ? v(dist(L.sp, R.sp), spRel) : v(2 * Math.abs(sides[0].sp[0] - cx), Math.hypot(spRel, MIRRORED_REL));
-    values.sleeve = v(avg(sides.map((x) => x.sleeve)), spRel);
-    values.sleeveOpening = v(avg(sides.map((x) => x.opening)));
+    if (sleeveSides.length) {
+      values.sleeve = v(avg(sleeveSides.map((x) => x.sleeve)), spRel);
+      values.sleeveOpening = v(avg(sleeveSides.map((x) => x.opening)));
+    }
     values.bicep = v(avg(sides.map((x) => x.bicep)));
     values.armholeDepth = v(avg(sides.map((x) => x.pit[1])) - snpY);
     values.shoulderDrop = v(Math.max(0, avg(sides.map((x) => x.sp[1])) - snpY), spRel);
@@ -207,7 +219,7 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
       { key: "shoulder", a: L?.sp ?? mirror(show.sp), b: R?.sp ?? mirror(show.sp), mirrored: !both },
     );
     // Every side's own sleeve lines, so a cuff cut off by the photo edge is caught on either side.
-    for (const sd of sides) segments.push({ key: "sleeve", a: sd.sp, b: sd.cuffTop }, { key: "sleeveOpening", a: sd.cuffTop, b: sd.cuffBottom }, { key: "bicep", a: sd.pit, b: sd.pit });
+    for (const sd of sleeveSides) segments.push({ key: "sleeve", a: sd.sp, b: sd.cuffTop }, { key: "sleeveOpening", a: sd.cuffTop, b: sd.cuffBottom });
   }
   const landmarks: Record<string, Pt> = { hemL, hemR, snpL, snpR };
   for (const [k, sd] of [["L", L], ["R", R]] as const) if (sd) Object.assign(landmarks, { [`pit${k}`]: sd.pit, [`sp${k}`]: sd.sp, [`cuffTop${k}`]: sd.cuffTop, [`cuffBottom${k}`]: sd.cuffBottom });
@@ -223,12 +235,17 @@ function turnAt(s: readonly Pt[], i: number): number {
 
 // The cuff's two corners on the outline from the shoulder point to the armpit: the first sharp
 // turn walking out along the sleeve's top line, and the first walking back along its underarm.
+// A kink in the mask edge right at the shoulder point or the armpit is not a cuff corner.
+const CUFF_CLEAR_CM = 3;
+
 function cuffCorners(rest: readonly Pt[]): [Pt, Pt] | null {
   const s = simplify(rest, 1);
   if (s.length < 4) return null;
+  const start = s[0], end = s[s.length - 1];
+  const clear = (i: number) => dist(s[i], start) >= CUFF_CLEAR_CM && dist(s[i], end) >= CUFF_CLEAR_CM;
   let top = -1, bottom = -1;
-  for (let i = 1; i < s.length - 1 && top < 0; i++) if (turnAt(s, i) > CORNER_TURN) top = i;
-  for (let i = s.length - 2; i > 0 && bottom < 0; i--) if (turnAt(s, i) > CORNER_TURN) bottom = i;
+  for (let i = 1; i < s.length - 1 && top < 0; i++) if (clear(i) && turnAt(s, i) > CORNER_TURN) top = i;
+  for (let i = s.length - 2; i > 0 && bottom < 0; i--) if (clear(i) && turnAt(s, i) > CORNER_TURN) bottom = i;
   return top > 0 && bottom > top ? [s[top], s[bottom]] : null;
 }
 

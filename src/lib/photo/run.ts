@@ -148,7 +148,8 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
   }
 
   const partsFor = (sh: Shape) => partGrids.map((g) => partPolygon(g, sh.plane));
-  const optsFor = (sh: Shape): TopOptions => ({ ...measureOpts, hood: hasHood ? partPolygon(hood, sh.plane) : null });
+  const nearEdge = ([x, y]: Pt) => x <= EDGE_PX || y <= EDGE_PX || x >= photo.width - 1 - EDGE_PX || y >= photo.height - 1 - EDGE_PX;
+  const optsFor = (sh: Shape): TopOptions => ({ ...measureOpts, hood: hasHood ? partPolygon(hood, sh.plane) : null, clipped: (p) => nearEdge(sh.plane.toPx(p)) });
   let shape: Shape;
   if (scale && paperGrid) {
     const s = shapeFromMasks(garmentGrid, paperGrid, scale);
@@ -168,10 +169,7 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
 
   // A measurement that ends on the photo's edge is of a garment cut off by the frame: refused.
   const toPhoto = (p: Pt) => shape.plane.toPx(applyAffine(invertAffine(m0.frame), p));
-  const onEdge = (p: Pt) => {
-    const [x, y] = toPhoto(p);
-    return x <= EDGE_PX || y <= EDGE_PX || x >= photo.width - 1 - EDGE_PX || y >= photo.height - 1 - EDGE_PX;
-  };
+  const onEdge = (p: Pt) => nearEdge(toPhoto(p));
   const clipped = new Set(m0.segments.filter((sg) => !sg.mirrored && (onEdge(sg.a) || onEdge(sg.b))).map((sg) => sg.key));
   const kept = Object.fromEntries(Object.entries(m0.values).filter(([k]) => !clipped.has(k)));
   if (clipped.size) notes.push(`옷이 사진 가장자리에 잘려 다음은 재지 않았습니다: ${[...clipped].map((k) => MEASURE_KO[k] ?? k).join(", ")}. 옷 전체가 사진 안에 들어오게 찍어 주십시오.`);
