@@ -31,7 +31,7 @@ Everything in this repository was written during the hackathon. The commit histo
 | Grading by size steps (re-drafts from graded measurements) | Done (Oct 31), increments to be confirmed |
 | Size decision: Muse Spark copies a size table, code compares it with your garment | Done (Oct 31) |
 | Cutting layout on your own fabric (raster bottom-left fill along the grain) | Done (Oct 31) |
-| Web app with sample mode (no API calls) and live-run limits | Done (Oct 31), not deployed |
+| Web app with sample mode (no API calls) and live-run limits. Samples: my T-shirt and shorts from real photos, the other four garments from example measurements | Done (Oct 31; samples Nov 2), not deployed |
 | Real-photo robustness: Muse Spark layout check (folded or hidden sleeves, wrinkles, hem), sleeves folded over the body left out and the other side mirrored, hood removed from the outline, photos turned 90°, garments cut off by the frame refused | Done (Oct 31), on the owner's T-shirt and hoodie |
 | Zip hoodie (two-piece hood, rib bands); front and back photos combined | Done (Oct 31) |
 | Checked against the owner's tape measurements of one T-shirt (body within 3%); shoulder point from the fitted armhole seam, or tapped on the photo (sleeve length −1%) | Done (Nov 1) |
@@ -64,4 +64,4 @@ npm run size -- table.png --mine=chest:52.5,length:71   # read a size table and 
 
 ## Privacy
 
-Requests use Standard mode, so photos and prompts are not used to train Meta models. Uploads are resized and stripped of metadata before anything is stored, and files sent to the Meta API expire after a day. Sample photos in this repository show my own garments and fabric. The sample measurement table is one I made; no shop's content is included.
+Requests use Standard mode, so photos and prompts are not used to train Meta models. Uploads are resized and stripped of metadata before anything is stored, and files sent to the Meta API expire after a day. Sample photos in this repository show my own garments and fabric; the T-shirt photo is cut out to the garment and the A4 sheet (`npm run photo -- --json --cutout`). The sample measurement table is one I made; no shop's content is included.

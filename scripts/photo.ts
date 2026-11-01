@@ -7,6 +7,7 @@
 //   --shoulders=0.31,0.12,0.69,0.11   shoulder points tapped on the (first) photo, as fractions of width, height
 //   --tape=length:70,chest:54   tape-measured values, printed next to the photo's
 //   --json=src/lib/sample/x.json   also write a golden run (first photo) for sample mode
+//   --cutout           the saved sample photo keeps only the garment and the A4 sheet; the floor goes plain
 // Several photos are combined: each value from the photo that measured it most surely.
 // Writes .cache/out/<name>-overlay.jpg per photo and <name>-pattern.pdf.
 
@@ -95,7 +96,18 @@ for (const source of sources) {
   const jsonOut = opt("json");
   if (jsonOut && runs.length === 0) {
     const publicPhoto = `samples/${name}.jpg`;
-    await writeFile(path.resolve("public", publicPhoto), photo.bytes);
+    let bytes = photo.bytes;
+    if (args.includes("--cutout")) {
+      // Garment outline, its parts and the A4 sheet, grown by a little so edges keep their shadow.
+      const keep = [o.outlinePx, ...o.partsPx, ...(run.scale.source === "a4" ? [run.scale.cornersPx] : [])];
+      const grow = Math.round(photo.width / 60);
+      const mask = `<svg xmlns="http://www.w3.org/2000/svg" width="${photo.width}" height="${photo.height}">${keep
+        .map((p) => `<path d="${svgPath(p, true)}" fill="#fff" stroke="#fff" stroke-width="${grow}" stroke-linejoin="round"/>`)
+        .join("")}</svg>`;
+      const cut = await sharp(photo.bytes).ensureAlpha().composite([{ input: Buffer.from(mask), blend: "dest-in" }]).png().toBuffer();
+      bytes = await sharp(cut).flatten({ background: "#e9e4da" }).jpeg({ quality: 85 }).toBuffer();
+    }
+    await writeFile(path.resolve("public", publicPhoto), bytes);
     const { pattern: _pattern, ...rest } = run;
     void _pattern;
     await writeFile(jsonOut, JSON.stringify({ photo: { src: `/${publicPhoto}`, width: photo.width, height: photo.height }, run: rest }) + "\n");

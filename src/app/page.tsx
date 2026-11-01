@@ -6,15 +6,18 @@ import type { SampleRun } from "@/lib/client/types";
 import { draft } from "@/lib/pattern/draft";
 import { layOut } from "@/lib/pattern/layout";
 import { MEASURE_KO } from "@/lib/pattern/measures";
-import shorts from "@/lib/sample/shorts-run.json";
+import tee from "@/lib/sample/tee-run.json";
 
-// The owner's T-shirt, measured with a tape (docs/EXPERIMENTS.md, 11/1), drafted as the example pattern.
-const TEE = { length: 70, chest: 56, shoulder: 51, hem: 55.5, sleeve: 23, sleeveOpening: 18, bicep: 23.5, neckWidth: 16, armholeDepth: 30, shoulderDrop: 6, frontNeckDrop: 12, backNeckDrop: 2.5 };
+// The owner's T-shirt (docs/EXPERIMENTS.md, 11/1): the photo run, and the pattern drafted from it.
+// The neck drops sit under the rib where a photo can't see; those two are the owner's tape values.
+const TAPE_NECK = { frontNeckDrop: 12, backNeckDrop: 2.5 };
+const PANEL_KEYS = ["chest", "length", "hem", "shoulder", "sleeve", "sleeveOpening"];
 
 export default function Home() {
-  const sample = shorts as unknown as SampleRun;
-  const tee = layOut(draft({ garment: "t-shirt", measures: TEE, fabric: "knit" }));
-  const values = Object.entries(sample.run.measured.values) as [string, { cm: number; plusMinusCm: number; bound?: string }][];
+  const sample = tee as unknown as SampleRun;
+  const measured = sample.run.measured.values as Record<string, { cm: number; plusMinusCm: number; bound?: string }>;
+  const pattern = layOut(draft({ garment: "t-shirt", measures: { ...Object.fromEntries(Object.entries(measured).map(([k, v]) => [k, Math.round(v.cm * 10) / 10])), ...TAPE_NECK }, fabric: "knit" }));
+  const values = PANEL_KEYS.filter((k) => measured[k]).map((k) => [k, measured[k]] as const);
   return (
     <main className="mx-auto w-full max-w-6xl px-5">
       <section className="grid items-center gap-10 py-14 lg:grid-cols-[1.1fr_1fr] lg:py-20">
@@ -40,7 +43,7 @@ export default function Home() {
               샘플 보기
             </Link>
           </div>
-          <p className="mt-6 text-sm text-muted">티셔츠 한 벌을 줄자와 비교했을 때 몸판 치수(가슴·밑단·총장·진동깊이) 오차 3% 이내.</p>
+          <p className="mt-6 text-sm text-muted">티셔츠 한 벌을 줄자로 잰 10개 치수가 모두 사진이 붙인 ± 안에 들어왔습니다. 가슴단면 +1.6%, 밑단단면 −1.2%, 소매단면 +0.4%.</p>
         </div>
         <div className="relative mx-auto w-full max-w-md">
           <PhotoOverlay photo={sample.photo} run={sample.run} />
@@ -71,7 +74,7 @@ export default function Home() {
         </Panel>
         <Panel n={3} title="패턴" text="시접·식서·너치·골선이 들어간 1:1 패턴을 A4로 나눠 인쇄합니다. 사이즈를 올리고 내리는 그레이딩, 원단 배치, 사이즈 결정까지.">
           <div className="aspect-[4/3] overflow-hidden rounded-xl">
-            <PatternPreview sheet={tee} />
+            <PatternPreview sheet={pattern} />
           </div>
         </Panel>
       </section>

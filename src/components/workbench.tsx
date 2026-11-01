@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { CuttingPanel } from "@/components/cutting-panel";
 import { PatternPreview } from "@/components/pattern-preview";
 import { PhotoOverlay } from "@/components/photo-overlay";
@@ -58,7 +58,10 @@ type Source = "photo" | "edited" | "default" | "missing";
 
 export interface WorkbenchProps {
   live: boolean;
-  initial?: { photo: PhotoView; run: OkRun; garment: GarmentKind; fabric: Fabric };
+  initial?: { photo?: PhotoView; run?: OkRun; garment: GarmentKind; fabric: Fabric };
+  garmentPicker?: boolean; // off when a sample page picks the garment
+  placeholder?: ReactNode; // shown in place of the photo when there is none and no upload
+  editedLabel?: string; // badge for initialEdits values, e.g. "줄자" or "예시 값"
   sampleTable?: { read: ReadTable; src: string };
   initialEdits?: Record<string, string>; // e.g. tape-measured values for a sample
   initialTab?: "measure" | "pattern" | "cut" | "size";
@@ -80,10 +83,10 @@ const SIDE_KO = { front: "앞면", back: "뒷면", unclear: "앞뒤 불분명" }
 const WRINKLE_KO = { flat: "평평함", "some wrinkles": "주름 조금", "heavily wrinkled or bunched": "많이 구겨짐" } as const;
 const SLEEVE_KO = { "spread flat": "펴짐", "folded over the body": "몸판 위로 접힘", "folded under or hidden": "아래로 접혀 안 보임", "bent or twisted": "굽음", "not a sleeve": "소매 아님" } as const;
 
-export function Workbench({ live, initial, sampleTable, initialEdits, initialTab }: WorkbenchProps) {
+export function Workbench({ live, initial, sampleTable, initialEdits, initialTab, garmentPicker = true, placeholder, editedLabel = "직접" }: WorkbenchProps) {
   const [garment, setGarment] = useState<GarmentKind>(initial?.garment ?? "t-shirt");
   const [fabric, setFabric] = useState<Fabric>(initial?.fabric ?? "woven");
-  const [shots, setShots] = useState<Shot[]>(initial ? [{ photo: initial.photo, run: initial.run }] : []);
+  const [shots, setShots] = useState<Shot[]>(initial?.photo ? [{ photo: initial.photo, run: initial.run }] : []);
   const [busy, setBusy] = useState<number | null>(null);
   const [ref, setRef] = useState<{ key: string; cm: string }>({ key: "chest", cm: "" });
   const [edits, setEdits] = useState<Record<string, string>>(initialEdits ?? {});
@@ -192,18 +195,20 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
       {/* Left: the photo canvas */}
       <div className="space-y-4 lg:sticky lg:top-20">
         <Card className="space-y-4">
-          <div className="flex flex-wrap gap-1.5">
-            {(Object.keys(GARMENT_KO) as GarmentKind[]).map((g) => (
-              <button
-                key={g}
-                type="button"
-                onClick={() => setGarment(g)}
-                className={`rounded-full px-3 py-1.5 text-sm transition ${g === garment ? "bg-ink text-paper" : "bg-paper text-muted ring-1 ring-line hover:text-ink"}`}
-              >
-                {GARMENT_KO[g]}
-              </button>
-            ))}
-          </div>
+          {garmentPicker && (
+            <div className="flex flex-wrap gap-1.5">
+              {(Object.keys(GARMENT_KO) as GarmentKind[]).map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGarment(g)}
+                  className={`rounded-full px-3 py-1.5 text-sm transition ${g === garment ? "bg-ink text-paper" : "bg-paper text-muted ring-1 ring-line hover:text-ink"}`}
+                >
+                  {GARMENT_KO[g]}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex items-center justify-between gap-3">
             <Segmented
               size="sm"
@@ -236,7 +241,7 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
               <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && choose(e.target.files[0])} />
             </label>
           ) : (
-            <p className="rounded-2xl bg-paper p-6 text-sm text-muted">공개 데모에서는 샘플만 보여 드립니다.</p>
+            placeholder ?? <p className="rounded-2xl bg-paper p-6 text-sm text-muted">공개 데모에서는 샘플만 보여 드립니다.</p>
           )}
 
           {(shots.length > 1 || (live && shots.length > 0)) && (
@@ -337,7 +342,7 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
             </div>
           )}
         </Card>
-        {shots.length === 0 && (
+        {shots.length === 0 && !placeholder && (
           <Card className="text-sm text-muted">
             <p className="mb-2 font-medium text-ink">잘 나오는 사진</p>
             <ul className="list-disc space-y-1 pl-5">
@@ -366,7 +371,7 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-sm font-medium">{MEASURE_KO[r.key] ?? r.key}</span>
                       {r.source === "photo" && <Badge tone="chalk">사진</Badge>}
-                      {r.source === "edited" && <Badge tone="ink">직접</Badge>}
+                      {r.source === "edited" && <Badge tone="ink">{initialEdits?.[r.key] === edits[r.key] ? editedLabel : "직접"}</Badge>}
                       {r.source === "default" && <Badge tone="warn">보통 값</Badge>}
                       {r.source === "missing" && <Badge tone="mark">재단 전 측정</Badge>}
                       {r.conflict && <Badge tone="warn">사진마다 다름</Badge>}
