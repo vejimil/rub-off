@@ -7,14 +7,15 @@
 //              one the layout check (Muse Spark) calls folded, hidden, bent or not a sleeve
 //   armpits    on a side with a usable sleeve, the deepest dent next to that sleeve
 //   side neck  the highest point either side of the centre line (a hood is removed beforehand)
-//   shoulder   where the usable sleeve mask starts nearest the side neck point
+//   shoulder   where the armhole seam (the sleeve mask's edge inside the garment, fitted with a
+//              line) meets the top of the outline
 //   sleeve     the outline from the shoulder point round the cuff to the armpit
 // With one usable side, widths are that side mirrored across the centre line, and the note says
 // so. With none, sleeve-side values are left to the tape measure. Neck drops can't be seen from
 // the outline; they stay unmeasured and the draft says so.
 
 import type { Pt } from "../geom/point.ts";
-import { applyAffine, invertAffine, polygonCentroid, rotation, simplify, translation } from "../geom/polygon.ts";
+import { applyAffine, invertAffine, polygonCentroid, rotation, segDist, simplify, translation } from "../geom/polygon.ts";
 import type { TopMeasures } from "../pattern/measures.ts";
 import { arc, argBest, compose, crossings, defects, dist, inRange, transform, valueOf, type Measured, type Shape, type Value } from "./shape.ts";
 
@@ -36,6 +37,11 @@ const RANGES: Record<TopKey, [number, number]> = {
 const MIN_ARMPIT_DEPTH = 2; // cm into the hull
 const ARMPIT_NEAR_SLEEVE = 4; // cm: the armpit is where the sleeve meets the body
 const SHOULDER_FALLBACK_REL = 0.05;
+// How far a landmark can be off on a real photo. On the owner's single-colour jersey T-shirt
+// (11/1, tape-checked) the shoulder point from the sleeve mask landed 0.5–3 cm from the seam; the
+// side neck point read 0.5 cm wide on each side.
+const SHOULDER_POINT_CM = 2;
+const NECK_POINT_CM = 0.5;
 const MIRRORED_REL = 0.05; // one side doubled: the centre line comes from the hem, and the garment may not lie symmetric (13% front-back gap on the owner's hoodie, 10/31)
 const FOLDED_SHARE = 0.75; // a sleeve whose middle is within this share of the half hem is over the body
 
@@ -151,9 +157,15 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
     const mask = usableBy[side];
     let sp: Pt;
     if (mask) {
-      // The sleeve point nearest the side neck point is where the sleeve meets the shoulder; snap it to the outline.
-      const q = mask.reduce((bp, p) => (dist(p, snp) < dist(bp, snp) ? p : bp), mask[0]);
-      sp = sleeveArc.reduce((bp, p) => (dist(p, q) < dist(bp, q) ? p : bp), sleeveArc[0]);
+      // The armhole seam: the sleeve mask's edge inside the garment, fitted with a line; the
+      // shoulder point is where that line meets the top of the outline. Without enough seam
+      // edge, the mask point nearest the side neck point, snapped to the outline.
+      const fitted = seamShoulderPoint(mask, outline, sleeveArc, pit);
+      if (fitted) sp = fitted;
+      else {
+        const q = mask.reduce((bp, p) => (dist(p, snp) < dist(bp, snp) ? p : bp), mask[0]);
+        sp = sleeveArc.reduce((bp, p) => (dist(p, q) < dist(bp, q) ? p : bp), sleeveArc[0]);
+      }
     } else {
       fallback = true;
       const found = shoulderFromOutline(sleeveArc);
@@ -186,24 +198,26 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
   const hemYAt = (x: number) => hemL[1] + ((x - hemL[0]) / (hemR[0] - hemL[0] || 1)) * (hemR[1] - hemL[1]);
   const avg = (xs: number[]) => xs.reduce((p, q) => p + q, 0) / xs.length;
   const extra = opts.extraRel ?? 0;
-  const v = (cm: number, rel = 0) => valueOf(cm, shape, undefined, Math.hypot(rel, extra));
+  const v = (cm: number, rel = 0, pointsCm = 0) => valueOf(cm, shape, undefined, Math.hypot(rel, extra), pointsCm);
+  const two = (a: number, b: number) => Math.hypot(a, b);
   const spRel = fallback ? SHOULDER_FALLBACK_REL : 0;
   const both = L && R;
   const values: Partial<Record<TopKey, Value>> = {
-    length: v(avg([hemYAt(snpL[0]) - snpL[1], hemYAt(snpR[0]) - snpR[1]])),
+    length: v(avg([hemYAt(snpL[0]) - snpL[1], hemYAt(snpR[0]) - snpR[1]]), 0, NECK_POINT_CM),
     hem: v(dist(hemL, hemR)),
-    neckWidth: v(dist(snpL, snpR)),
+    neckWidth: v(dist(snpL, snpR), 0, two(NECK_POINT_CM, NECK_POINT_CM)),
   };
   if (sides.length) {
     values.chest = both ? v(dist(L.pit, R.pit)) : v(2 * Math.abs(sides[0].pit[0] - cx), MIRRORED_REL);
-    values.shoulder = both ? v(dist(L.sp, R.sp), spRel) : v(2 * Math.abs(sides[0].sp[0] - cx), Math.hypot(spRel, MIRRORED_REL));
+    values.shoulder = both ? v(dist(L.sp, R.sp), spRel, two(SHOULDER_POINT_CM, SHOULDER_POINT_CM)) : v(2 * Math.abs(sides[0].sp[0] - cx), Math.hypot(spRel, MIRRORED_REL), 2 * SHOULDER_POINT_CM);
     if (sleeveSides.length) {
-      values.sleeve = v(avg(sleeveSides.map((x) => x.sleeve)), spRel);
+      values.sleeve = v(avg(sleeveSides.map((x) => x.sleeve)), spRel, SHOULDER_POINT_CM);
       values.sleeveOpening = v(avg(sleeveSides.map((x) => x.opening)));
     }
-    values.bicep = v(avg(sides.map((x) => x.bicep)));
-    values.armholeDepth = v(avg(sides.map((x) => x.pit[1])) - snpY);
-    values.shoulderDrop = v(Math.max(0, avg(sides.map((x) => x.sp[1])) - snpY), spRel);
+    // The bicep is measured square to the sleeve's top line, which needs the cuff inside the photo.
+    if (sleeveSides.length) values.bicep = v(avg(sleeveSides.map((x) => x.bicep)), 0, SHOULDER_POINT_CM / 2);
+    values.armholeDepth = v(avg(sides.map((x) => x.pit[1])) - snpY, 0, NECK_POINT_CM);
+    values.shoulderDrop = v(Math.max(0, avg(sides.map((x) => x.sp[1])) - snpY), spRel, SHOULDER_POINT_CM / 2);
   }
   const { values: kept, refused } = inRange(values, RANGES);
   const show = R ?? L;
@@ -235,6 +249,42 @@ function turnAt(s: readonly Pt[], i: number): number {
 
 // The cuff's two corners on the outline from the shoulder point to the armpit: the first sharp
 // turn walking out along the sleeve's top line, and the first walking back along its underarm.
+const SEAM_INSIDE_CM = 1; // mask edge this far inside the outline is the seam, not the garment's edge
+const SEAM_MIN_POINTS = 6;
+
+function seamShoulderPoint(mask: readonly Pt[], outline: readonly Pt[], sleeveArc: readonly Pt[], pit: Pt): Pt | null {
+  // Mask edge every half centimetre, kept where it runs inside the garment.
+  const pts: Pt[] = [];
+  for (let i = 0; i < mask.length; i++) {
+    const a = mask[i], b = mask[(i + 1) % mask.length];
+    const k = Math.max(1, Math.ceil(dist(a, b) / 0.5));
+    for (let j = 0; j < k; j++) pts.push([a[0] + ((b[0] - a[0]) * j) / k, a[1] + ((b[1] - a[1]) * j) / k]);
+  }
+  const toOutline = (p: Pt) => Math.min(...outline.map((q, i) => segDist(p, q, outline[(i + 1) % outline.length])));
+  const seam = pts.filter((p) => toOutline(p) > SEAM_INSIDE_CM);
+  if (seam.length < SEAM_MIN_POINTS) return null;
+  // Total least squares line through the seam points.
+  const cx = seam.reduce((s, p) => s + p[0], 0) / seam.length, cy = seam.reduce((s, p) => s + p[1], 0) / seam.length;
+  let sxx = 0, syy = 0, sxy = 0;
+  for (const [x, y] of seam) {
+    sxx += (x - cx) ** 2;
+    syy += (y - cy) ** 2;
+    sxy += (x - cx) * (y - cy);
+  }
+  const th = 0.5 * Math.atan2(2 * sxy, sxx - syy);
+  const d: Pt = [Math.cos(th), Math.sin(th)];
+  // First crossing of that line with the outline from the side neck point outward, clear of the armpit.
+  for (let i = 1; i < sleeveArc.length; i++) {
+    const a = sleeveArc[i - 1], b = sleeveArc[i];
+    const sa = (a[0] - cx) * d[1] - (a[1] - cy) * d[0], sb = (b[0] - cx) * d[1] - (b[1] - cy) * d[0];
+    if (sa === sb || sa * sb > 0) continue;
+    const t = sa / (sa - sb);
+    const x: Pt = [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
+    if (dist(x, pit) >= 3) return x;
+  }
+  return null;
+}
+
 // A kink in the mask edge right at the shoulder point or the armpit is not a cuff corner.
 const CUFF_CLEAR_CM = 3;
 

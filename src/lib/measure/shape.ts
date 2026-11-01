@@ -71,9 +71,11 @@ export function partPolygon(mask: Grid, plane: Plane): Pt[] {
   return simplifyClosed(traceOuter(largestComponent(mask)).map(plane.toCm), SIMPLIFY_CM);
 }
 
-export function valueOf(cm: number, shape: Shape, bound?: Value["bound"], extraRel = 0): Value {
+// extraCm: how far the landmarks themselves can be off, beyond the scale (a seam SAM can only
+// place to within a couple of centimetres).
+export function valueOf(cm: number, shape: Shape, bound?: Value["bound"], extraRel = 0, extraCm = 0): Value {
   const rel = Math.hypot(shape.plane.rel, extraRel);
-  const edge = (2 * EDGE_PX) / shape.pxPerCm;
+  const edge = (2 * EDGE_PX) / shape.pxPerCm + extraCm;
   return { cm, plusMinusCm: cm * rel + edge, confidence: confidenceOf(rel + edge / Math.max(cm, 1)), ...(bound && { bound }) };
 }
 
