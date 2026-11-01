@@ -29,7 +29,15 @@ export async function POST(request: Request) {
   // No A4 in the photo: one tape-measured value may set the scale instead.
   const refKey = String(form.get("refKey") ?? ""), refCm = Number(form.get("refCm"));
   const reference = /^[a-zA-Z]+$/.test(refKey) && refCm > 0 && refCm < 200 ? { key: refKey, cm: refCm } : undefined;
-  const input = { photo, garment: garment as GarmentKind, fabric: fabric as Fabric, cacheRoot: path.join(CACHE_BASE, "photos"), reference };
+  // Shoulder points tapped on the photo: up to two, as fractions of its width and height.
+  let shoulders: [number, number][] | undefined;
+  try {
+    const raw = JSON.parse(String(form.get("shoulders") ?? "[]"));
+    if (Array.isArray(raw) && raw.length <= 2 && raw.every((p) => Array.isArray(p) && p.length === 2 && p.every((x) => typeof x === "number" && x >= 0 && x <= 1))) shoulders = raw.length ? raw : undefined;
+  } catch {
+    return Response.json({ error: "bad_input" }, { status: 400 });
+  }
+  const input = { photo, garment: garment as GarmentKind, fabric: fabric as Fabric, cacheRoot: path.join(CACHE_BASE, "photos"), reference, shoulders };
   // A photo already segmented costs nothing and doesn't count against the limits.
   let run = await runPhoto({ ...input, allowApi: false });
   if (!run.ok && run.stage === "cost") {

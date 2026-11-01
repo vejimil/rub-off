@@ -34,6 +34,7 @@ Everything in this repository was written during the hackathon. The commit histo
 | Web app with sample mode (no API calls) and live-run limits | Done (Oct 31), not deployed |
 | Real-photo robustness: Muse Spark layout check (folded or hidden sleeves, wrinkles, hem), sleeves folded over the body left out and the other side mirrored, hood removed from the outline, photos turned 90°, garments cut off by the frame refused | Done (Oct 31), on the owner's T-shirt and hoodie |
 | Zip hoodie (two-piece hood, rib bands); front and back photos combined | Done (Oct 31) |
+| Checked against the owner's tape measurements of one T-shirt (body within 3%); shoulder point from the fitted armhole seam, or tapped on the photo (sleeve length −1%) | Done (Nov 1) |
 | Muse Image fabric preview | Planned |
 
 ### Not built by me

@@ -42,6 +42,7 @@ const SHOULDER_FALLBACK_REL = 0.05;
 // side neck point read 0.5 cm wide on each side.
 const SHOULDER_POINT_CM = 2;
 const NECK_POINT_CM = 0.5;
+const USER_POINT_CM = 0.5; // a tap on the seam, at phone-photo resolution
 const MIRRORED_REL = 0.05; // one side doubled: the centre line comes from the hem, and the garment may not lie symmetric (13% front-back gap on the owner's hoodie, 10/31)
 const FOLDED_SHARE = 0.75; // a sleeve whose middle is within this share of the half hem is over the body
 
@@ -49,6 +50,8 @@ export interface TopOptions {
   // Per sleeve mask, in the same order: false when the layout check says it isn't a usable sleeve.
   sleeveUsable?: boolean[];
   hood?: Pt[] | null; // the hood's polygon, which points to the top of the garment
+  // Shoulder points the user tapped, in the shape's cm: they replace the ones found from the masks.
+  userShoulders?: Pt[];
   // True for a point (in the shape's cm) on the photo's edge: a cuff there is cut off by the frame.
   clipped?: (p: Pt) => boolean;
   extraRel?: number; // wrinkles seen by the layout check
@@ -147,6 +150,13 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
   };
 
   let fallback = false;
+  // Shoulder points the user tapped on the photo, in this frame, by side.
+  const tapped: Partial<Record<SideName, Pt>> = {};
+  for (const p of opts.userShoulders ?? []) {
+    const q = transform(m, [p])[0];
+    tapped[q[0] < cx ? "left" : "right"] = q;
+  }
+
   const measureSide = (side: SideName) => {
     if (!usableBy[side] && !noMasks) return null;
     const d = armpit(side);
@@ -156,23 +166,25 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
     const snp = outline[snpIdx], pit = outline[d.i];
     const mask = usableBy[side];
     let sp: Pt;
-    if (mask) {
+    let byUser = false;
+    if (tapped[side]) {
+      sp = tapped[side]!;
+      byUser = true;
+    } else if (mask) {
       // The armhole seam: the sleeve mask's edge inside the garment, fitted with a line; the
       // shoulder point is where that line meets the top of the outline. Without enough seam
-      // edge, the mask point nearest the side neck point, snapped to the outline.
-      const fitted = seamShoulderPoint(mask, outline, sleeveArc, pit);
-      if (fitted) sp = fitted;
-      else {
-        const q = mask.reduce((bp, p) => (dist(p, snp) < dist(bp, snp) ? p : bp), mask[0]);
-        sp = sleeveArc.reduce((bp, p) => (dist(p, q) < dist(bp, q) ? p : bp), sleeveArc[0]);
-      }
+      // edge, the mask point nearest the side neck point.
+      sp = seamShoulderPoint(mask, outline, sleeveArc, pit) ?? mask.reduce((bp, p) => (dist(p, snp) < dist(bp, snp) ? p : bp), mask[0]);
     } else {
       fallback = true;
       const found = shoulderFromOutline(sleeveArc);
       if (!found) return null;
       sp = found;
     }
-    const rest = sleeveArc.slice(Math.max(0, sleeveArc.indexOf(sp)));
+    // On the outline, and the sleeve's outline from there round the cuff to the armpit.
+    const snapped = snapToPolyline(sleeveArc, sp);
+    sp = snapped.pt;
+    const rest = [sp, ...sleeveArc.slice(snapped.k + 1)];
     const cuff = cuffCorners(rest);
     if (!cuff) return null;
     const [cuffTop, cuffBottom] = cuff;
@@ -182,7 +194,7 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
     // Bicep: from the armpit square across to the sleeve's top line.
     const u = [cuffTop[0] - sp[0], cuffTop[1] - sp[1]], ul = Math.hypot(u[0], u[1]) || 1;
     const bicep = Math.abs(u[0] * (pit[1] - sp[1]) - u[1] * (pit[0] - sp[0])) / ul;
-    return { pit, sp, cuffTop, cuffBottom, sleeve: dist(sp, cuffTop), opening: dist(cuffTop, cuffBottom), bicep, cutOff };
+    return { pit, sp, cuffTop, cuffBottom, sleeve: dist(sp, cuffTop), opening: dist(cuffTop, cuffBottom), bicep, cutOff, spCm: byUser ? USER_POINT_CM : SHOULDER_POINT_CM };
   };
   const L = measureSide("left"), R = measureSide("right");
   if (fallback) notes.push("SAM이 소매를 찾지 못해 어깨점을 윤곽이 꺾이는 곳으로 잡았습니다(± 큼). 어깨너비를 확인해 주십시오.");
@@ -209,15 +221,15 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
   };
   if (sides.length) {
     values.chest = both ? v(dist(L.pit, R.pit)) : v(2 * Math.abs(sides[0].pit[0] - cx), MIRRORED_REL);
-    values.shoulder = both ? v(dist(L.sp, R.sp), spRel, two(SHOULDER_POINT_CM, SHOULDER_POINT_CM)) : v(2 * Math.abs(sides[0].sp[0] - cx), Math.hypot(spRel, MIRRORED_REL), 2 * SHOULDER_POINT_CM);
+    values.shoulder = both ? v(dist(L.sp, R.sp), spRel, two(L.spCm, R.spCm)) : v(2 * Math.abs(sides[0].sp[0] - cx), Math.hypot(spRel, MIRRORED_REL), 2 * sides[0].spCm);
     if (sleeveSides.length) {
-      values.sleeve = v(avg(sleeveSides.map((x) => x.sleeve)), spRel, SHOULDER_POINT_CM);
+      values.sleeve = v(avg(sleeveSides.map((x) => x.sleeve)), spRel, avg(sleeveSides.map((x) => x.spCm)));
       values.sleeveOpening = v(avg(sleeveSides.map((x) => x.opening)));
     }
     // The bicep is measured square to the sleeve's top line, which needs the cuff inside the photo.
-    if (sleeveSides.length) values.bicep = v(avg(sleeveSides.map((x) => x.bicep)), 0, SHOULDER_POINT_CM / 2);
+    if (sleeveSides.length) values.bicep = v(avg(sleeveSides.map((x) => x.bicep)), 0, avg(sleeveSides.map((x) => x.spCm)) / 2);
     values.armholeDepth = v(avg(sides.map((x) => x.pit[1])) - snpY, 0, NECK_POINT_CM);
-    values.shoulderDrop = v(Math.max(0, avg(sides.map((x) => x.sp[1])) - snpY), spRel, SHOULDER_POINT_CM / 2);
+    values.shoulderDrop = v(Math.max(0, avg(sides.map((x) => x.sp[1])) - snpY), spRel, avg(sides.map((x) => x.spCm)) / 2);
   }
   const { values: kept, refused } = inRange(values, RANGES);
   const show = R ?? L;
@@ -249,6 +261,20 @@ function turnAt(s: readonly Pt[], i: number): number {
 
 // The cuff's two corners on the outline from the shoulder point to the armpit: the first sharp
 // turn walking out along the sleeve's top line, and the first walking back along its underarm.
+// The nearest point on a polyline, and the index of the segment it lies on.
+function snapToPolyline(pts: readonly Pt[], p: Pt): { pt: Pt; k: number } {
+  let best = { pt: pts[0], k: 0, d: Infinity };
+  for (let k = 0; k + 1 < pts.length; k++) {
+    const a = pts[k], b = pts[k + 1];
+    const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy;
+    const t = l2 === 0 ? 0 : Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2));
+    const q: Pt = [a[0] + t * dx, a[1] + t * dy];
+    const d = dist(p, q);
+    if (d < best.d) best = { pt: q, k, d };
+  }
+  return { pt: best.pt, k: best.k };
+}
+
 const SEAM_INSIDE_CM = 1; // mask edge this far inside the outline is the seam, not the garment's edge
 const SEAM_MIN_POINTS = 6;
 

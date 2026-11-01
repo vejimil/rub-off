@@ -1,13 +1,23 @@
-import { svgPath } from "@/lib/geom/point";
+"use client";
+
+import { svgPath, type Pt } from "@/lib/geom/point";
 import { MEASURE_KO } from "@/lib/pattern/measures";
 import type { OkRun, PhotoView } from "@/lib/client/types";
 
 // The photo with what the pipeline found: the A4 sheet, the garment outline, the SAM part masks
-// and each measured line with its cm.
-export function PhotoOverlay({ photo, run }: { photo: PhotoView; run?: OkRun }) {
+// and each measured line with its cm. With onTap, a click reports where on the photo it landed
+// (as fractions of its width and height), and taps are drawn as rings.
+export function PhotoOverlay({ photo, run, onTap, taps = [] }: { photo: PhotoView; run?: OkRun; onTap?: (p: Pt) => void; taps?: Pt[] }) {
   const fs = Math.round(Math.max(photo.width, photo.height) / 55);
   return (
-    <figure className="relative overflow-hidden rounded-lg border border-line bg-card">
+    <figure
+      className={`relative overflow-hidden rounded-lg border bg-card ${onTap ? "cursor-crosshair border-chalk" : "border-line"}`}
+      onClick={(e) => {
+        if (!onTap) return;
+        const r = e.currentTarget.getBoundingClientRect();
+        onTap([(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]);
+      }}
+    >
       {/* eslint-disable-next-line @next/next/no-img-element -- a local object URL or a sample, shown at its own size */}
       <img src={photo.src} alt="펴놓은 옷과 A4 용지" className="block h-auto w-full" />
       {run && (
@@ -34,6 +44,16 @@ export function PhotoOverlay({ photo, run }: { photo: PhotoView; run?: OkRun }) 
               >
                 {MEASURE_KO[s.key] ?? s.key} {s.cm.toFixed(1)}
               </text>
+            </g>
+          ))}
+        </svg>
+      )}
+      {taps.length > 0 && (
+        <svg viewBox={`0 0 ${photo.width} ${photo.height}`} className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
+          {taps.map(([u, v], i) => (
+            <g key={i}>
+              <circle cx={u * photo.width} cy={v * photo.height} r={fs * 0.9} fill="none" stroke="var(--chalk)" strokeWidth={fs / 5} />
+              <circle cx={u * photo.width} cy={v * photo.height} r={fs / 5} fill="var(--chalk)" />
             </g>
           ))}
         </svg>

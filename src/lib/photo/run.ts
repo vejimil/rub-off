@@ -61,6 +61,8 @@ export interface PhotoRunInput {
   garmentConcept?: string; // override the SAM word ("shorts", "top")
   // No A4 in the photo: one value measured with a tape (e.g. chest 54 cm) sets the scale instead.
   reference?: { key: string; cm: number };
+  // Shoulder points tapped on the photo, as fractions of its width and height (0–1).
+  shoulders?: Pt[];
 }
 
 export type PhotoRun =
@@ -131,6 +133,7 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
   };
   if (layout?.wrinkles === "some wrinkles") notes.push("Muse Spark가 옷에 주름이 조금 있다고 보아 ±를 키웠습니다.");
   if (layout?.wrinkles === "heavily wrinkled or bunched") notes.push("Muse Spark가 옷이 많이 구겨졌다고 보아 ±를 크게 키웠습니다. 펴서 다시 찍으면 정확해집니다.");
+  if (input.shoulders?.length) notes.push(`어깨점 ${input.shoulders.length}개는 사진에서 직접 찍은 점을 썼습니다.`);
   if (layout?.hem === "folded or rolled") notes.push("Muse Spark가 밑단이 접혀 있다고 보았습니다. 총장이 짧게 나올 수 있습니다.");
 
   // The sheet: the most confident "paper" that fits as A4.
@@ -149,7 +152,12 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
 
   const partsFor = (sh: Shape) => partGrids.map((g) => partPolygon(g, sh.plane));
   const nearEdge = ([x, y]: Pt) => x <= EDGE_PX || y <= EDGE_PX || x >= photo.width - 1 - EDGE_PX || y >= photo.height - 1 - EDGE_PX;
-  const optsFor = (sh: Shape): TopOptions => ({ ...measureOpts, hood: hasHood ? partPolygon(hood, sh.plane) : null, clipped: (p) => nearEdge(sh.plane.toPx(p)) });
+  const optsFor = (sh: Shape): TopOptions => ({
+    ...measureOpts,
+    hood: hasHood ? partPolygon(hood, sh.plane) : null,
+    clipped: (p) => nearEdge(sh.plane.toPx(p)),
+    userShoulders: input.shoulders?.map(([u, v]) => sh.plane.toCm([u * photo.width, v * photo.height])),
+  });
   let shape: Shape;
   if (scale && paperGrid) {
     const s = shapeFromMasks(garmentGrid, paperGrid, scale);

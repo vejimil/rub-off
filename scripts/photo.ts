@@ -4,6 +4,7 @@
 //   --concept=shorts   another SAM word for the garment     --fabric=knit
 //   --raw              send the file as is (already upright, ≤ 2000 px), e.g. to reuse an existing cache
 //   --ref=chest:54     no A4 in the photo: this tape value sets the scale
+//   --shoulders=0.31,0.12,0.69,0.11   shoulder points tapped on the (first) photo, as fractions of width, height
 //   --tape=length:70,chest:54   tape-measured values, printed next to the photo's
 //   --json=src/lib/sample/x.json   also write a golden run (first photo) for sample mode
 // Several photos are combined: each value from the photo that measured it most surely.
@@ -29,6 +30,10 @@ const garment = (opt("garment") ?? "t-shirt") as GarmentKind;
 const fabric = (opt("fabric") as Fabric) ?? "woven";
 const tape = Object.fromEntries((opt("tape") ?? "").split(",").filter(Boolean).map((kv) => [kv.split(":")[0], Number(kv.split(":")[1])]));
 const outDir = path.resolve(".cache", "out");
+const pairsOf = (csv: string) => {
+  const n = csv.split(",").map(Number);
+  return Array.from({ length: n.length >> 1 }, (_, i): [number, number] => [n[2 * i], n[2 * i + 1]]);
+};
 await mkdir(outDir, { recursive: true });
 
 const line = (k: string, v: { cm: number; plusMinusCm: number; confidence: string; bound?: string }, extra = "") => {
@@ -54,6 +59,7 @@ for (const source of sources) {
     allowApi: args.includes("--yes"),
     garmentConcept: opt("concept"),
     reference: opt("ref") ? { key: opt("ref")!.split(":")[0], cm: Number(opt("ref")!.split(":")[1]) } : undefined,
+    shoulders: source === sources[0] && opt("shoulders") ? pairsOf(opt("shoulders")!) : undefined,
   });
   const name = path.basename(source).replace(/\.[^.]+$/, "");
   console.log(`\n== ${name}`);

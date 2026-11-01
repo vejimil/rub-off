@@ -8,6 +8,7 @@ import { SizePanel } from "@/components/size-panel";
 import { resizeToJpeg } from "@/lib/client/resize";
 import { combineMeasurements } from "@/lib/measure/combine";
 import type { FailedRun, OkRun, PhotoView } from "@/lib/client/types";
+import type { Pt } from "@/lib/geom/point";
 import { draft, REQUIRED } from "@/lib/pattern/draft";
 import { layOut } from "@/lib/pattern/layout";
 import { DEFAULTS, MEASURE_KO, type MeasuresOf } from "@/lib/pattern/measures";
@@ -67,7 +68,11 @@ interface Shot {
   run?: OkRun;
   failure?: string;
   missingA4?: boolean;
+  taps?: Pt[]; // shoulder points tapped on this photo, as fractions of its size
+  tapping?: boolean;
 }
+
+const TOPS: readonly GarmentKind[] = ["shirt", "t-shirt", "hoodie"];
 
 const SIDE_KO = { front: "앞면", back: "뒷면", unclear: "앞뒤 불분명" } as const;
 const WRINKLE_KO = { flat: "평평함", "some wrinkles": "주름 조금", "heavily wrinkled or bunched": "많이 구겨짐" } as const;
@@ -103,6 +108,7 @@ export function Workbench({ live, initial, sampleTable, initialEdits }: Workbenc
       form.set("refKey", ref.key);
       form.set("refCm", ref.cm);
     }
+    if (shot.taps?.length && TOPS.includes(garment)) form.set("shoulders", JSON.stringify(shot.taps));
     try {
       const res = await fetch("/api/photo", { method: "POST", body: form });
       const body = await res.json();
@@ -110,7 +116,7 @@ export function Workbench({ live, initial, sampleTable, initialEdits }: Workbenc
       else if (!body.run.ok) {
         const f = body.run as FailedRun;
         update(i, { failure: `${STAGE_KO[f.stage]} 단계에서 멈췄습니다: ${f.detail}`, missingA4: f.missingA4, run: undefined });
-      } else update(i, { run: body.run, failure: undefined, missingA4: false });
+      } else update(i, { run: body.run, failure: undefined, missingA4: false, tapping: false });
     } catch {
       update(i, { failure: "서버에 연결하지 못했습니다." });
     } finally {
@@ -197,7 +203,12 @@ export function Workbench({ live, initial, sampleTable, initialEdits }: Workbenc
         <div className="grid gap-6 sm:grid-cols-2">
           {shots.map((shot, i) => (
             <div key={shot.photo.src} className="space-y-2">
-              <PhotoOverlay photo={shot.photo} run={shot.run?.garment === garment ? shot.run : undefined} />
+              <PhotoOverlay
+                photo={shot.photo}
+                run={shot.run?.garment === garment ? shot.run : undefined}
+                taps={shot.taps}
+                onTap={shot.tapping ? (p) => update(i, { taps: [...(shot.taps ?? []), p].slice(-2) }) : undefined}
+              />
               {shot.file && (
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <button onClick={() => analyse(i)} disabled={busy !== null} className="rounded-md bg-ink px-3 py-1.5 text-paper disabled:opacity-40">
@@ -206,6 +217,27 @@ export function Workbench({ live, initial, sampleTable, initialEdits }: Workbenc
                   <button onClick={() => setShots((all) => all.filter((_, j) => j !== i))} className="text-muted underline">
                     빼기
                   </button>
+                </div>
+              )}
+              {shot.file && shot.run && TOPS.includes(garment) && (
+                <div className="space-y-1 rounded-md bg-chalk-soft p-2 text-sm">
+                  {shot.tapping ? (
+                    <>
+                      <p>사진에서 양쪽 어깨점(소매 솔기가 어깨선과 만나는 점)을 하나씩 누르십시오. 단색 옷은 솔기가 잘 안 보여 SAM이 0.5–3 cm 벗어날 수 있습니다.</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => analyse(i)} disabled={(shot.taps?.length ?? 0) === 0 || busy !== null} className="rounded bg-ink px-2 py-1 text-paper disabled:opacity-40">
+                          이 점으로 다시 재기 ({shot.taps?.length ?? 0}/2)
+                        </button>
+                        <button onClick={() => update(i, { taps: [], tapping: false })} className="text-muted underline">
+                          취소
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <button onClick={() => update(i, { tapping: true, taps: [] })} className="underline">
+                      어깨점이 솔기와 다르면 직접 찍기
+                    </button>
+                  )}
                 </div>
               )}
               {shot.failure && <p className="rounded-md bg-mark-soft p-2 text-sm">{shot.failure}</p>}

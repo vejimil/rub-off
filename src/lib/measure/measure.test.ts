@@ -111,3 +111,17 @@ test("a sleeve the layout check rejects is not used", () => {
   close(m.values.chest?.cm, 54);
   assert.ok(m.notes.some((x) => x.includes("Muse Spark")));
 });
+
+test("tapped shoulder points replace the masks' and narrow the ±", () => {
+  // Sleeve masks that start 3 cm out along the sleeve, as on a single-colour jersey.
+  const off: Pt[][] = [
+    [[26.5, 6.6], [36, 15], [31, 26], [29, 24]],
+    [[-26.5, 6.6], [-29, 24], [-31, 26], [-36, 15]],
+  ];
+  const fromMasks = measureTop(shapeOf(TEE), off);
+  const fromTaps = measureTop(shapeOf(TEE), off, { userShoulders: [[-23.6, 3.8], [23.4, 4.2]] });
+  assert.ok(!("ok" in fromMasks) && !("ok" in fromTaps));
+  close(fromTaps.values.shoulder?.cm, 47);
+  close(fromTaps.values.sleeve?.cm, Math.hypot(36 - 23.5, 15 - 4));
+  assert.ok(fromTaps.values.shoulder!.plusMinusCm < fromMasks.values.shoulder!.plusMinusCm);
+});
