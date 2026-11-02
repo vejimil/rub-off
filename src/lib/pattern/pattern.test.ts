@@ -7,8 +7,9 @@ import { grade, gradedLabel } from "../rules/grading.ts";
 import { draft } from "./draft.ts";
 import { layOut, pagesFor } from "./layout.ts";
 import { patternPdf } from "./pdf.ts";
-import { cuttingLine } from "./seam.ts";
-import type { Piece } from "./types.ts";
+import { edgeDims, matchText, seamMatches } from "./dims.ts";
+import { cuttingLine, normalized } from "./seam.ts";
+import { seamLine, type Piece } from "./types.ts";
 
 const TEE = { length: 70, chest: 54, shoulder: 47, hem: 53, sleeve: 21, sleeveOpening: 17, bicep: 20, armholeDepth: 23 };
 
@@ -71,7 +72,7 @@ test("drafted widths and lengths are the measured ones", () => {
   assert.ok(Math.abs(side[1][0] * 2 - TEE.hem) < 1e-6);
   const shoulder = front.edges.find((e) => e.kind === "shoulder")!.pts;
   assert.ok(Math.abs(shoulder[1][0] * 2 - TEE.shoulder) < 1e-6);
-  assert.ok(p.notes.some((n) => n.includes("frontNeckDrop")), "defaults are named");
+  assert.ok(p.notes.some((n) => n.includes("Front neck drop")), "defaults are named");
 });
 
 test("grading moves the measurements and the pieces follow", () => {
@@ -114,3 +115,30 @@ test("a hoodie's hood neck edge is solved to the half neckline, and its ribs use
   const front = p.pieces.find((x) => x.id === "front")!;
   assert.deepEqual(front.cut, { count: 2, onFold: false, mirror: true });
 });
+
+test("edge lengths on the pattern are the seam lines' own; seams sewn together are compared", () => {
+  const p = draft({ garment: "t-shirt", measures: TEE, fabric: "woven" });
+  const front = p.pieces.find((x) => x.id === "front")!;
+  const fold = edgeDims(front).find((d) => d.kind === "fold")!;
+  assert.ok(Math.abs(fold.cm - (TEE.length - p.measures.frontNeckDrop)) < 1e-6, String(fold.cm));
+  // Every label sits inside its piece.
+  const line = seamLine({ ...front, edges: normalized(front.edges) });
+  for (const d of edgeDims(front)) assert.ok(insidePolygon([d.at[0] + 0.7 * d.inward[0], d.at[1] + 0.7 * d.inward[1]], line), d.kind);
+
+  const m = seamMatches(p);
+  const side = m.find((x) => x.en === "Side seam")!, cap = m.find((x) => x.en === "Sleeve into armhole")!;
+  assert.ok(Math.abs(side.diff) < 0.05);
+  assert.ok(Math.abs(cap.diff - 1.5) < 0.1, String(cap.diff)); // woven cap ease
+  assert.match(matchText(cap, "en"), /ease 1\.5 cm/);
+  assert.equal(seamMatches(draft({ garment: "skirt", measures: { length: 60, hem: 50 }, fabric: "woven" })).length, 0);
+});
+
+// Even-odd ray test.
+function insidePolygon([x, y]: Pt, poly: readonly Pt[]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}

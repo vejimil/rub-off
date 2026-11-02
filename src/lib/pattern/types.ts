@@ -54,6 +54,10 @@ export interface Pattern {
   fabric: Fabric;
   pieces: Piece[];
   notes: string[];
+  // The flat measurements it was drafted from (after grading), and which of them are typical values
+  // rather than measured.
+  measures: Record<string, number>;
+  unmeasured: string[];
 }
 
 export type GarmentKind = "shirt" | "t-shirt" | "hoodie" | "skirt" | "eco-bag" | "pants";

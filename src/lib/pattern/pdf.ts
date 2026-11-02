@@ -5,10 +5,12 @@
 // pattern markings.
 
 import { PDFDocument, StandardFonts, clip, degrees, endPath, popGraphicsState, pushGraphicsState, rectangle, rgb, type PDFFont, type PDFPage } from "pdf-lib";
-import { add, lerp, polylineLength, scale, sub, type Pt } from "../geom/point.ts";
+import { add, lerp, scale, sub, type Pt } from "../geom/point.ts";
 import { bounds } from "../geom/polygon.ts";
 import { seamAllowance } from "../rules/seam-rules.ts";
+import { EDGE_EN, edgeDims, matchText, seamMatches } from "./dims.ts";
 import { A4_TILING, layOut, pagesFor, type PlacedPiece, type Sheet } from "./layout.ts";
+import { MEASURE_EN } from "./measures.ts";
 import { allowanceOf, notchTicks } from "./seam.ts";
 import { seamLine, type EdgeKind, type Pattern } from "./types.ts";
 
@@ -34,7 +36,7 @@ export async function patternPdf(pattern: Pattern, opts: PdfOptions = {}): Promi
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  cover(doc.addPage(PAGE), pattern, sheet, [cols, rows], font, bold, opts);
+  cover(doc, pattern, sheet, [cols, rows], font, bold, opts);
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) tile(doc.addPage(PAGE), sheet, r, c, [cols, rows], pattern, font, bold);
   }
@@ -131,6 +133,11 @@ function drawPiece(page: PDFPage, to: ToPage, pp: PlacedPiece, pattern: Pattern,
     }
   }
 
+  // Each seam line's length, just inside it, along it.
+  for (const d of edgeDims(piece)) {
+    label(page, to, `${EDGE_EN[d.kind]} ${d.cm.toFixed(1)} cm`.trim(), add(d.at, scale(d.inward, 0.7)), 7, font, d.dir);
+  }
+
   // Piece label near the middle of the seam line, away from the grainline.
   const line = seamLine(piece), b = bounds(line);
   const mid: Pt = [(b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2];
@@ -188,11 +195,17 @@ function tile(page: PDFPage, sheet: Sheet, r: number, c: number, [cols, rows]: [
   page.drawText("5 cm", { x: bar.x - 22, y: bar.y - 2, size: 6, font, color: GREY });
 }
 
-function cover(page: PDFPage, pattern: Pattern, sheet: Sheet, [cols, rows]: [number, number], font: PDFFont, bold: PDFFont, opts: PdfOptions) {
+function cover(doc: PDFDocument, pattern: Pattern, sheet: Sheet, [cols, rows]: [number, number], font: PDFFont, bold: PDFFont, opts: PdfOptions) {
+  let page = doc.addPage(PAGE);
   let y = PAGE[1] - 2 * CM;
   const x = 2 * CM;
+  // Text runs on to another page before the tiles if the cover fills up.
   const text = (t: string, size: number, f = font, color = BLACK, dx = 0) => {
     for (const lineText of wrap(safe(t, f), f, size, PAGE[0] - 4 * CM - dx)) {
+      if (y < 1.5 * CM) {
+        page = doc.addPage(PAGE);
+        y = PAGE[1] - 2 * CM;
+      }
       page.drawText(lineText, { x: x + dx, y, size, font: f, color });
       y -= size * 1.35;
     }
@@ -231,9 +244,25 @@ function cover(page: PDFPage, pattern: Pattern, sheet: Sheet, [cols, rows]: [num
   for (const pp of sheet.pieces) {
     const p = pp.piece;
     const cutText = p.cut.onFold ? `cut ${p.cut.count} on fold` : `cut ${p.cut.count}${p.cut.mirror ? ", mirror" : ""}`;
-    const seam = polylineLength(seamLine(p).concat([seamLine(p)[0]]));
-    text(`${p.name} (${cutText}): ${pp.size[0].toFixed(1)} x ${pp.size[1].toFixed(1)} cm with allowance, seam line ${seam.toFixed(1)} cm around`, 8, font, BLACK, 8);
+    text(`${p.name} (${cutText}): ${pp.size[0].toFixed(1)} x ${pp.size[1].toFixed(1)} cm with allowance`, 8, font, BLACK, 8);
   }
+  const matches = seamMatches(pattern);
+  if (matches.length) {
+    y -= 4;
+    text("Seams sewn together (seam line lengths)", 11, bold);
+    for (const m of matches) text(matchText(m, "en"), 8, font, BLACK, 8);
+  }
+  y -= 4;
+  text("Drafted from these flat measurements (cm)", 11, bold);
+  const typical = new Set(pattern.unmeasured);
+  text(
+    Object.entries(pattern.measures)
+      .filter(([k]) => MEASURE_EN[k])
+      .map(([k, v]) => `${MEASURE_EN[k]} ${v.toFixed(1)}${typical.has(k) ? "*" : ""}`)
+      .join(",  "),
+    8, font, BLACK, 8,
+  );
+  if (typical.size) text("* typical value, not measured: measure before cutting.", 8, font, GREY, 8);
   y -= 4;
   text("Seam allowance included", 11, bold);
   const kinds = [...new Set(sheet.pieces.flatMap((pp) => pp.piece.edges.map((e) => e.kind)))] as EdgeKind[];

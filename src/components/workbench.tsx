@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { CuttingPanel } from "@/components/cutting-panel";
-import { PatternPreview } from "@/components/pattern-preview";
+import { PatternPreview, SeamChecks } from "@/components/pattern-preview";
 import { PhotoOverlay } from "@/components/photo-overlay";
 import { SizePanel } from "@/components/size-panel";
 import { Badge, buttonGhost, buttonPrimary, Card, Segmented, Tabs } from "@/components/ui";
@@ -442,7 +442,8 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
             {missing.length > 0 && <p className="rounded-xl bg-mark-soft p-3 text-sm">패턴을 만들려면 먼저 재 주십시오: {missing.map((m) => MEASURE_KO[m.key]).join(", ")}</p>}
             {sheet && pattern && (
               <>
-                <PatternPreview sheet={sheet} />
+                <PatternPreview sheet={sheet} dims />
+                <SeamChecks sheet={sheet} />
                 <button onClick={downloadPdf} className={`${buttonPrimary} w-full`}>
                   A4 패턴 PDF 받기
                 </button>

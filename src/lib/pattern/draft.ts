@@ -3,7 +3,7 @@
 
 import { draftBag, draftPants, draftSkirt } from "./garments/lower.ts";
 import { draftTop } from "./garments/top.ts";
-import { withDefaults, type MeasuresOf } from "./measures.ts";
+import { MEASURE_EN, withDefaults, type MeasuresOf } from "./measures.ts";
 import type { Fabric, GarmentKind, Pattern } from "./types.ts";
 
 export interface DraftInput<K extends GarmentKind = GarmentKind> {
@@ -29,8 +29,8 @@ export function draft<K extends GarmentKind>(input: DraftInput<K>): Pattern {
           ? draftSkirt(measures as MeasuresOf["skirt"], input.elasticCm)
           : draftBag(measures as MeasuresOf["eco-bag"]);
   const notes = [...out.notes];
-  if (unmeasured.length) notes.push(`Not measured, set from typical values: ${unmeasured.join(", ")}. Measure before cutting.`);
-  return { garment: g, sizeLabel: input.sizeLabel ?? "Original", fabric: input.fabric, pieces: out.pieces, notes };
+  if (unmeasured.length) notes.push(`Not measured, set from typical values: ${unmeasured.map((k) => MEASURE_EN[k] ?? k).join(", ")}. Measure before cutting.`);
+  return { garment: g, sizeLabel: input.sizeLabel ?? "Original", fabric: input.fabric, pieces: out.pieces, notes, measures: { ...values }, unmeasured };
 }
 
 // What each garment needs measured (the rest have defaults).
