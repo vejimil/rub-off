@@ -3,6 +3,10 @@ import { A4_TILING, pagesFor, type Sheet } from "@/lib/pattern/layout";
 import { bounds } from "@/lib/geom/polygon";
 import { EDGE_KO, edgeDims, matchText, seamMatches } from "@/lib/pattern/dims";
 
+// Coordinates written to two decimals: the server and the browser can differ in the last digits
+// of the same computation, and React would report the mismatch on hydration.
+const f2 = (n: number) => n.toFixed(2);
+
 // Text keeps a ring of paper around it, so a grainline or seam running under it doesn't cross it out.
 const HALO = { stroke: "var(--field)", strokeWidth: 0.35, paintOrder: "stroke", strokeLinejoin: "round" } as const;
 
@@ -34,7 +38,7 @@ export function PatternPreview({ sheet, dims = false, className = "h-auto w-full
             {pp.piece.edges.map((e, i) => (
               <path key={i} d={svgPath(e.pts)} fill="none" stroke={e.kind === "fold" ? "var(--chalk)" : "var(--muted)"} strokeWidth={0.12} strokeDasharray={e.kind === "fold" ? "1.2 0.4 0.2 0.4" : "0.5 0.3"} />
             ))}
-            <line x1={g0[0]} y1={g0[1]} x2={g1[0]} y2={g1[1]} stroke="var(--ink)" strokeWidth={0.12} />
+            <line x1={f2(g0[0])} y1={f2(g0[1])} x2={f2(g1[0])} y2={f2(g1[1])} stroke="var(--ink)" strokeWidth={0.12} />
             {dims &&
               edgeDims(pp.piece).map((d, i) => {
                 const [x, y] = [d.at[0] + 0.9 * d.inward[0], d.at[1] + 0.9 * d.inward[1]];
@@ -42,15 +46,15 @@ export function PatternPreview({ sheet, dims = false, className = "h-auto w-full
                 if (ang > 90) ang -= 180;
                 if (ang < -90) ang += 180;
                 return (
-                  <text key={`d${i}`} x={x} y={y} transform={`rotate(${ang.toFixed(1)} ${x.toFixed(2)} ${y.toFixed(2)})`} fontSize={1.05} textAnchor="middle" dominantBaseline="middle" fill="var(--ink)" {...HALO}>
+                  <text key={`d${i}`} x={f2(x)} y={f2(y)} transform={`rotate(${ang.toFixed(1)} ${f2(x)} ${f2(y)})`} fontSize={1.05} textAnchor="middle" dominantBaseline="middle" fill="var(--ink)" {...HALO}>
                     {`${EDGE_KO[d.kind]} ${d.cm.toFixed(1)}`.trim()}
                   </text>
                 );
               })}
-            <text x={(b.minX + b.maxX) / 2} y={(b.minY + b.maxY) / 2 - 0.4} fontSize={2.2} textAnchor="middle" fill="var(--ink)" fontWeight={600} {...HALO}>
+            <text x={f2((b.minX + b.maxX) / 2)} y={f2((b.minY + b.maxY) / 2 - 0.4)} fontSize={2.2} textAnchor="middle" fill="var(--ink)" fontWeight={600} {...HALO}>
               {pp.piece.nameKo}
             </text>
-            <text x={(b.minX + b.maxX) / 2} y={(b.minY + b.maxY) / 2 + 1.6} fontSize={1.4} textAnchor="middle" fill="var(--muted)" {...HALO}>
+            <text x={f2((b.minX + b.maxX) / 2)} y={f2((b.minY + b.maxY) / 2 + 1.6)} fontSize={1.4} textAnchor="middle" fill="var(--muted)" {...HALO}>
               {pp.piece.cut.onFold ? `골선 ${pp.piece.cut.count}장` : `${pp.piece.cut.count}장${pp.piece.cut.mirror ? " (대칭)" : ""}`}
             </text>
           </g>
