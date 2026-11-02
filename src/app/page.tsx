@@ -67,6 +67,7 @@ export default function Home() {
       pm: measured[k].plusMinusCm,
     }));
   const inside = compare.filter((c) => Math.abs(c.photo - c.tape) <= c.pm + 0.05).length;
+  const widest = [...compare].sort((a, b) => Math.abs(b.photo - b.tape) - Math.abs(a.photo - a.tape))[0];
   const pct = (k: string) => {
     const c = compare.find((x) => x.key === k)!;
     const v = ((c.photo - c.tape) / c.tape) * 100;
@@ -222,17 +223,18 @@ export default function Home() {
         <div className="grid gap-10 px-5 py-32 sm:px-10 lg:px-16 lg:grid-cols-12 lg:gap-x-12 lg:gap-y-8 lg:py-48">
           <div className="lg:col-span-5" data-reveal>
             <h2 id="tape-title" className="font-display text-[9vw] leading-[1.05] tracking-[-0.02em] sm:text-[8vw] lg:text-[clamp(32px,3.2vw,50px)]">
-              줄자로 다시 쟀습니다
+              줄자와 거의 같습니다
             </h2>
             <p className="mt-6 max-w-md text-lg leading-relaxed">
-              티셔츠 앞면 사진 한 장에서 잰 값입니다. 같은 옷을 줄자로 잰 {compare.length}곳 중 {inside}곳이 사진이 붙인 ± 안에 들었습니다. 가슴단면 {pct("chest")}, 밑단단면 {pct("hem")}, 소매단면{" "}
-              {pct("sleeveOpening")}.
+              티셔츠를 사진 한 장으로 잰 값과, 같은 옷을 줄자로 잰 값입니다. 가슴단면 {pct("chest")}, 밑단단면 {pct("hem")}, 소매단면 {pct("sleeveOpening")}.{" "}
+              {inside === compare.length ? `${compare.length}곳 모두` : `${compare.length}곳 중 ${inside}곳이`} 사진이 함께 적은 오차(±) 안에 들었고, 가장 크게 다른 곳은 {MEASURE_KO[widest.key]}{" "}
+              {Math.abs(widest.photo - widest.tape).toFixed(1)} cm입니다.
             </p>
-            <p className="mt-4 max-w-md text-lg">어깨점은 솔기가 잘 안 보여 사진에서 두 번 눌러 찍었습니다. 앞목깊이처럼 사진에 안 보이는 값은 재지 않고 줄자 값을 받습니다.</p>
+            <p className="mt-4 max-w-md text-lg">어깨점은 솔기가 잘 안 보여 사진 위에서 직접 눌러 정했습니다. 앞목깊이처럼 사진에 안 보이는 곳은 줄자 값을 씁니다.</p>
           </div>
           <div className="lg:col-span-7" data-reveal style={{ ["--d" as string]: 1 }}>
             <table className="w-full text-lg">
-              <caption className="sr-only">티셔츠 단면: 줄자 값과 사진 값</caption>
+              <caption className="sr-only">티셔츠 단면: 줄자로 잰 값과 사진으로 잰 값</caption>
               <thead>
                 <tr className="text-left text-[15px] text-muted">
                   <th className="pb-4 font-normal">단면</th>
