@@ -1,0 +1,26 @@
+{
+  "garment": "t-shirt",
+  "text": "소매가 2 cm 정도 길고, 옷 길이도 5 cm쯤 길어요. 품이 헐렁해서 가슴 단면을 4 cm 줄이고 싶어요.",
+  "read": {
+    "items": [
+      {
+        "amount": "2",
+        "complaint": "sleeve-long",
+        "quote": "소매가 2 cm 정도 길고",
+        "side": "none"
+      },
+      {
+        "amount": "5",
+        "complaint": "body-long",
+        "quote": "옷 길이도 5 cm쯤 길어요",
+        "side": "none"
+      },
+      {
+        "amount": "4",
+        "complaint": "body-loose",
+        "quote": "품이 헐렁해서 가슴 단면을 4 cm 줄이고 싶어요",
+        "side": "none"
+      }
+    ]
+  }
+}

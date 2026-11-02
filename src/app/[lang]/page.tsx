@@ -80,11 +80,11 @@ const T = {
     "La IA solo encuentra la prenda y la hoja A4 en la foto; las medidas salen de medir ese contorno. Donde la foto no puede medir, no se inventa ningún número: te pedimos usar la cinta.",
   ),
   sizeTableAlt: L("직접 만든 예시 실측표", "A sample size chart, self-made", "Una tabla de medidas de ejemplo, hecha a mano"),
-  alterTitle: L("불편한 점을 수선 의뢰서로", "Complaints into alterations", "De la molestia al arreglo"),
+  alterTitle: L("불편한 점을 수선으로", "Complaints into alterations", "De la molestia al arreglo"),
   alterP1: L(
-    "입을 사람이 불편한 점을 고르거나 말하듯 적으면, 어디를 몇 cm 고칠지 도식화에 표시해 드립니다. 수선집에 그대로 보여 주면 됩니다.",
-    "The person who wears it picks what bothers them, or writes it the way they'd say it, and you get where to alter and by how many centimetres, marked on a technical drawing. Show it to a tailor as it is.",
-    "Quien lleva la prenda elige lo que le molesta, o lo escribe como lo diría, y obtienes dónde arreglar y cuántos centímetros, marcado en un dibujo técnico. Llévaselo así a la modista.",
+    "입을 사람이 불편한 점을 고르거나 말하듯 적으면, 어디를 몇 cm 고칠지 도식화에 표시해 드립니다. 수선집에 그대로 보여 주거나, 직접 고친다면 순서와 실제 크기 수선 패턴을 받으면 됩니다.",
+    "The person who wears it picks what bothers them, or writes it the way they'd say it, and you get where to alter and by how many centimetres, marked on a technical drawing. Show it to a tailor as it is, or, to do it yourself, get the steps and an actual-size alteration pattern.",
+    "Quien lleva la prenda elige lo que le molesta, o lo escribe como lo diría, y obtienes dónde arreglar y cuántos centímetros, marcado en un dibujo técnico. Llévaselo así a la modista o, si lo haces tú, obtén los pasos y un patrón de arreglos a tamaño real.",
   ),
   alterP2: L(
     "AI는 글을 불편함 목록에 나눠 넣기만 하고, 길이는 적힌 숫자와 의류학 수선 규칙으로 계산합니다. 줄자로 잰 몸 치수를 넣으면 옷과 비교해 줄이거나 늘릴 곳도 찾습니다.",
@@ -118,7 +118,7 @@ const T = {
   ctaWord: L("만들기", "Make", "Crear"),
   footMake: L("패턴 만들기", "Make a pattern", "Crear patrón"),
   footExamples: L("예시 보기", "Examples", "Ejemplos"),
-  footAlter: L("수선 의뢰서 만들기", "Make an alteration order", "Crear una orden de arreglos"),
+  footAlter: L("수선하기", "Alterations", "Arreglos"),
   footHow: L("찍는 법", "How to shoot", "Cómo hacer la foto"),
   builtTitle: L("만든 방법", "How it's made", "Cómo está hecho"),
   built: L(

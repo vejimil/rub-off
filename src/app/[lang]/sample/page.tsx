@@ -8,9 +8,9 @@ import { isLang, L, type Lang } from "@/lib/i18n/lang";
 const T = {
   title: L("예시", "Examples", "Ejemplos"),
   intro: L(
-    "직접 찍은 티셔츠와 반바지 사진에서 잰 결과, 그리고 휠체어를 타는 사람이 적은 글로 만든 수선 의뢰서입니다. 값을 고치면 결과가 바로 바뀝니다.",
-    "A T-shirt and shorts measured from real photos, and an alteration order made from what a wheelchair user wrote. Change a value and the result updates.",
-    "Una camiseta y un pantalón corto medidos en fotos reales, y una orden de arreglos hecha con lo que escribió una persona en silla de ruedas. Cambia un valor y el resultado se actualiza.",
+    "직접 찍은 티셔츠와 반바지 사진에서 잰 결과, 같은 두 옷과 휠체어를 타는 사람의 바지를 고치는 수선 의뢰서와 수선 가이드입니다. 값을 고치면 결과가 바로 바뀝니다.",
+    "A T-shirt and shorts measured from real photos, and alterations for the same two garments and for a wheelchair user's trousers: an order for a tailor and a guide to do it yourself. Change a value and the result updates.",
+    "Una camiseta y un pantalón corto medidos en fotos reales, y arreglos para esas dos prendas y para el pantalón de una persona en silla de ruedas: una orden para el taller y una guía para hacerlo tú. Cambia un valor y el resultado se actualiza.",
   ),
 };
 

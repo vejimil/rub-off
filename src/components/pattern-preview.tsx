@@ -15,8 +15,9 @@ const f2 = (n: number) => n.toFixed(2);
 const HALO = { stroke: "var(--field)", strokeWidth: 0.35, paintOrder: "stroke", strokeLinejoin: "round" } as const;
 
 // The laid-out pattern at a glance: cutting lines, seam lines, grainlines and the A4 pages it
-// prints on, with each seam line's length when `dims` is on. Units are cm.
-export function PatternPreview({ sheet, dims = false, className = "h-auto w-full rounded-xl bg-field" }: { sheet: Sheet; dims?: boolean; className?: string }) {
+// prints on, with each seam line's length when `dims` is on. Units are cm. `text` scales the piece
+// names, for small pieces (an alteration's) whose names would not fit at a garment's size.
+export function PatternPreview({ sheet, dims = false, text = 1, className = "h-auto w-full rounded-xl bg-field" }: { sheet: Sheet; dims?: boolean; text?: number; className?: string }) {
   const lang = useLang();
   const [cols, rows] = pagesFor(sheet.width, sheet.height);
   const W = (cols - 1) * A4_TILING.step[0] + A4_TILING.content[0], H = (rows - 1) * A4_TILING.step[1] + A4_TILING.content[1];
@@ -37,6 +38,7 @@ export function PatternPreview({ sheet, dims = false, className = "h-auto w-full
       {sheet.pieces.map((pp) => {
         const b = bounds(pp.cut);
         const [g0, g1] = pp.piece.grain;
+        const [lx, ly] = pp.piece.labelAt ?? [(b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2];
         return (
           <g key={pp.piece.id}>
             <path d={svgPath(pp.cut, true)} fill="rgba(6,43,138,0.05)" stroke="var(--ink)" strokeWidth={0.25} />
@@ -44,12 +46,13 @@ export function PatternPreview({ sheet, dims = false, className = "h-auto w-full
               <path key={i} d={svgPath(e.pts)} fill="none" stroke={e.kind === "fold" ? "var(--chalk)" : "var(--muted)"} strokeWidth={0.12} strokeDasharray={e.kind === "fold" ? "1.2 0.4 0.2 0.4" : "0.5 0.3"} />
             ))}
             {pp.piece.marks
-              ?.filter((m) => m.kind === "pocket")
+              ?.filter((m) => m.kind === "pocket" || m.kind === "guide")
               .map((m, i) => (
-                <line key={`m${i}`} x1={f2(m.a[0])} y1={f2(m.a[1])} x2={f2(m.b[0])} y2={f2(m.b[1])} stroke="var(--ink)" strokeWidth={0.15} strokeDasharray="0.6 0.4" />
+                <line key={`m${i}`} x1={f2(m.a[0])} y1={f2(m.a[1])} x2={f2(m.b[0])} y2={f2(m.b[1])} stroke={m.kind === "guide" ? "var(--mark)" : "var(--ink)"} strokeWidth={m.kind === "guide" ? 0.2 : 0.15} strokeDasharray="0.6 0.4" />
               ))}
-            <line x1={f2(g0[0])} y1={f2(g0[1])} x2={f2(g1[0])} y2={f2(g1[1])} stroke="var(--ink)" strokeWidth={0.12} />
+            {!pp.piece.paper && <line x1={f2(g0[0])} y1={f2(g0[1])} x2={f2(g1[0])} y2={f2(g1[1])} stroke="var(--ink)" strokeWidth={0.12} />}
             {dims &&
+              !pp.piece.paper &&
               edgeDims(pp.piece).map((d, i) => {
                 const [x, y] = [d.at[0] + 0.9 * d.inward[0], d.at[1] + 0.9 * d.inward[1]];
                 let ang = (Math.atan2(d.dir[1], d.dir[0]) * 180) / Math.PI;
@@ -61,10 +64,10 @@ export function PatternPreview({ sheet, dims = false, className = "h-auto w-full
                   </text>
                 );
               })}
-            <text x={f2((b.minX + b.maxX) / 2)} y={f2((b.minY + b.maxY) / 2 - 0.4)} fontSize={2.2} textAnchor="middle" fill="var(--ink)" fontWeight={600} {...HALO}>
+            <text x={f2(lx)} y={f2(ly - 0.4 * text)} fontSize={2.2 * text} textAnchor="middle" fill="var(--ink)" fontWeight={600} {...HALO}>
               {pp.piece.names[lang]}
             </text>
-            <text x={f2((b.minX + b.maxX) / 2)} y={f2((b.minY + b.maxY) / 2 + 1.6)} fontSize={1.4} textAnchor="middle" fill="var(--muted)" {...HALO}>
+            <text x={f2(lx)} y={f2(ly + 1.6 * text)} fontSize={1.4 * text} textAnchor="middle" fill="var(--muted)" {...HALO}>
               {cutText(pp.piece, lang)}
             </text>
           </g>

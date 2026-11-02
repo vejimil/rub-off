@@ -43,8 +43,13 @@ export interface Piece {
   grain: [Pt, Pt]; // grainline arrow, parallel to the selvage
   notches: Notch[];
   // Lines inside the piece: placement marks, "lengthen or shorten here" double lines, where a
-  // pocket is sewn on (its outline, segment by segment; the first carries the label).
-  marks?: { kind: "lengthen" | "placement" | "pocket"; a: Pt; b: Pt; label?: Local }[];
+  // pocket is sewn on (its outline, segment by segment; the first carries the label), and on a
+  // paper template the lines to trace onto the garment (each labelled).
+  marks?: { kind: "lengthen" | "placement" | "pocket" | "guide"; a: Pt; b: Pt; label?: Local }[];
+  // A paper template laid on the garment to trace a line (an alteration's gauge or curve), not cut
+  // from fabric: no allowance, no grainline.
+  paper?: boolean;
+  labelAt?: Pt; // where the piece's name goes, when the middle is taken by lines
   // Values that could not be measured safely and were set from a rule or a default instead.
   unmeasured?: string[];
 }

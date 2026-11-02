@@ -7,7 +7,7 @@
 
 import { add, dist, lerp, pointAlong, polylineLength, scale, sub, xAt, type Pt } from "../geom/point.ts";
 import { quad } from "../pattern/curves.ts";
-import { draft } from "../pattern/draft.ts";
+import { draft, REQUIRED } from "../pattern/draft.ts";
 import { ELASTIC_CM, WAISTBAND_CM, ZIP_CM } from "../pattern/garments/lower.ts";
 import { CUFF_HEIGHT } from "../pattern/garments/top.ts";
 import { withDefaults, type MeasuresOf } from "../pattern/measures.ts";
@@ -208,6 +208,8 @@ function aLineBase(m: MeasuresOf["a-line-skirt"]): Base {
 
 export function baseFor(garment: GarmentKind, measures: Record<string, number>, fabric: Fabric): Base | null {
   if (NOT_WORN.includes(garment)) return null;
+  // A missing value would draw as NaN rather than throw.
+  if (REQUIRED[garment].some((k) => !(Number.isFinite(measures[k]) && measures[k] > 0))) return null;
   const m = withDefaults(garment, measures as Partial<MeasuresOf[typeof garment]>).measures as unknown as Record<string, number>;
   try {
     if (garment === "pants") return pantsBase(m as unknown as MeasuresOf["pants"]);

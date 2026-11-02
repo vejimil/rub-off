@@ -1,0 +1,26 @@
+{
+  "garment": "t-shirt",
+  "text": "Las mangas me sobran unos 2 cm y el largo unos 5 cm. Me queda holgada, así que quiero quitar 4 cm de pecho, medido en plano.",
+  "read": {
+    "items": [
+      {
+        "amount": "2",
+        "complaint": "sleeve-long",
+        "quote": "Las mangas me sobran unos 2 cm",
+        "side": "none"
+      },
+      {
+        "amount": "5",
+        "complaint": "body-long",
+        "quote": "el largo unos 5 cm",
+        "side": "none"
+      },
+      {
+        "amount": "4",
+        "complaint": "body-loose",
+        "quote": "Me queda holgada, así que quiero quitar 4 cm de pecho, medido en plano.",
+        "side": "none"
+      }
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "garment": "t-shirt",
+  "text": "The sleeves are about 2 cm too long and the body is about 5 cm too long. It's baggy, so I'd like to take 4 cm off the chest, measured flat.",
+  "read": {
+    "items": [
+      {
+        "amount": "2 cm",
+        "complaint": "sleeve-long",
+        "quote": "The sleeves are about 2 cm too long",
+        "side": "none"
+      },
+      {
+        "amount": "5 cm",
+        "complaint": "body-long",
+        "quote": "the body is about 5 cm too long",
+        "side": "none"
+      },
+      {
+        "amount": "4 cm",
+        "complaint": "body-loose",
+        "quote": "It's baggy, so I'd like to take 4 cm off the chest",
+        "side": "none"
+      }
+    ]
+  }
+}

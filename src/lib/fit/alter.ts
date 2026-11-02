@@ -29,6 +29,40 @@ export interface Alteration {
   // How the measurements change if the pattern is drafted with this alteration (flat cm).
   delta?: Record<string, number>;
   from: Local; // why: the body working, the item picked, or the wearer's words
+  diy: Diy; // how to do it yourself (diy.ts)
+}
+
+// The method, for the do-it-yourself guide. `cm` is in the method's own terms: how far each seam
+// moves for take-in and let-out, a panel's finished width, how far a hem moves, how much the elastic
+// changes, how long an opening is.
+export type How =
+  | "hem-up"
+  | "cuff-shorten"
+  | "hem-down"
+  | "band"
+  | "take-in"
+  | "let-out"
+  | "panel"
+  | "elastic-shorter"
+  | "elastic-longer"
+  | "back-rise"
+  | "front-rise"
+  | "remove-pockets"
+  | "cast-opening"
+  | "pull-loops"
+  | "front-hem"
+  | "elbow-patch"
+  | "underarm-patch"
+  | "fasteners"
+  | "shoulder"
+  | "taper"
+  | "tailor";
+export type Seams = "side" | "leg" | "underarm";
+export interface Diy {
+  how: How;
+  cm?: number;
+  where?: "hem" | "sleeve";
+  seams?: Seams;
 }
 
 export const DIFFICULTY_NAME: Record<Difficulty, Local> = {
@@ -126,6 +160,7 @@ export function fromBody(garment: GarmentKind, comparisons: Comparison[]): Alter
           part: L("허리", "Waist", "Cintura"),
           difficulty: "easy",
           reversible: true,
+          diy: { how: c.verdict === "big" ? "elastic-shorter" : "elastic-longer", cm: 2 * amt },
           ...(c.verdict === "big"
             ? {
                 action: L("고무줄 줄이기", "Shorten the elastic", "Acortar el elástico"),
@@ -146,6 +181,7 @@ export function fromBody(garment: GarmentKind, comparisons: Comparison[]): Alter
         });
         continue;
       }
+      const seams: Seams = c.key === "bicep" ? "underarm" : c.key === "thigh" || c.key === "legOpening" ? "leg" : "side";
       const where =
         c.key === "bicep"
           ? L("소매 밑선", "underarm seams", "costuras de la manga")
@@ -159,6 +195,7 @@ export function fromBody(garment: GarmentKind, comparisons: Comparison[]): Alter
           ...base,
           part,
           action: L(`${where.ko} 줄이기`, `Take in the ${where.en}`, `Meter las ${where.es}`),
+          diy: { how: "take-in", cm: amt / 2, seams },
           instruction: L(
             `${jo(nm.ko, "을")} 단면 ${a} cm (둘레 ${a2} cm) 줄입니다: ${jo(where.ko, "을")} 각각 ${ah} cm씩 안으로 새로 박습니다.${big ? ` ${BIG_TAKE_IN} cm보다 크게 줄이면 ${more.ko}도 같이 고쳐야 합니다.` : ""}`,
             `Take in the ${nm.en} by ${a} cm flat (${a2} cm around): restitch each of the ${where.en} ${ah} cm further in.${big ? ` Past ${BIG_TAKE_IN} cm, reshape the ${more.en} too.` : ""}`,
@@ -172,6 +209,9 @@ export function fromBody(garment: GarmentKind, comparisons: Comparison[]): Alter
           ...base,
           part,
           action: ok ? L(`${where.ko} 늘리기`, `Let out the ${where.en}`, `Sacar las ${where.es}`) : L(`${where.ko}에 덧천 넣기`, `Add panels at the ${where.en}`, `Añadir piezas en las ${where.es}`),
+          // A panel in each of two side seams (or a leg's two seams) adds its width to the flat
+          // measurement; a sleeve has one underarm seam, so its panel is twice as wide.
+          diy: ok ? { how: "let-out", cm: amt / 2, seams } : { how: "panel", cm: seams === "underarm" ? 2 * amt : amt, seams },
           instruction: ok
             ? L(
                 `${jo(nm.ko, "을")} 단면 ${a} cm (둘레 ${a2} cm) 늘립니다: ${where.ko} 시접을 각각 ${ah} cm씩 풀어 박습니다. 시접이 그만큼 남아 있는지 먼저 확인하십시오.`,
@@ -193,6 +233,7 @@ export function fromBody(garment: GarmentKind, comparisons: Comparison[]): Alter
         ...base,
         part: L("어깨", "Shoulders", "Hombros"),
         action: c.verdict === "big" ? L("어깨 줄이기", "Narrow the shoulders", "Estrechar los hombros") : L("어깨 (늘릴 수 없음)", "Shoulders (can't be let out)", "Hombros (no se pueden sacar)"),
+        diy: c.verdict === "big" ? { how: "shoulder", cm: amt / 2 } : { how: "tailor" },
         instruction:
           c.verdict === "big"
             ? L(
@@ -216,6 +257,7 @@ export function fromBody(garment: GarmentKind, comparisons: Comparison[]): Alter
         ...base,
         part: L("밑위", "Rise", "Tiro"),
         action: big ? L("밑위 줄이기", "Shorten the rise", "Acortar el tiro") : L("밑위 늘리기", "Lengthen the rise", "Alargar el tiro"),
+        diy: { how: "tailor" },
         instruction: L(
           `앞밑위가 ${a} cm ${big ? "깁니다" : "짧습니다"}. 허리단을 떼고 허리선을 ${a} cm ${big ? "내려" : "올려(덧단)"} 다시 답니다.`,
           `The front rise is ${a} cm too ${big ? "long" : "short"}. Take off the waistband, ${big ? "lower" : "raise (with an extension)"} the waistline ${a} cm and sew the band back on.`,
@@ -235,6 +277,7 @@ export function fromBody(garment: GarmentKind, comparisons: Comparison[]): Alter
         ...base,
         part: partL,
         action: L(`${nm.ko} 줄이기`, `Shorten the ${nm.en}`, `Acortar ${nm.es}`),
+        diy: cuff ? { how: "cuff-shorten", cm: amt } : { how: "hem-up", cm: amt, where: sleeve ? "sleeve" : "hem" },
         instruction: cuff
           ? CUFF_SHORTEN(amt)
           : L(`${jo(hemOf.ko, "을")} ${a} cm 올려 다시 박습니다.`, `Turn the ${hemOf.en} up ${a} cm and restitch.`, `Sube ${hemOf.es} ${a} cm y vuelve a coserlo.`),
@@ -246,6 +289,7 @@ export function fromBody(garment: GarmentKind, comparisons: Comparison[]): Alter
         ...base,
         part: partL,
         action: ok ? L(`${nm.ko} 늘리기`, `Lengthen the ${nm.en}`, `Alargar ${nm.es}`) : L(`${hemOf.ko}에 덧단 달기`, `Add an extension to the ${hemOf.en}`, `Alargar ${hemOf.es} con una tira`),
+        diy: { how: ok ? "hem-down" : "band", cm: amt, where: sleeve ? "sleeve" : "hem" },
         instruction: ok
           ? L(
               `${hemOf.ko} 시접을 ${a} cm 내려 다시 박습니다. 시접이 ${a} cm 이상 남아 있는지 먼저 확인하십시오.`,
@@ -393,6 +437,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
     part,
     action,
     amountCm: a,
+    diy: cuff ? { how: "cuff-shorten", cm: a } : { how: "hem-up", cm: a, where: key === "sleeve" ? "sleeve" : "hem" },
     instruction: a
       ? cuff
         ? CUFF_SHORTEN(a)
@@ -413,6 +458,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         ? sleeve ? L("소매에 커프스 덧달기", "Add a cuff band to the sleeves", "Añadir un puño a las mangas") : L("밑단에 덧단 달기", "Add a hem band", "Alargar el bajo con una tira")
         : sleeve ? L("소매 단 내리기", "Let the sleeve hems down", "Sacar el bajo de las mangas") : L("밑단 내리기", "Let the hem down", "Sacar el bajo"),
       amountCm: a,
+      diy: { how: a && !ok ? "band" : "hem-down", cm: a, where: sleeve ? "sleeve" : "hem" },
       instruction: a
         ? ok
           ? L(
@@ -439,6 +485,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: L("뒤 밑위", "Back rise", "Tiro trasero"),
         action: L("뒤 밑위 늘리기", "Raise the back rise", "Subir el tiro trasero"),
+        diy: { how: "back-rise", cm: amt },
         amountCm: amt,
         instruction: a
           ? L(
@@ -461,6 +508,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: L("앞 밑위", "Front rise", "Tiro delantero"),
         action: L("앞 밑위 줄이기", "Lower the front rise", "Bajar el tiro delantero"),
+        diy: { how: "front-rise", cm: a },
         amountCm: a,
         instruction: a
           ? L(
@@ -484,6 +532,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: L("뒷주머니·리벳", "Back pockets, rivets", "Bolsillos traseros, remaches"),
         action: L("뒷주머니·리벳 떼기", "Remove back pockets and rivets", "Quitar bolsillos traseros y remaches"),
+        diy: { how: "remove-pockets" },
         instruction: L(
           "뒷주머니와 리벳을 떼고 자국을 정리합니다. 주머니가 필요하면 허벅지 옆으로 옮겨 답니다.",
           "Remove the back pockets and rivets and tidy the marks. If you need a pocket, move it to the side of the thigh.",
@@ -498,6 +547,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: L("밑단", "Hem", "Bajo"),
         action: a && !ok ? L("밑단에 덧단 달기", "Add a hem extension", "Alargar el bajo con una tira") : L("밑단 내리기", "Let the hem down", "Sacar el bajo"),
+        diy: { how: a && !ok ? "band" : "hem-down", cm: a, where: "hem" },
         amountCm: a,
         instruction: a
           ? ok
@@ -528,6 +578,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         part: L(`${sk}바지 옆선`, side ? `${side.en[0].toUpperCase()}${side.en.slice(1)} outseam` : "Outseam", `Costura lateral${ss}`),
         side: c.side ?? "both",
         action: L("옆선 트임 + 스냅", "Open the outseam, add snaps", "Abertura lateral con broches"),
+        diy: { how: "cast-opening", cm: open },
         amountCm: open,
         instruction: open
           ? L(
@@ -553,6 +604,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: L("허리단 안쪽", "Inside the waistband", "Interior de la cinturilla"),
         action: L("당김 고리 달기", "Add pull loops", "Poner presillas para tirar"),
+        diy: { how: "pull-loops" },
         instruction: L(
           "허리단 안쪽 양옆과 뒤에 손목이 들어가는 당김 고리를 답니다.",
           "Sew pull loops wide enough for a wrist inside the waistband, at both sides and at the back.",
@@ -567,6 +619,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: L("앞 밑단", "Front hem", "Bajo delantero"),
         action: L("앞자락만 줄이기", "Shorten the front only", "Acortar solo el delantero"),
+        diy: { how: "front-hem", cm: a },
         amountCm: a,
         instruction: a
           ? L(
@@ -586,6 +639,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: L("팔꿈치", "Elbows", "Codos"),
         action: L("팔꿈치 덧댐", "Elbow patches", "Coderas"),
+        diy: { how: "elbow-patch" },
         instruction: L(
           "소매 팔꿈치 안쪽이나 바깥에 질긴 천을 덧댑니다. 떼어 낼 수 있게 달면 바꿔 달 수 있습니다.",
           "Patch the elbows with a sturdy fabric, inside or outside. Attached so they come off, the patches can be replaced.",
@@ -600,6 +654,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: L("겨드랑이", "Underarms", "Axilas"),
         action: L("겨드랑이 덧댐", "Underarm patches", "Refuerzo en las axilas"),
+        diy: { how: "underarm-patch" },
         instruction: L("겨드랑이 안쪽에 부드러운 천을 덧대거나 거셋을 넣습니다.", "Line the underarms with a soft fabric patch, or set in a gusset.", "Refuerza las axilas por dentro con una tela suave o pon una cuña (escudete)."),
         difficulty: "medium",
       };
@@ -610,6 +665,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: L("여밈", "Fastening", "Cierre"),
         action: top ? L("자석 단추로 바꾸기", "Switch to magnetic buttons", "Cambiar a botones imantados") : L("큰 당김 고리와 후크", "Large zip pull and a hook", "Tirador grande y corchete"),
+        diy: { how: "fasteners" },
         instruction: top
           ? L("단추를 자석 단추로 바꾸고, 지퍼에는 큰 당김 고리를 답니다.", "Replace the buttons with magnetic ones, and add a large pull to any zip.", "Cambia los botones por botones imantados y pon un tirador grande en la cremallera.")
           : L("지퍼에 큰 당김 고리를 달고, 허리 단추를 후크로 바꿉니다.", "Add a large pull to the zip and replace the waist button with a hook and bar.", "Pon un tirador grande en la cremallera y cambia el botón de la cintura por un corchete."),
@@ -630,6 +686,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: L("허리", "Waist", "Cintura"),
         action: L("고무줄 줄이기", "Shorten the elastic", "Acortar el elástico"),
+        diy: { how: "elastic-shorter", cm: a },
         amountCm: a,
         instruction: a
           ? L(`허리 고무줄을 ${f(a)} cm 짧게 다시 끼웁니다.`, `Rethread the waist elastic ${f(a)} cm shorter.`, `Vuelve a pasar el elástico de la cintura ${f(a)} cm más corto.`)
@@ -646,6 +703,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: L("몸판", "Body", "Cuerpo"),
         action: L("옆선 늘리기", "Let out the side seams", "Sacar las costuras laterales"),
+        diy: { how: "let-out", seams: "side" },
         instruction: L(
           `양 옆선 시접을 풀어 늘립니다. 시접으로는 단면 ${f(LET_OUT_FLAT)} cm까지이고, 그보다 끼면 옆선에 덧천을 넣거나 한 치수 큰 패턴으로 만듭니다. 몸 치수를 넣으면 늘릴 길이가 계산됩니다.`,
           `Let out both side seams. The seam allowance gives up to ${f(LET_OUT_FLAT)} cm flat; if it is tighter than that, add panels at the side seams or make a pattern one size up. Enter body measurements to get the amount.`,
@@ -666,6 +724,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: L("옆선", "Side seams", "Costuras laterales"),
         action: L("옆선 줄이기", "Take in the side seams", "Meter las costuras laterales"),
+        diy: { how: "take-in", cm: a !== undefined ? a / 2 : undefined, seams: "side" },
         amountCm: a,
         instruction: a
           ? big
@@ -693,6 +752,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: L("어깨", "Shoulders", "Hombros"),
         action: L("어깨너비 줄이기", "Narrow the shoulders", "Estrechar los hombros"),
+        diy: { how: "shoulder", cm: a !== undefined ? a / 2 : undefined },
         amountCm: a,
         instruction: a
           ? L(
@@ -713,6 +773,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: L("바지 안솔기", "Inseam", "Entrepierna"),
         action: L("바지통 줄이기", "Taper the legs", "Estrechar las perneras"),
+        diy: { how: "taper", cm: a },
         amountCm: a,
         instruction: a
           ? L(
@@ -733,6 +794,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: L("허리", "Waist", "Cintura"),
         action: L("고무줄 늘리기", "Lengthen the elastic", "Alargar el elástico"),
+        diy: { how: "elastic-longer", cm: a },
         amountCm: a,
         instruction: a
           ? L(`허리 고무줄을 ${f(a)} cm 길게 다시 끼웁니다.`, `Rethread the waist elastic ${f(a)} cm longer.`, `Vuelve a pasar el elástico de la cintura ${f(a)} cm más largo.`)
@@ -749,6 +811,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         from,
         part: OTHER,
         action: L("수선집과 상의", "Talk it over with a tailor", "Consultar en el taller de arreglos"),
+        diy: { how: "tailor" },
         instruction: L(
           "옷을 입은 채 수선집에 보여 주고 어디를 어떻게 고칠지 상의하십시오.",
           "Wear the garment to a tailor and decide together what to change and how.",
@@ -768,7 +831,7 @@ export function guarded(a: Alteration, extra: readonly number[] = []): Alteratio
   const base = [a.amountCm ?? 0, LET_OUT_FLAT, HEM_SPARE.top, HEM_SPARE.pants, BIG_TAKE_IN, BACK_RISE_DEFAULT, CAST_MARGIN, 90, ...extra];
   const allowed = base.flatMap((x) => [x, x / 2, 2 * x, x - CAST_MARGIN]).map((x) => Math.round(x * 10) / 10);
   if (LANGS.every((l) => guardNumbers(a.instruction[l], allowed))) return a;
-  return { ...a, instruction: UNCHECKED, amountCm: undefined, delta: undefined };
+  return { ...a, instruction: UNCHECKED, amountCm: undefined, delta: undefined, diy: { ...a.diy, cm: undefined } };
 }
 
 // Alterations that touch the same measurement: the later one wins in the pattern delta.

@@ -3,14 +3,20 @@
 import { useState } from "react";
 import { GarmentFlat } from "@/components/garment-flat";
 import { useLang } from "@/components/lang";
+import { PatternPreview } from "@/components/pattern-preview";
 import { Badge, buttonGhost, buttonPrimary, Segmented } from "@/components/ui";
 import { compare, complaintsFor, DIFFICULTY_NAME, fromBody, fromComplaint, guarded, type Alteration, type Complaint } from "@/lib/fit/alter";
 import { BODY_HOW, BODY_KEYS, BODY_NAME, targetsFromBody, type BodyFit, type BodyKey } from "@/lib/fit/body";
+import { alterationPattern, diyGuide, type Guide } from "@/lib/fit/diy";
 import { flatFor } from "@/lib/fit/flat";
 import { MAX_TEXT, parse, type ReadComplaints } from "@/lib/fit/read-complaint";
 import { L } from "@/lib/i18n/lang";
 import { GARMENT_NAME } from "@/lib/i18n/names";
+import { cutText } from "@/lib/pattern/dims";
 import { REQUIRED } from "@/lib/pattern/draft";
+import { layOut } from "@/lib/pattern/layout";
+import { patternPdf } from "@/lib/pattern/pdf";
+import { loadPdfFont } from "@/lib/pattern/pdf-font";
 import { MEASURE_NAME } from "@/lib/pattern/measures";
 import { NOT_WORN, type Fabric, type GarmentKind } from "@/lib/pattern/types";
 
@@ -103,10 +109,32 @@ const T = {
     "e.g. The sleeves are about 3 cm too long and the legs are too wide. When I sit, the back of the waist drops.",
     "p. ej.: Las mangas me sobran unos 3 cm y las perneras son demasiado anchas. Al sentarme se me baja la cintura por detrás.",
   ),
-  makeOrder: L("수선 의뢰서 만들기", "Make the alteration order", "Crear la orden de arreglos"),
+  makeOrder: L("고칠 곳 찾기", "Find what to alter", "Buscar qué arreglar"),
   orPick: L("또는 목록에서 고르기", "Or pick from the list", "O elige de la lista"),
   bodyMore: L("몸 치수로 더 정확하게 (선택)", "More exact with body measurements (optional)", "Más exacto con medidas del cuerpo (opcional)"),
   print: L("인쇄 · PDF로 저장", "Print · save as PDF", "Imprimir · guardar en PDF"),
+  who: L("누가 고치나요", "Who's doing it", "Quién lo arregla"),
+  toTailor: L("수선집에 맡기기", "Take it to a tailor", "Llevarla al taller"),
+  diy: L("직접 고치기", "Do it myself", "Hacerlo yo"),
+  guide: L("수선 가이드", "Alteration guide", "Guía de arreglos"),
+  tools: L("준비물", "You need", "Necesitas"),
+  steps: L("순서", "Steps", "Pasos"),
+  cutPieces: L("수선 패턴", "Alteration pattern", "Patrón de arreglos"),
+  tailorBetter: L("수선집 권장", "Best left to a tailor", "Mejor en un taller"),
+  emptyDiy: L(
+    "불편한 점을 적거나 고르면, 직접 고치는 순서와 실제 크기 수선 패턴이 여기에 만들어집니다.",
+    "Write or pick what bothers you, and the steps to fix it yourself, with an actual-size alteration pattern, appear here.",
+    "Escribe o elige lo que te molesta, y aquí aparecerán los pasos para arreglarlo tú, con un patrón de arreglos a tamaño real.",
+  ),
+  patternTitle: L("수선 패턴", "Alteration pattern", "Patrón de arreglos"),
+  patternSub: L(
+    "새로 자를 천 조각과, 옷에 대고 선을 옮겨 그리는 종이 본입니다. 실제 크기(배율 100%)로 인쇄해 첫 장의 10 cm 사각형을 자로 확인하십시오.",
+    "Fabric pieces to cut, and paper templates to lay on the garment and trace. Print at actual size (100%) and check the 10 cm square on the first page with a ruler.",
+    "Piezas de tela para cortar y plantillas de papel para colocar sobre la prenda y calcar. Imprime a tamaño real (100 %) y comprueba con una regla el cuadrado de 10 cm de la primera página.",
+  ),
+  download: L("수선 패턴 PDF 받기", "Download the alteration pattern (PDF)", "Descargar el patrón de arreglos (PDF)"),
+  making: L("만드는 중…", "Making…", "Preparando…"),
+  pdfHeading: L("수선 패턴", "Alteration pattern", "Patrón de arreglos"),
 };
 const count = (n: number) => L(`고칠 곳 ${n}군데`, `${n} change${n > 1 ? "s" : ""}`, `${n} arreglo${n > 1 ? "s" : ""}`);
 const numbered = (n: number) => L(`${n}번`, `Number ${n}`, `Número ${n}`);
@@ -136,6 +164,8 @@ export function AlterPanel({ garment, fabric, measures, sampleText, lead = false
   const [read, setRead] = useState<{ text: string; read: ReadComplaints } | null>(sampleText ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<keyof typeof ERRORS | null>(null);
+  const [who, setWho] = useState<"tailor" | "diy">("tailor");
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   const bodyNums = Object.fromEntries(Object.entries(body).map(([k, v]) => [k, Number(v)]).filter(([, v]) => Number.isFinite(v as number) && (v as number) > 0)) as Partial<Record<BodyKey, number>>;
   const targets = targetsFromBody(garment, bodyNums, fit, fabric, measures);
@@ -150,6 +180,27 @@ export function AlterPanel({ garment, fabric, measures, sampleText, lead = false
     ...fromText.filter((c) => !(c.id in picked)).map((c) => fromComplaint(garment, c)),
   ].map((a) => guarded(a));
   const views = flatFor(garment, measures, fabric, alterations);
+  const diy = who === "diy";
+  const guides: Guide[] = diy ? alterations.map((a, i) => diyGuide(garment, measures, fabric, a, i + 1)) : [];
+  const altPattern = diy ? alterationPattern(garment, measures, fabric, guides) : null;
+  const altSheet = altPattern ? layOut(altPattern) : null;
+
+  async function downloadPdf() {
+    if (!altPattern) return;
+    setPdfBusy(true);
+    try {
+      const heading = `${T.pdfHeading[lang]}: ${GARMENT_NAME[garment][lang]}`;
+      const { bytes } = await patternPdf(altPattern, { title: heading, heading, createdFor: "Rub-Off", lang, font: await loadPdfFont(lang) });
+      const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `rub-off-${garment}-alterations.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setPdfBusy(false);
+    }
+  }
 
   async function analyse() {
     const t = text.trim();
@@ -354,17 +405,66 @@ export function AlterPanel({ garment, fabric, measures, sampleText, lead = false
       </div>
   );
 
+  // One alteration's do-it-yourself guide: what to have, the steps, the pieces it prints.
+  const guideBody = (g: Guide) => (
+    <div className="mt-3 space-y-3 text-[15px] leading-relaxed">
+      {g.tools.length > 0 && (
+        <div>
+          <p className="text-[13px] text-muted">{T.tools[lang]}</p>
+          <ul className="mt-1 flex flex-wrap gap-1.5">
+            {g.tools.map((t) => (
+              <li key={t.en} className="rounded-full bg-well px-2.5 py-1 text-[13px]">
+                {t[lang]}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div>
+        <p className="text-[13px] text-muted">{T.steps[lang]}</p>
+        <ol className="mt-1 list-decimal space-y-1 pl-5 marker:text-muted">
+          {g.steps.map((s, k) => (
+            <li key={k}>{s[lang]}</li>
+          ))}
+        </ol>
+      </div>
+      {g.pieces.length > 0 && (
+        <p className="text-[13px] text-muted">
+          {T.cutPieces[lang]}: {g.pieces.map((p) => `${p.names[lang]} (${cutText(p, lang, true)})`).join(", ")}
+        </p>
+      )}
+      {g.missing && <p className="rounded-lg bg-chalk-soft px-3 py-2 text-[13px]">{g.missing[lang]}</p>}
+    </div>
+  );
+
+  const whoSwitch = (
+    <div className="no-print flex flex-wrap items-center gap-3">
+      <span className="text-[15px] text-muted">{T.who[lang]}</span>
+      <Segmented
+        label={T.who[lang]}
+        value={who}
+        onChange={setWho}
+        options={[
+          { value: "tailor", label: T.toTailor[lang] },
+          { value: "diy", label: T.diy[lang] },
+        ]}
+      />
+    </div>
+  );
+
   const orderSection = (
+    <div className="space-y-4">
+    {whoSwitch}
     <section aria-labelledby="order-title" className="print-order overflow-hidden rounded-xl bg-field">
       <div className="flex flex-wrap items-baseline justify-between gap-2 bg-ink px-5 py-4 text-sand">
         <h3 id="order-title" className="font-display text-2xl">
-          {T.order[lang]}
+          {(diy ? T.guide : T.order)[lang]}
             <span className="ml-2 font-sans text-[15px]">{GARMENT_NAME[garment][lang]}</span>
           </h3>
         <span className="text-[15px]">{alterations.length > 0 ? count(alterations.length)[lang] : T.empty[lang]}</span>
       </div>
       {alterations.length === 0 ? (
-        <p className="px-5 py-8 text-[15px] text-muted">{(lead ? T.leadEmpty : T.emptyText)[lang]}</p>
+        <p className="px-5 py-8 text-[15px] text-muted">{(diy ? T.emptyDiy : lead ? T.leadEmpty : T.emptyText)[lang]}</p>
       ) : (
         <ol className="space-y-1 p-1">
           {views && (
@@ -393,15 +493,26 @@ export function AlterPanel({ garment, fabric, measures, sampleText, lead = false
                   )}
                 </p>
               </div>
-              <p className="mt-1.5 text-[15px] leading-relaxed">{a.instruction[lang]}</p>
+              {diy ? guideBody(guides[i]) : <p className="mt-1.5 text-[15px] leading-relaxed">{a.instruction[lang]}</p>}
               <p className="mt-2 flex flex-wrap items-center gap-1.5">
                 <Badge tone={a.difficulty === "hard" ? "mark" : a.difficulty === "medium" ? "warn" : "ok"}>{DIFFICULTY_NAME[a.difficulty][lang]}</Badge>
                 {a.reversible && <Badge tone="chalk">{T.reversible[lang]}</Badge>}
+                {diy && guides[i].tailor && <Badge tone="mark">{T.tailorBetter[lang]}</Badge>}
                 <span className="text-[13px] text-muted">{a.from[lang]}</span>
               </p>
             </li>
           ))}
         </ol>
+      )}
+      {altPattern && altSheet && (
+        <div className="mx-1 mb-1 rounded-lg bg-paper p-4">
+          <h4 className="text-lg font-semibold">{T.patternTitle[lang]}</h4>
+          <p className="mt-1 text-[15px] text-muted">{T.patternSub[lang]}</p>
+          <PatternPreview sheet={altSheet} text={0.5} className="mt-4 h-auto w-full rounded-xl bg-field" />
+          <button type="button" className={`${buttonPrimary} no-print mt-4`} disabled={pdfBusy} onClick={downloadPdf}>
+            {pdfBusy ? T.making[lang] : T.download[lang]}
+          </button>
+        </div>
       )}
       {alterations.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-4 pt-2">
@@ -412,6 +523,7 @@ export function AlterPanel({ garment, fabric, measures, sampleText, lead = false
         </div>
       )}
     </section>
+    </div>
   );
 
   if (lead)

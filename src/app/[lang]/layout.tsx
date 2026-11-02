@@ -20,9 +20,9 @@ export function generateStaticParams() {
 
 const META = {
   description: L(
-    "옷을 A4 용지와 함께 펴고 한 장 찍으면, 인쇄해 자르는 패턴과 맞는 사이즈, 원단 배치, 수선 의뢰서가 나옵니다.",
-    "Photograph a garment lying flat next to an A4 sheet and get a printable 1:1 sewing pattern, a size decision, a cutting layout and an alteration order.",
-    "Fotografía una prenda extendida junto a una hoja A4 y obtén un patrón imprimible a escala 1:1, la talla que te queda, la colocación en tu tela y una orden de arreglos.",
+    "옷을 A4 용지와 함께 펴고 한 장 찍으면, 인쇄해 자르는 패턴과 맞는 사이즈, 원단 배치, 수선 의뢰서와 직접 고치는 수선 가이드가 나옵니다.",
+    "Photograph a garment lying flat next to an A4 sheet and get a printable 1:1 sewing pattern, a size decision, a cutting layout, and an alteration order or a guide to alter it yourself.",
+    "Fotografía una prenda extendida junto a una hoja A4 y obtén un patrón imprimible a escala 1:1, la talla que te queda, la colocación en tu tela y una orden de arreglos o una guía para arreglarla tú.",
   ),
 };
 
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: LayoutProps<"/[lang]">): Prom
 
 const NAV = {
   how: L("방법", "How", "Cómo"),
-  alter: L("수선 의뢰서", "Alterations", "Arreglos"),
+  alter: L("수선하기", "Alterations", "Arreglos"),
   alterShort: L("수선", "Alter", "Arreglos"),
   makeShort: L("패턴", "Pattern", "Patrón"),
   sample: L("예시", "Examples", "Ejemplos"),

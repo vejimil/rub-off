@@ -42,6 +42,7 @@ function mapPiece(piece: Piece, f: (p: Pt) => Pt): Piece {
     grain: [f(piece.grain[0]), f(piece.grain[1])],
     notches: piece.notches.map((n) => ({ ...n, at: f(n.at) })),
     marks: piece.marks?.map((m) => ({ ...m, a: f(m.a), b: f(m.b) })),
+    ...(piece.labelAt ? { labelAt: f(piece.labelAt) } : {}),
   };
 }
 

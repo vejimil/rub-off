@@ -27,6 +27,7 @@ const ROWS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 export interface PdfOptions {
   title?: string;
+  heading?: string; // the cover's first line; defaults to "Rub-Off pattern: <garment>"
   createdFor?: string; // e.g. "Rub-Off sample"
   lang?: Lang; // default "en"
   font?: Uint8Array; // a TrueType font with the language's characters; required for Korean
@@ -171,13 +172,15 @@ function drawPiece(page: PDFPage, to: ToPage, pp: PlacedPiece, pattern: Pattern,
     label(page, to, T.fold[lang], add(lerp(q1, q2, 0.5), scale(n, 0.6)), 9, bold, u);
   }
 
-  // Grainline, arrows both ends.
+  // Grainline, arrows both ends. A paper template has none.
   const [g0, g1] = piece.grain;
-  polyline(page, to, [g0, g1], W_SEAM);
-  arrowHead(page, to, g0, g1, 0.7);
-  arrowHead(page, to, g1, g0, 0.7);
   const gd = sub(g1, g0), gl = Math.hypot(gd[0], gd[1]);
-  label(page, to, T.grain[lang], add(lerp(g0, g1, 0.5), scale([-gd[1] / gl, gd[0] / gl], 0.45)), 7, font, gd);
+  if (!piece.paper && gl > 0) {
+    polyline(page, to, [g0, g1], W_SEAM);
+    arrowHead(page, to, g0, g1, 0.7);
+    arrowHead(page, to, g1, g0, 0.7);
+    label(page, to, T.grain[lang], add(lerp(g0, g1, 0.5), scale([-gd[1] / gl, gd[0] / gl], 0.45)), 7, font, gd);
+  }
 
   for (const t of notchTicks(piece, pattern.fabric)) {
     const offsets = t.count === 1 ? [0] : [-0.2, 0.2];
@@ -190,6 +193,10 @@ function drawPiece(page: PDFPage, to: ToPage, pp: PlacedPiece, pattern: Pattern,
       polyline(page, to, [m.a, m.b], W_MARK);
       polyline(page, to, [add(m.a, scale(n, 0.6)), add(m.b, scale(n, 0.6))], W_MARK);
       label(page, to, T.lengthen[lang], add(lerp(m.a, m.b, 0.5), scale(n, 1.2)), 6, font, d, GREY);
+    } else if (m.kind === "guide") {
+      // A line to trace onto the garment: as heavy as a seam line, labelled just inside it.
+      polyline(page, to, [m.a, m.b], W_SEAM, false, [5, 2]);
+      if (m.label) label(page, to, m.label[lang], add(lerp(m.a, m.b, 0.5), scale(n, 0.5)), 6, font, d);
     } else if (m.kind === "pocket") {
       polyline(page, to, [m.a, m.b], W_MARK, false, [3, 2]);
       if (m.label) label(page, to, m.label[lang], add(lerp(m.a, m.b, 0.5), scale(n, 0.9)), 6, font, d, GREY);
@@ -199,8 +206,8 @@ function drawPiece(page: PDFPage, to: ToPage, pp: PlacedPiece, pattern: Pattern,
     }
   }
 
-  // Each seam line's length, just inside it, along it.
-  for (const d of edgeDims(piece)) {
+  // Each seam line's length, just inside it, along it. A paper template's lines say it instead.
+  for (const d of piece.paper ? [] : edgeDims(piece)) {
     label(page, to, `${EDGE_NAME[d.kind][lang]} ${d.cm.toFixed(1)} cm`.trim(), add(d.at, scale(d.inward, 0.7)), 7, font, d.dir);
   }
 
@@ -208,7 +215,7 @@ function drawPiece(page: PDFPage, to: ToPage, pp: PlacedPiece, pattern: Pattern,
   const line = seamLine(piece), b = bounds(line);
   const mid: Pt = [(b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2];
   const small = Math.min(b.maxX - b.minX, b.maxY - b.minY) < 12;
-  const at: Pt = small ? mid : [mid[0], mid[1] - 3];
+  const at: Pt = piece.labelAt ?? (small ? mid : [mid[0], mid[1] - 3]);
   const lines = [
     [lang === "ko" ? piece.names.ko : piece.names[lang].toUpperCase(), 12, bold],
     [`${cutText(piece, lang)}  |  ${T.size[lang]} ${sizeOf(pattern, lang)}  |  ${FABRIC[pattern.fabric][lang]}`, 8, font],
@@ -278,7 +285,7 @@ function cover(doc: PDFDocument, pattern: Pattern, sheet: Sheet, [cols, rows]: [
       y -= size * 1.35;
     }
   };
-  text(`${T.title[lang]}: ${GARMENT_NAME[pattern.garment][lang]}`, 18, bold);
+  text(opts.heading ?? `${T.title[lang]}: ${GARMENT_NAME[pattern.garment][lang]}`, 18, bold);
   const pagesText = L(`A4 ${cols * rows}장 (${rows}행 × ${cols}열)`, `${cols * rows} pages (${rows} rows x ${cols} columns)`, `${cols * rows} páginas (${rows} filas × ${cols} columnas)`)[lang];
   text(`${T.size[lang]} ${sizeOf(pattern, lang)}  |  ${FABRIC[pattern.fabric][lang]}  |  ${pagesText}${opts.createdFor ? `  |  ${opts.createdFor}` : ""}`, 10, font, GREY);
   y -= 6;
@@ -312,7 +319,7 @@ function cover(doc: PDFDocument, pattern: Pattern, sheet: Sheet, [cols, rows]: [
   for (const pp of sheet.pieces) {
     const p = pp.piece;
     const [w, h] = [pp.size[0].toFixed(1), pp.size[1].toFixed(1)];
-    const size = L(`시접 포함 ${w} × ${h} cm`, `${w} x ${h} cm with allowance`, `${w} × ${h} cm con margen de costura`)[lang];
+    const size = (p.paper ? L(`${w} × ${h} cm`, `${w} x ${h} cm`, `${w} × ${h} cm`) : L(`시접 포함 ${w} × ${h} cm`, `${w} x ${h} cm with allowance`, `${w} × ${h} cm con margen de costura`))[lang];
     text(`${p.names[lang]} (${cutText(p, lang, true)}): ${size}`, 8, font, BLACK, 8);
   }
   const matches = seamMatches(pattern);
@@ -334,11 +341,12 @@ function cover(doc: PDFDocument, pattern: Pattern, sheet: Sheet, [cols, rows]: [
   if (typical.size) text(T.typical[lang], 8, font, GREY, 8);
   y -= 4;
   text(T.allowance[lang], 11, bold);
-  const kinds = [...new Set(sheet.pieces.flatMap((pp) => pp.piece.edges.map((e) => e.kind)))] as EdgeKind[];
+  const cut = sheet.pieces.filter((pp) => !pp.piece.paper);
+  const kinds = [...new Set(cut.flatMap((pp) => pp.piece.edges.map((e) => e.kind)))] as EdgeKind[];
   const used = kinds
     .filter((kd) => kd !== "fold")
     .map((kd) => {
-      const vals = [...new Set(sheet.pieces.flatMap((pp) => pp.piece.edges.filter((e) => e.kind === kd).map((e) => allowanceOf(e, pattern.fabric))))];
+      const vals = [...new Set(cut.flatMap((pp) => pp.piece.edges.filter((e) => e.kind === kd).map((e) => allowanceOf(e, pattern.fabric))))];
       return `${EDGE_NAME[kd][lang] || T.plainSeam[lang]} ${vals.map((v) => v.toFixed(1)).join("/")} cm`;
     });
   const dflt = seamAllowance("seam", pattern.fabric);

@@ -115,6 +115,7 @@ export function matchText(m: SeamMatch, lang: Lang): string {
 // "Cut 1 on fold", "골선 1장", "Cortar 2 (simétricas)". The list form (inside brackets on the PDF
 // cover) is lower case with a comma: "cut 2, mirror".
 export function cutText(p: Piece, lang: Lang, list = false): string {
+  if (p.paper) return L("종이 본: 천은 자르지 않음", list ? "paper template, not cut from fabric" : "Paper template: don't cut fabric", list ? "plantilla de papel, no se corta en tela" : "Plantilla de papel: no cortar tela")[lang];
   const { count, onFold, mirror } = p.cut;
   const m = L("대칭", "mirror", "simétricas")[lang];
   const extra = mirror ? (list ? `, ${m}` : ` (${m})`) : "";
