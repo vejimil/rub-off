@@ -79,7 +79,7 @@ export function PatternPreview({ sheet, dims = false, text = 1, className = "h-a
 
 // The seams that are sewn to each other, with their lengths and the difference between them.
 const SEAMS = {
-  title: L("서로 꿰매는 솔기", "Seams sewn together", "Costuras que se unen"),
+  title: L("맞대어 박는 솔기", "Seams sewn together", "Costuras que se unen"),
   note: L(
     "패턴에 적힌 길이(cm)는 모두 완성선을 잰 값이고, 시접은 그 바깥에 따로 붙어 있습니다.",
     "Every length on the pattern (cm) is measured on the seam line; the seam allowance is added outside it.",

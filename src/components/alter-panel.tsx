@@ -21,9 +21,9 @@ import { MEASURE_NAME } from "@/lib/pattern/measures";
 import { NOT_WORN, type Fabric, type GarmentKind } from "@/lib/pattern/types";
 
 const ERRORS = {
-  live_disabled: L("지금은 글 읽기를 쉬고 있습니다. 위 목록에서 골라 주십시오.", "Reading written text is paused right now. Please pick from the list above.", "Ahora mismo no se pueden leer textos. Elige de la lista de arriba."),
-  visitor_limit: L("오늘 읽을 수 있는 글을 모두 썼습니다. 위 목록에서 골라 주십시오.", "You've used today's text readings. Please pick from the list above.", "Ya has usado las lecturas de texto de hoy. Elige de la lista de arriba."),
-  daily_limit: L("오늘 읽을 수 있는 양을 모두 썼습니다. 위 목록에서 골라 주십시오.", "Today's text readings are used up. Please pick from the list above.", "Hoy ya no quedan lecturas de texto. Elige de la lista de arriba."),
+  live_disabled: L("지금은 적은 글을 읽을 수 없습니다. 위 목록에서 골라 주십시오.", "Written text can't be read right now. Please pick from the list above.", "Ahora mismo no se pueden leer textos. Elige de la lista de arriba."),
+  visitor_limit: L("오늘 읽을 수 있는 글을 모두 읽었습니다. 위 목록에서 골라 주십시오.", "You've used today's text readings. Please pick from the list above.", "Ya has usado las lecturas de texto de hoy. Elige de la lista de arriba."),
+  daily_limit: L("오늘은 더 이상 글을 읽을 수 없습니다. 위 목록에서 골라 주십시오.", "Today's text readings are used up. Please pick from the list above.", "Hoy ya no quedan lecturas de texto. Elige de la lista de arriba."),
   failed: L("글을 읽지 못했습니다. 잠시 후 다시 해 주십시오.", "Couldn't read the text. Please try again in a moment.", "No se pudo leer el texto. Inténtalo de nuevo en un momento."),
   offline: L("서버에 연결하지 못했습니다.", "Couldn't connect.", "No se pudo conectar."),
 };
@@ -58,11 +58,11 @@ const T = {
   long: L("김", "Too long", "Largo"),
   short: L("짧음", "Too short", "Corto"),
   sayTitle: L("입었을 때 불편한 점", "What bothers you when you wear it", "Qué te molesta al llevarla"),
-  saySub: L("해당하는 것을 고르거나, 아래에 말하듯 적어 주십시오.", "Pick what applies, or write it below the way you'd say it.", "Elige lo que corresponda o escríbelo abajo con tus palabras."),
+  saySub: L("맞는 것을 고르거나, 아래에 말하듯 적어 주십시오.", "Pick what applies, or write it below the way you'd say it.", "Elige lo que corresponda o escríbelo abajo con tus palabras."),
   seated: L("앉아서 입을 때", "When seated", "En posición sentada"),
   general: L("길이와 품", "Length and fit", "Largo y holgura"),
   askNote: L(
-    "재 본 길이가 있으면 넣어 주십시오. 모르면 비워 두면 수선집에서 잽니다.",
+    "재 본 길이가 있으면 넣어 주십시오. 비워 두면 수선집에서 잽니다.",
     "If you've measured it, enter the length. Leave it blank and the tailor will measure it.",
     "Si lo has medido, escribe la medida. Si lo dejas vacío, lo mide el taller.",
   ),
@@ -79,7 +79,7 @@ const T = {
   order: L("수선 의뢰서", "Alteration order", "Orden de arreglos"),
   empty: L("아직 비어 있습니다", "Empty so far", "Vacía por ahora"),
   emptyText: L(
-    "몸 치수를 넣거나 불편한 점을 고르면, 수선집에 그대로 보여 줄 수 있는 의뢰서가 여기에 만들어집니다.",
+    "몸 치수를 넣거나 불편한 점을 고르면, 수선집에 그대로 보여 줄 의뢰서가 여기에 나옵니다.",
     "Enter body measurements or pick what bothers you, and an order you can hand to a tailor as it is appears here.",
     "Escribe las medidas del cuerpo o elige qué te molesta, y aquí aparecerá una orden que puedes llevar tal cual al taller.",
   ),
@@ -89,19 +89,19 @@ const T = {
   reversible: L("되돌릴 수 있음", "Reversible", "Reversible"),
   checkFirst: L("고치기 전에 옷을 입고 한 번 더 확인하십시오.", "Try the garment on and check once more before altering it.", "Pruébate la prenda y compruébalo otra vez antes de arreglarla."),
   leadNeedMeasures: L(
-    "고칠 옷의 사진을 올리면 그 옷의 치수로 길이를 계산합니다. 사진 없이도 불편한 점을 적으면 의뢰서는 만들어지고, 길이는 수선집에서 잽니다.",
+    "고칠 옷의 사진을 올리면 그 옷의 치수로 길이를 계산합니다. 사진 없이 불편한 점만 적어도 의뢰서는 나오고, 길이는 수선집에서 잽니다.",
     "Upload a photo of the garment and the lengths are worked out from its own measurements. Without one, write what bothers you and you still get the order; the tailor measures the lengths.",
     "Sube una foto de la prenda y los largos se calculan con sus propias medidas. Sin foto, escribe lo que te molesta y tendrás igualmente la orden; el taller toma las medidas.",
   ),
   leadEmpty: L(
-    "불편한 점을 적거나 목록에서 고르면, 수선집에 그대로 보여 줄 수 있는 의뢰서가 여기에 만들어집니다.",
+    "불편한 점을 적거나 목록에서 고르면, 수선집에 그대로 보여 줄 의뢰서가 여기에 나옵니다.",
     "Write or pick what bothers you, and an order you can hand to a tailor as it is appears here.",
     "Escribe o elige lo que te molesta, y aquí aparecerá una orden que puedes llevar tal cual al taller.",
   ),
   leadTitle: L("어디가 불편한가요?", "What bothers you?", "¿Qué te molesta?"),
   leadSub: L(
-    "입었을 때 불편한 점을 말하듯 적어 주십시오. 길이를 재 봤다면 숫자도 같이 적으면 그 값이 들어갑니다.",
-    "Write what bothers you when you wear it, the way you'd say it. If you've measured how much, put the number in too and it is used.",
+    "입었을 때 불편한 점을 말하듯 적어 주십시오. 길이를 재 봤다면 숫자도 함께 적으면 그 값으로 계산합니다.",
+    "Write what bothers you when you wear it, the way you'd say it. If you've measured how much, include the number and it's used.",
     "Escribe lo que te molesta al llevarla, como lo dirías. Si has medido cuánto, pon también el número y se usará.",
   ),
   leadPlaceholder: L(
@@ -122,7 +122,7 @@ const T = {
   cutPieces: L("수선 패턴", "Alteration pattern", "Patrón de arreglos"),
   tailorBetter: L("수선집 권장", "Best left to a tailor", "Mejor en un taller"),
   emptyDiy: L(
-    "불편한 점을 적거나 고르면, 직접 고치는 순서와 실제 크기 수선 패턴이 여기에 만들어집니다.",
+    "불편한 점을 적거나 고르면, 직접 고치는 순서와 실제 크기 수선 패턴이 여기에 나옵니다.",
     "Write or pick what bothers you, and the steps to fix it yourself, with an actual-size alteration pattern, appear here.",
     "Escribe o elige lo que te molesta, y aquí aparecerán los pasos para arreglarlo tú, con un patrón de arreglos a tamaño real.",
   ),

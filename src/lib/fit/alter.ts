@@ -197,7 +197,7 @@ export function fromBody(garment: GarmentKind, comparisons: Comparison[]): Alter
           action: L(`${where.ko} 줄이기`, `Take in the ${where.en}`, `Meter las ${where.es}`),
           diy: { how: "take-in", cm: amt / 2, seams },
           instruction: L(
-            `${jo(nm.ko, "을")} 단면 ${a} cm (둘레 ${a2} cm) 줄입니다: ${jo(where.ko, "을")} 각각 ${ah} cm씩 안으로 새로 박습니다.${big ? ` ${BIG_TAKE_IN} cm보다 크게 줄이면 ${more.ko}도 같이 고쳐야 합니다.` : ""}`,
+            `${jo(nm.ko, "을")} 단면 ${a} cm (둘레 ${a2} cm) 줄입니다. ${jo(where.ko, "을")} 각각 ${ah} cm씩 안으로 새로 박습니다.${big ? ` ${BIG_TAKE_IN} cm보다 크게 줄이면 ${more.ko}도 같이 고쳐야 합니다.` : ""}`,
             `Take in the ${nm.en} by ${a} cm flat (${a2} cm around): restitch each of the ${where.en} ${ah} cm further in.${big ? ` Past ${BIG_TAKE_IN} cm, reshape the ${more.en} too.` : ""}`,
             `Mete ${nm.es} ${a} cm en plano (${a2} cm de contorno): vuelve a coser cada una de las ${where.es} ${ah} cm más adentro.${big ? ` Si metes más de ${BIG_TAKE_IN} cm, rehaz también ${more.es}.` : ""}`,
           ),
@@ -214,7 +214,7 @@ export function fromBody(garment: GarmentKind, comparisons: Comparison[]): Alter
           diy: ok ? { how: "let-out", cm: amt / 2, seams } : { how: "panel", cm: seams === "underarm" ? 2 * amt : amt, seams },
           instruction: ok
             ? L(
-                `${jo(nm.ko, "을")} 단면 ${a} cm (둘레 ${a2} cm) 늘립니다: ${where.ko} 시접을 각각 ${ah} cm씩 풀어 박습니다. 시접이 그만큼 남아 있는지 먼저 확인하십시오.`,
+                `${jo(nm.ko, "을")} 단면 ${a} cm (둘레 ${a2} cm) 늘립니다. ${where.ko} 시접을 각각 ${ah} cm씩 풀어 박습니다. 시접이 그만큼 남아 있는지 먼저 확인하십시오.`,
                 `Let out the ${nm.en} by ${a} cm flat (${a2} cm around): unpick the ${where.en} and restitch each ${ah} cm into the seam allowance. First check that this much allowance is left.`,
                 `Saca ${nm.es} ${a} cm en plano (${a2} cm de contorno): descose las ${where.es} y vuelve a coser cada una ${ah} cm dentro del margen. Comprueba antes que quede ese margen.`,
               )
@@ -237,7 +237,7 @@ export function fromBody(garment: GarmentKind, comparisons: Comparison[]): Alter
         instruction:
           c.verdict === "big"
             ? L(
-                `어깨너비를 ${a} cm 줄입니다: 소매를 떼고 양쪽 어깨끝을 ${ah} cm씩 안으로 옮겨 진동을 다시 그린 뒤 소매를 답니다.`,
+                `어깨너비를 ${a} cm 줄입니다. 소매를 떼고 양쪽 어깨끝을 ${ah} cm씩 안으로 옮겨 진동을 다시 그린 뒤 소매를 답니다.`,
                 `Narrow the shoulders by ${a} cm: take off the sleeves, move each shoulder point ${ah} cm in, redraw the armholes and set the sleeves back in.`,
                 `Estrecha los hombros ${a} cm: descose las mangas, mete cada punto de hombro ${ah} cm, vuelve a trazar las sisas y monta de nuevo las mangas.`,
               )
@@ -428,7 +428,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
   const from = c.quote ? L(`적은 글 "${c.quote}"`, `Your words "${c.quote}"`, `Lo que escribiste "${c.quote}"`) : L(`고른 것 "${label.ko}"`, `You picked "${label.en}"`, `Elegiste "${label.es}"`);
   const id = `say-${c.id}`;
   const measureFirst = (what: Local) =>
-    L(`${jo(what.ko, "을")} 재서 적어 주시면 길이가 들어갑니다. 아니면 수선집에서 잽니다.`, `Measure ${what.en} and enter it to get the amount; otherwise the tailor measures it.`, `Mide ${what.es} y anótalo para tener la medida; si no, la toma el taller.`);
+    L(`${jo(what.ko, "을")} 재서 적어 주시면 그 길이로 계산합니다. 비워 두면 수선집에서 잽니다.`, `Measure ${what.en} and enter it to get the amount; otherwise the tailor measures it.`, `Mide ${what.es} y anótalo para tener la medida; si no, la toma el taller.`);
   const join = (first: Local, then: Local) => L(`${first.ko} ${then.ko}`, `${first.en} ${then.en}`, `${first.es} ${then.es}`);
   const side = c.side && c.side !== "both" ? SIDE[c.side] : undefined;
   const shorten = (part: Local, hemOf: Local, action: Local, key: string, cuff = false): Alteration => ({
@@ -705,7 +705,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         action: L("옆선 늘리기", "Let out the side seams", "Sacar las costuras laterales"),
         diy: { how: "let-out", seams: "side" },
         instruction: L(
-          `양 옆선 시접을 풀어 늘립니다. 시접으로는 단면 ${f(LET_OUT_FLAT)} cm까지이고, 그보다 끼면 옆선에 덧천을 넣거나 한 치수 큰 패턴으로 만듭니다. 몸 치수를 넣으면 늘릴 길이가 계산됩니다.`,
+          `양 옆선 시접을 풀어 늘립니다. 시접으로는 단면 ${f(LET_OUT_FLAT)} cm까지이고, 그보다 끼면 옆선에 덧천을 넣거나 한 치수 큰 패턴으로 만듭니다. 몸 치수를 넣으면 늘릴 길이를 계산합니다.`,
           `Let out both side seams. The seam allowance gives up to ${f(LET_OUT_FLAT)} cm flat; if it is tighter than that, add panels at the side seams or make a pattern one size up. Enter body measurements to get the amount.`,
           `Saca ambas costuras laterales. El margen de costura da hasta ${f(LET_OUT_FLAT)} cm en plano; si queda más justo, añade piezas en los costados o haz un patrón una talla más grande. Introduce las medidas del cuerpo para calcular cuánto.`,
         ),

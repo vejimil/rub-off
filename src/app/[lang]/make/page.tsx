@@ -11,9 +11,9 @@ import type { GarmentKind } from "@/lib/pattern/types";
 const T = {
   title: L("사진으로 패턴 만들기", "Make a pattern from a photo", "Crea un patrón con una foto"),
   intro: L(
-    "옷 사진 한 장(앞·뒤면 두 장이면 더 좋습니다)과 A4 용지 한 장이면 됩니다. 사진으로 잴 수 없는 곳은 줄자로 재 달라고 알려 드립니다.",
-    "One photo of the garment (front and back is better) and one A4 sheet. Anything a photo can't measure, you'll be asked to measure with a tape.",
-    "Una foto de la prenda (delantero y espalda, mejor) y una hoja A4. Lo que la foto no pueda medir, te pediremos que lo midas con cinta.",
+    "옷 사진 한 장과 A4 용지 한 장이면 됩니다. 앞뒤 두 장이면 더 정확합니다. 사진으로 잴 수 없는 곳은 줄자로 재 달라고 알려 드립니다.",
+    "One photo of the garment and one A4 sheet; front and back is more accurate. Anything a photo can't measure, you'll be asked to measure with a tape.",
+    "Una foto de la prenda y una hoja A4; con delantero y espalda es más exacto. Lo que la foto no pueda medir, te pediremos que lo midas con cinta.",
   ),
 };
 

@@ -44,7 +44,7 @@ export const CONCEPTS: Record<GarmentKind, { garment: string; parts: string[] }>
 export const PAPER = "paper";
 const SPARK_CHECK_USD = 0.01; // one layout check, a 1024 px image and a short answer
 // A photo not analysed yet, when analysis isn't allowed (the routes then check the visitor's limits).
-export const NEEDS_ANALYSIS = L("이 사진은 아직 분석하지 않았습니다.", "This photo hasn't been analysed yet.", "Esta foto aún no se ha analizado.");
+export const NEEDS_ANALYSIS = L("이 사진은 아직 재지 않았습니다.", "This photo hasn't been measured yet.", "Esta foto aún no se ha medido.");
 const EDGE_PX = 4;
 
 export interface Prepared {
@@ -149,7 +149,7 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
     const n = input.shoulders.length;
     notes.push(L(`어깨점 ${n}개는 사진에서 직접 찍은 점을 썼습니다.`, `${n} shoulder point${n > 1 ? "s were" : " was"} taken from your taps on the photo.`, `${n === 1 ? "Se usó 1 punto" : `Se usaron ${n} puntos`} de hombro marcados por ti en la foto.`));
   }
-  if (layout?.hem === "folded or rolled") notes.push(L("밑단이 접혀 있는 것으로 보입니다. 총장이 짧게 나올 수 있습니다.", "The hem looks folded or rolled. The length may come out short.", "El bajo parece doblado o enrollado. El largo puede salir corto."));
+  if (layout?.hem === "folded or rolled") notes.push(L("밑단이 접혀 있는 듯합니다. 총장이 짧게 나올 수 있습니다.", "The hem looks folded or rolled. The length may come out short.", "El bajo parece doblado o enrollado. El largo puede salir corto."));
 
   // The sheet: the most confident "paper" that fits as A4.
   const papers = masksOfWord(PAPER).sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));

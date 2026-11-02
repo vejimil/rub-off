@@ -12,7 +12,7 @@ import { seamLine, type Pattern } from "@/lib/pattern/types";
 const T = {
   title: L("주머니 달기", "Add pockets", "Añadir bolsillos"),
   hint: L(
-    "주머니를 끌어 조각 위에 놓으십시오. 누르기만 하면 보통 다는 자리에 놓입니다. 놓은 주머니를 누르면 모서리를 끌어 크기를 바꿀 수 있습니다. 놓은 자리는 패턴에 점선으로 표시되고, 주머니 조각이 따로 추가됩니다.",
+    "주머니를 끌어 조각 위에 놓거나, 누르면 흔히 다는 자리에 놓입니다. 놓은 주머니를 누르면 모서리를 끌어 크기를 바꿀 수 있습니다. 다는 자리는 패턴에 점선으로 표시하고, 주머니 조각을 따로 붙입니다.",
     "Drag a pocket onto a piece, or just tap it to put it where one usually goes. Tap a placed pocket and drag a corner to resize it. Its place is dotted on the pattern and the pocket is added as a piece of its own.",
     "Arrastra un bolsillo sobre una pieza, o tócalo para ponerlo donde suele ir. Toca un bolsillo colocado y arrastra una esquina para cambiar su tamaño. Su posición queda punteada en el patrón y el bolsillo se añade como pieza propia.",
   ),

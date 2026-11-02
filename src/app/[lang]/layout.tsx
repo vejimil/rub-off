@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: LayoutProps<"/[lang]">): Prom
 }
 
 const NAV = {
-  how: L("방법", "How", "Cómo"),
+  how: L("찍는 법", "How to shoot", "Cómo hacer la foto"),
   alter: L("수선하기", "Alterations", "Arreglos"),
   alterShort: L("수선", "Alter", "Arreglos"),
   makeShort: L("패턴", "Pattern", "Patrón"),

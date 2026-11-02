@@ -21,9 +21,9 @@ interface FabricPhoto {
 }
 
 const ERRORS = {
-  live_disabled: L("지금은 원단 사진 분석을 쉬고 있습니다. 원단 크기를 입력해 주십시오.", "Fabric photos can't be read right now. Type your fabric's size instead.", "Ahora no podemos leer fotos de tela. Escribe el tamaño de tu tela."),
-  visitor_limit: L("오늘 분석할 수 있는 사진 수를 모두 썼습니다. 원단 크기를 입력해 주십시오.", "You've used today's photo readings. Type your fabric's size instead.", "Ya usaste las lecturas de fotos de hoy. Escribe el tamaño de tu tela."),
-  daily_limit: L("오늘 분석할 수 있는 양을 모두 썼습니다. 원단 크기를 입력해 주십시오.", "Today's photo readings are used up. Type your fabric's size instead.", "Se agotaron las lecturas de fotos de hoy. Escribe el tamaño de tu tela."),
+  live_disabled: L("지금은 원단 사진을 읽을 수 없습니다. 원단 크기를 입력해 주십시오.", "Fabric photos can't be read right now. Type your fabric's size instead.", "Ahora no podemos leer fotos de tela. Escribe el tamaño de tu tela."),
+  visitor_limit: L("오늘 읽을 수 있는 사진을 모두 썼습니다. 원단 크기를 입력해 주십시오.", "You've used today's photo readings. Type your fabric's size instead.", "Ya usaste las lecturas de fotos de hoy. Escribe el tamaño de tu tela."),
+  daily_limit: L("오늘은 더 이상 사진을 읽을 수 없습니다. 원단 크기를 입력해 주십시오.", "Today's photo readings are used up. Type your fabric's size instead.", "Se agotaron las lecturas de fotos de hoy. Escribe el tamaño de tu tela."),
   failed: L("원단 사진을 읽지 못했습니다. 잠시 후 다시 해 주십시오.", "Couldn't read the fabric photo. Try again in a moment.", "No pudimos leer la foto de la tela. Inténtalo de nuevo en un momento."),
 } as const;
 
@@ -33,7 +33,7 @@ const T = {
   fromPhoto: L("원단 사진으로", "From a fabric photo", "Desde una foto de la tela"),
   crossGrain: L("식서 90° 돌림 허용", "Allow turning 90° off the grain", "Permitir girar 90° respecto al hilo"),
   grainNote: L(
-    "원단의 식서(세로 방향)는 사진·입력의 세로입니다. 조각은 식서를 따라 0°·180°로만 돌리고, 원단 가장자리와 조각 사이에 1 cm 이상 띄웁니다.",
+    "입력한 크기(또는 사진)의 세로를 원단의 식서로 봅니다. 조각은 식서를 따라 0°·180°로만 돌리고, 원단 가장자리에서 1 cm 이상 띄웁니다.",
     "The fabric's grain (lengthwise) runs up and down the photo or the size you typed. Pieces turn only 0° or 180° along the grain and stay at least 1 cm from the edges and from each other.",
     "El hilo de la tela (a lo largo) va de arriba abajo en la foto o en el tamaño que escribiste. Las piezas solo giran 0° o 180° siguiendo el hilo y quedan al menos a 1 cm de los bordes y entre sí.",
   ),

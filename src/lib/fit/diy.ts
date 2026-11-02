@@ -151,7 +151,7 @@ function lengthsOf(garment: GarmentKind, measures: Record<string, number>, fabri
 // ---------- guides ----------
 
 const MEASURE_FIRST = L(
-  "고칠 길이를 넣으면 실제 크기 조각이 만들어집니다. 재단 전에 옷을 입고 재 보십시오.",
+  "고칠 길이를 넣으면 실제 크기 조각을 그립니다. 재단 전에 옷을 입고 재 보십시오.",
   "Enter the amount and the actual-size pieces are made. Try the garment on and measure before cutting.",
   "Escribe la medida y se crean las piezas a tamaño real. Pruébate la prenda y mide antes de cortar.",
 );
@@ -279,7 +279,7 @@ function build(garment: GarmentKind, measures: Record<string, number>, fabric: F
         [
           L("천을 세탁해 줄어들 만큼 미리 줄여 둡니다.", "Wash the new fabric first so it shrinks before cutting.", "Lava antes la tela nueva para que encoja antes de cortar."),
           L(
-            `수선 패턴의 ${names.ko}을 천에 대고 2장 자릅니다. 시접 ${f(sa)} cm, 아래 단 시접 ${f(hem)} cm가 포함돼 있습니다.`,
+            `수선 패턴의 ${names.ko}을 천에 대고 2장 자릅니다. 시접 ${f(sa)} cm와 아래 단 시접 ${f(hem)} cm가 들어 있습니다.`,
             `Cut 2 ${names.en.toLowerCase()} pieces from the alteration pattern. They include ${f(sa)} cm seam allowance and ${f(hem)} cm at the hem.`,
             `Corta 2 piezas de ${names.es.toLowerCase()} con el patrón de arreglos. Incluyen ${f(sa)} cm de margen y ${f(hem)} cm de dobladillo.`,
           ),
@@ -361,7 +361,7 @@ function build(garment: GarmentKind, measures: Record<string, number>, fabric: F
                 `Cut 2 of each panel from the alteration pattern: ${f(cm)} cm wide finished, with ${f(sa)} cm seam allowance on each side.`,
                 `Corta 2 de cada pieza con el patrón de arreglos: ${f(cm)} cm de ancho terminado, con ${f(sa)} cm de margen a cada lado.`,
               )
-            : L("덧천 폭은 몸 치수나 고칠 길이를 넣으면 계산됩니다.", "The panel width is worked out once body measurements or an amount are entered.", "El ancho de la pieza se calcula al introducir las medidas del cuerpo o una cantidad."),
+            : L("몸 치수나 고칠 길이를 넣으면 덧천 폭을 계산합니다.", "The panel width is worked out once body measurements or an amount are entered.", "El ancho de la pieza se calcula al introducir las medidas del cuerpo o una cantidad."),
           L("덧천의 한쪽 긴 변을 앞판에, 다른 쪽을 뒤판에 겉끼리 맞대 박습니다.", "Sew one long edge of each panel to the front and the other to the back, right sides together.", "Cose un borde largo de cada pieza al delantero y el otro a la espalda, derecho con derecho."),
           ...(seams === "underarm" || (top && seams === "side")
             ? [L("겨드랑이 쪽 끝은 진동 박음선에 맞춰 같이 박습니다.", "At the underarm, sew the panel's end into the armhole seam.", "En la axila, cose el extremo de la pieza en la costura de la sisa.")]

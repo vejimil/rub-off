@@ -52,7 +52,7 @@ const T = {
   ],
   pageMap: L("페이지 배치", "Page map", "Mapa de páginas"),
   pieces: L("조각", "Pieces", "Piezas"),
-  seams: L("서로 꿰매는 솔기 (완성선 길이)", "Seams sewn together (seam line lengths)", "Costuras que se unen (largo en la línea de costura)"),
+  seams: L("맞대어 박는 솔기 (완성선 길이)", "Seams sewn together (seam line lengths)", "Costuras que se unen (largo en la línea de costura)"),
   drafted: L("이 단면 치수로 제도했습니다 (cm)", "Drafted from these flat measurements (cm)", "Trazado con estas medidas en plano (cm)"),
   typical: L("* 재지 않은 보통 값: 재단 전에 재 주십시오.", "* typical value, not measured: measure before cutting.", "* valor habitual, sin medir: mídelo antes de cortar."),
   allowance: L("시접 포함", "Seam allowance included", "Margen de costura incluido"),
@@ -69,9 +69,9 @@ const T = {
     "- Montaje: no recortes; superpón cada página sobre la vecina hasta que coincidan las líneas grises discontinuas del solape y pega con cinta.",
   ),
   numbers: L(
-    "재단 전에 모든 치수를 확인하십시오. 이 패턴의 숫자는 사진에서 잰 값과 규칙표에서만 나오고, 언어 모델이 만든 숫자는 없습니다.",
-    "Confirm every measurement before cutting. Numbers on this pattern come from the photo's geometry and the rule tables, never from a language model.",
-    "Comprueba cada medida antes de cortar. Los números de este patrón salen de la geometría de la foto y de las tablas de reglas, nunca de un modelo de lenguaje.",
+    "재단 전에 모든 치수를 확인하십시오.",
+    "Confirm every measurement before cutting.",
+    "Comprueba cada medida antes de cortar.",
   ),
 };
 const FABRIC: Record<Fabric, Local> = { woven: L("우븐", "woven", "tejido plano"), knit: L("니트", "knit", "punto") };

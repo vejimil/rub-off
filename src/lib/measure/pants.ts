@@ -11,7 +11,7 @@ import type { PantsMeasures } from "../pattern/measures.ts";
 import { arc, argBest, compose, crossings, dist, inRange, quarterTurns, transform, valueOf, widthAt, type Measured, type Shape, type Value } from "./shape.ts";
 
 export const CROTCH_HIDDEN = L(
-  "사진에서 두 다리가 붙어 가랑이가 가려졌습니다. 밑위는 최대값, 안솔기는 최소값으로만 읽었습니다. 다리를 벌려 다시 찍으면 정확해집니다.",
+  "사진에서 두 다리가 붙어 가랑이가 가려졌습니다. 밑위는 최댓값, 안솔기는 최솟값으로만 읽었습니다. 다리를 벌려 다시 찍으면 정확해집니다.",
   "The legs touch in the photo, so the crotch is hidden. The rise is read only as a maximum and the inseam only as a minimum. Lay the legs apart and take it again for exact values.",
   "Las piernas se tocan en la foto y la entrepierna queda oculta. El tiro se lee solo como máximo y el largo de entrepierna solo como mínimo. Separa las piernas y vuelve a hacer la foto para valores exactos.",
 );

@@ -46,11 +46,11 @@ const BOTTOMS_TABLE = { read: tablesBottoms as ReadTable, src: "/samples/size-ta
 const TEE_TAPE = { frontNeckDrop: "12", backNeckDrop: "2.5" };
 const TEE_RUN = tee as unknown as SampleRun, SHORTS_RUN = shorts as unknown as SampleRun;
 const BOTH = L(
-  "수선집에 맡길 의뢰서와, 직접 고칠 때의 가이드와 실제 크기 수선 패턴",
+  "만든 수선 의뢰서와, 직접 고칠 때의 가이드·실제 크기 수선 패턴",
   "an order to take to a tailor, and a guide with an actual-size alteration pattern for doing it yourself",
   "una orden para llevar al taller, y una guía con un patrón de arreglos a tamaño real para hacerlo tú",
 );
-const withBoth = (head: Local) => L(`${head.ko}: ${BOTH.ko}`, `${head.en}: ${BOTH.en}`, `${head.es}: ${BOTH.es}`);
+const withBoth = (head: Local) => L(`${head.ko} ${BOTH.ko}`, `${head.en}: ${BOTH.en}`, `${head.es}: ${BOTH.es}`);
 
 const SAMPLES: Sample[] = [
   {
@@ -69,7 +69,7 @@ const SAMPLES: Sample[] = [
     run: TEE_RUN,
     tape: TEE_TAPE,
     alter: TEE_COMPLAINT,
-    sub: withBoth(L("직접 찍은 티셔츠의 소매와 길이가 길고 품이 크다는 예시 글에서", "The photographed T-shirt, from an example text saying the sleeves and body are too long and it's baggy", "La camiseta fotografiada, a partir de un texto de ejemplo que dice que mangas y largo sobran y que queda holgada")),
+    sub: withBoth(L("직접 찍은 사진과 '소매와 길이가 길고 품이 크다'는 예시 글로", "From the photo and an example text saying the sleeves and body are too long and it's baggy", "A partir de la foto y de un texto de ejemplo que dice que mangas y largo sobran y que queda holgada")),
   },
   {
     id: "shorts-alter",
@@ -77,22 +77,22 @@ const SAMPLES: Sample[] = [
     garment: "pants",
     run: SHORTS_RUN,
     alter: SHORTS_COMPLAINT,
-    sub: withBoth(L("직접 찍은 반바지의 허리가 헐렁하고 통이 넓고 길이가 짧다는 예시 글에서", "The photographed shorts, from an example text saying the waist is loose, the legs wide and the length short", "El pantalón corto fotografiado, a partir de un texto de ejemplo que dice que la cintura está floja, las perneras anchas y el largo corto")),
+    sub: withBoth(L("직접 찍은 사진과 '허리가 헐렁하고 통이 넓고 길이가 짧다'는 예시 글로", "From the photo and an example text saying the waist is loose, the legs wide and the length short", "A partir de la foto y de un texto de ejemplo que dice que la cintura está floja, las perneras anchas y el largo corto")),
   },
   {
     id: "pants",
     label: L("휠체어 바지", "Wheelchair trousers", "Pantalón para silla de ruedas"),
     garment: "pants",
     alter: COMPLAINT_EXAMPLE,
-    sub: withBoth(L("휠체어를 타는 사람이 고무줄 바지에 대해 적은 불편함에서", "What a wheelchair user wrote about their elastic-waist trousers", "Lo que una persona en silla de ruedas escribió sobre su pantalón de cintura elástica")),
+    sub: withBoth(L("휠체어를 타는 사람이 고무줄 바지의 불편한 점을 적은 예시 글로", "From what a wheelchair user wrote about their elastic-waist trousers (an example)", "A partir de lo que una persona en silla de ruedas escribió sobre su pantalón de cintura elástica (un ejemplo)")),
   },
 ];
 
 const T = {
   real: L("실제 사진", "Real photo", "Foto real"),
-  photoGroup: L("실제 사진으로 해 본 것", "Measured from real photos", "Medido en fotos reales"),
+  photoGroup: L("실제 사진으로 잰 예시", "Measured from real photos", "Medido en fotos reales"),
   alterGroup: L("수선하기", "Alterations", "Arreglos"),
-  words: L("적은 글에서", "From written words", "De un texto escrito"),
+  words: L("적은 글로", "From written words", "De un texto escrito"),
   tape: L("줄자", "Tape", "Cinta"),
   exampleValue: L("예시 값", "Example", "Ejemplo"),
   tryMine: L("내 옷 사진으로 해 보기", "Try it with a photo of your garment", "Pruébalo con una foto de tu prenda"),

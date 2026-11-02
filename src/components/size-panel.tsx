@@ -10,9 +10,9 @@ import { decideSize, type Mine } from "@/lib/size/decide";
 import { toSizeTable, type ReadTable } from "@/lib/size/table";
 
 const ERRORS = {
-  live_disabled: L("지금은 새 실측표 읽기를 쉬고 있습니다. 예시 표로 해 보십시오.", "New size tables can't be read right now. Try the example table.", "Ahora no podemos leer tablas nuevas. Prueba con la tabla de ejemplo."),
-  visitor_limit: L("오늘 읽을 수 있는 표를 모두 썼습니다. 내일 다시 해 주십시오.", "You've used today's table readings. Try again tomorrow.", "Ya usaste las lecturas de tablas de hoy. Vuelve a intentarlo mañana."),
-  daily_limit: L("오늘 읽을 수 있는 양을 모두 썼습니다. 내일 다시 해 주십시오.", "Today's table readings are used up. Try again tomorrow.", "Se agotaron las lecturas de tablas de hoy. Vuelve a intentarlo mañana."),
+  live_disabled: L("지금은 새 실측표를 읽을 수 없습니다. 예시 표로 해 보십시오.", "New size tables can't be read right now. Try the example table.", "Ahora no podemos leer tablas nuevas. Prueba con la tabla de ejemplo."),
+  visitor_limit: L("오늘 읽을 수 있는 표를 모두 읽었습니다. 내일 다시 해 주십시오.", "You've used today's table readings. Try again tomorrow.", "Ya usaste las lecturas de tablas de hoy. Vuelve a intentarlo mañana."),
+  daily_limit: L("오늘은 더 이상 표를 읽을 수 없습니다. 내일 다시 해 주십시오.", "Today's table readings are used up. Try again tomorrow.", "Se agotaron las lecturas de tablas de hoy. Vuelve a intentarlo mañana."),
   failed: L("표를 읽지 못했습니다. 다시 해 주십시오.", "Couldn't read the table. Try again.", "No pudimos leer la tabla. Inténtalo de nuevo."),
 } as const;
 

@@ -56,7 +56,7 @@ const T = {
   framePhoto: L("A4 용지를 올리고 위에서 찍은 티셔츠", "The T-shirt with an A4 sheet, shot from above", "La camiseta con una hoja A4, fotografiada desde arriba"),
   tapeTitle: L("자로 쟀을 때와 거의 같습니다", "Close to measuring by hand", "Casi como medir a mano"),
   tapeNote: L(
-    "어깨점은 솔기가 잘 안 보여 사진 위에서 직접 눌러 정했습니다. 앞목깊이처럼 사진에 안 보이는 곳은 자로 잰 값을 씁니다.",
+    "어깨 솔기가 잘 안 보여 어깨점은 사진에서 직접 찍었습니다. 앞목깊이처럼 사진에 보이지 않는 곳은 자로 잰 값을 씁니다.",
     "The shoulder seams were hard to see, so the shoulder points were tapped on the photo. What a photo can't see, like the front neck drop, is measured by hand.",
     "Las costuras del hombro se veían poco, así que los puntos del hombro se marcaron a mano en la foto. Lo que la foto no ve, como la profundidad del escote, se mide a mano.",
   ),
@@ -67,32 +67,32 @@ const T = {
   colDiff: L("차이", "Difference", "Diferencia"),
   garmentsTitle: L("옷과 소품 열세 가지", "Thirteen things to sew", "Trece cosas para coser"),
   garmentsSub: L(
-    "만들 수 있는 옷을 고르면 그 옷으로 바로 시작합니다. 내 옷 사진으로 재거나, 사진이 없으면 보통 치수로 먼저 그려 볼 수 있습니다.",
-    "Pick what you want to make and start right there: measure your own garment from a photo, or without one, draft it from typical measurements first.",
-    "Elige lo que quieres hacer y empieza ahí mismo: mide tu prenda con una foto o, sin foto, trázala primero con medidas típicas.",
+    "고르면 그 옷으로 바로 시작합니다. 내 옷 사진으로 재거나, 사진이 없으면 보통 치수로 먼저 그려 볼 수 있습니다.",
+    "Pick one to start with it: measure your own garment from a photo, or, without one, draft it from typical measurements first.",
+    "Elige una para empezar con ella: mide tu prenda con una foto o, sin foto, trázala primero con medidas típicas.",
   ),
   garmentsRow: L("옷과 소품 열세 가지, 옆으로 넘기기", "Thirteen things to sew, scroll sideways", "Trece cosas para coser, desliza hacia el lado"),
   startWith: L("이 옷으로 시작", "Start with this", "Empezar con esta"),
   outputsTitle: L("사진 한 장에서 네 가지", "Four things from one photo", "Cuatro cosas de una foto"),
   outputsSub: L(
-    "AI는 사진에서 옷과 A4 용지를 찾는 데만 쓰고, 치수는 그 윤곽을 직접 재서 냅니다. 사진으로 잴 수 없는 곳은 숫자를 지어내지 않고 줄자로 재 달라고 알려 드립니다.",
+    "AI는 사진에서 옷과 A4 용지를 찾는 데만 쓰고, 치수는 그 윤곽을 재서 구합니다. 사진으로 잴 수 없는 곳은 숫자를 지어내지 않고 줄자로 재 달라고 알려 드립니다.",
     "AI only finds the garment and the A4 sheet in the photo; the measurements come from measuring that outline. Where a photo can't measure, no number is made up: you're asked to use a tape.",
     "La IA solo encuentra la prenda y la hoja A4 en la foto; las medidas salen de medir ese contorno. Donde la foto no puede medir, no se inventa ningún número: te pedimos usar la cinta.",
   ),
   sizeTableAlt: L("직접 만든 예시 실측표", "A sample size chart, self-made", "Una tabla de medidas de ejemplo, hecha a mano"),
   alterTitle: L("불편한 점을 수선으로", "Complaints into alterations", "De la molestia al arreglo"),
   alterP1: L(
-    "입을 사람이 불편한 점을 고르거나 말하듯 적으면, 어디를 몇 cm 고칠지 도식화에 표시해 드립니다. 수선집에 그대로 보여 주거나, 직접 고친다면 순서와 실제 크기 수선 패턴을 받으면 됩니다.",
+    "입을 사람이 불편한 점을 고르거나 말하듯 적으면, 어디를 몇 cm 고칠지 도식화에 표시해 드립니다. 수선집에 그대로 보여 주면 되고, 직접 고친다면 순서와 실제 크기 수선 패턴도 받을 수 있습니다.",
     "The person who wears it picks what bothers them, or writes it the way they'd say it, and you get where to alter and by how many centimetres, marked on a technical drawing. Show it to a tailor as it is, or, to do it yourself, get the steps and an actual-size alteration pattern.",
     "Quien lleva la prenda elige lo que le molesta, o lo escribe como lo diría, y obtienes dónde arreglar y cuántos centímetros, marcado en un dibujo técnico. Llévaselo así a la modista o, si lo haces tú, obtén los pasos y un patrón de arreglos a tamaño real.",
   ),
   alterP2: L(
-    "AI는 글을 불편함 목록에 나눠 넣기만 하고, 길이는 적힌 숫자와 의류학 수선 규칙으로 계산합니다. 줄자로 잰 몸 치수를 넣으면 옷과 비교해 줄이거나 늘릴 곳도 찾습니다.",
-    "AI only sorts the words into a list of known fit problems; the lengths come from the numbers written and from clothing-construction alteration rules. Add body measurements taken with a tape and it also finds where to take in or let out.",
-    "La IA solo ordena las palabras en una lista de problemas conocidos; las medidas salen de los números escritos y de reglas de arreglos de confección. Añade medidas del cuerpo tomadas con cinta y también encuentra dónde meter o sacar.",
+    "줄자로 잰 몸 치수를 넣으면 옷과 비교해 줄이거나 늘릴 곳도 찾아 줍니다.",
+    "Add body measurements taken with a tape and it also finds where to take in or let out.",
+    "Añade medidas del cuerpo tomadas con cinta y también encuentra dónde meter o sacar.",
   ),
   quoteBy: L(
-    "휠체어를 타는 사람이 고무줄 바지에 대해 적은 글 (예시)",
+    "휠체어를 타는 사람이 고무줄 바지를 입고 불편했던 점을 적은 글 (예시)",
     "What a wheelchair user wrote about elastic-waist trousers (an example)",
     "Lo que escribió una persona en silla de ruedas sobre su pantalón de cintura elástica (un ejemplo)",
   ),
@@ -106,12 +106,12 @@ const T = {
       `Pantalón de cintura elástica, ${n} cambios. El rayado es tela que se añade, el cuadriculado es tela que se quita, la línea roja discontinua es una costura o abertura nueva. Pruébatelo y comprueba antes de arreglar.`,
     ),
   alterMine: L("내 옷 찍어서 고치기", "Photograph your garment and fix it", "Fotografía tu prenda y arréglala"),
-  alterExample: L("샘플로 해 보기", "Try it on a sample", "Pruébalo con una muestra"),
-  gradeTitle: L("한 치수 크게 그려 보기", "Draft it a size up", "Trázalo una talla más"),
+  alterExample: L("예시로 해 보기", "Try an example", "Prueba un ejemplo"),
+  gradeTitle: L("다른 사이즈로 만들기", "Make it in another size", "Hazlo en otra talla"),
   gradeSub: L(
-    "사진으로 잰 그 티셔츠입니다. 치수를 고르면 잰 값을 옮기고 패턴을 처음부터 다시 그립니다.",
-    "The same T-shirt, measured from the photo. Pick a size and the measurements move and the pattern is drafted again from scratch.",
-    "La misma camiseta, medida en la foto. Elige una talla y las medidas cambian y el patrón se vuelve a trazar desde cero.",
+    "위에서 사진으로 잰 그 티셔츠입니다. 사이즈를 고르면 치수가 바뀌고, 패턴을 처음부터 다시 그립니다.",
+    "The same T-shirt measured from the photo above. Pick a size: the measurements change and the pattern is drafted again from scratch.",
+    "La misma camiseta medida en la foto de arriba. Elige una talla: las medidas cambian y el patrón se vuelve a trazar desde cero.",
   ),
   howTitle: L("찍는 법", "How to shoot", "Cómo hacer la foto"),
   ctaLine: L("옷 사진 한 장과 A4 용지 한 장이면 됩니다. 사진을 올리면 바로 잽니다.", "One photo of the garment and one A4 sheet. Upload it and it's measured right away.", "Una foto de la prenda y una hoja A4. Súbela y se mide al momento."),
@@ -122,22 +122,22 @@ const T = {
   footHow: L("찍는 법", "How to shoot", "Cómo hacer la foto"),
   builtTitle: L("만든 방법", "How it's made", "Cómo está hecho"),
   built: L(
-    "Meta의 SAM 3.1이 사진에서 옷과 A4 용지를 찾고, Muse Spark가 소매가 접혔는지, 실측표와 불편함을 적은 글을 읽습니다. 치수와 고칠 길이는 사진에서 잰 값과 의류학 규칙으로만 계산합니다.",
-    "Meta's SAM 3.1 finds the garment and the A4 sheet in the photo; Muse Spark reads whether a sleeve is folded, a shop's size chart and what the wearer wrote. Measurements and alteration lengths come only from the photo's outline and clothing-construction rules.",
-    "SAM 3.1 de Meta encuentra la prenda y la hoja A4 en la foto; Muse Spark lee si una manga está doblada, la tabla de medidas de una tienda y lo que escribió quien la lleva. Las medidas y los largos de arreglo salen solo del contorno de la foto y de reglas de confección.",
+    "Meta의 SAM 3.1이 사진에서 옷과 A4 용지를 찾고, Muse Spark가 소매가 접혔는지 보고 실측표와 불편한 점을 적은 글을 읽습니다. 치수와 고칠 길이는 사진에서 잰 값과 의류학 규칙으로만 계산합니다.",
+    "Meta's SAM 3.1 finds the garment and the A4 sheet in the photo; Muse Spark checks whether a sleeve is folded and reads a shop's size chart and what the wearer wrote. Measurements and alteration lengths come only from the photo's outline and clothing-construction rules.",
+    "SAM 3.1 de Meta encuentra la prenda y la hoja A4 en la foto; Muse Spark mira si una manga está doblada y lee la tabla de medidas de una tienda y lo que escribió quien la lleva. Las medidas y los largos de arreglo salen solo del contorno de la foto y de reglas de confección.",
   ),
   beforeCutTitle: L("재단 전에", "Before you cut", "Antes de cortar"),
   beforeCut: L("인쇄한 10 cm 사각형을 자로 재고, ±가 큰 값은 줄자로 확인하십시오.", "Measure the printed 10 cm square with a ruler, and check any value with a large ± with a tape.", "Mide con una regla el cuadrado de 10 cm impreso y comprueba con cinta los valores con un ± grande."),
-  owner: L("사진 속 옷과 실측표는 만든 사람의 것입니다.", "The garments and the size chart in the photos are the maker's own.", "Las prendas y la tabla de medidas de las fotos son de quien hizo esto."),
+  owner: L("사진 속 옷은 만든 사람이 직접 찍은 자기 옷이고, 실측표는 직접 만든 예시입니다.", "The garments in the photos are the maker's own, photographed by the maker; the size chart is a self-made example.", "Las prendas de las fotos son de quien hizo esto, fotografiadas por esa persona; la tabla de medidas es un ejemplo hecho a mano."),
   top: L("맨 위로", "Back to top", "Volver arriba"),
   cutAlt: L("원단 위 재단 배치", "Pattern pieces placed on the fabric", "Piezas del patrón colocadas en la tela"),
 };
 
 const OUTPUTS = {
   pdf: { name: L("패턴 PDF", "Pattern PDF", "Patrón en PDF"), text: L("솔기마다 길이를 적어 A4로 나눠 인쇄합니다. 10 cm 사각형으로 배율을 확인합니다.", "Every seam labelled with its length, printed across A4 pages. A 10 cm square checks the scale.", "Cada costura con su largo, impreso en hojas A4. Un cuadrado de 10 cm comprueba la escala.") },
-  grade: { name: L("그레이딩", "Grading", "Escalado"), text: L("한두 치수 크게, 작게. 아래에서 바로 바꿔 볼 수 있습니다.", "One or two sizes up or down. Try it right below.", "Una o dos tallas más o menos. Pruébalo justo abajo.") },
-  size: { name: L("사이즈", "Size", "Talla"), text: L("쇼핑몰 실측표 사진을 옮겨 적고, 내 옷과 같은 핏인 사이즈를 고릅니다.", "Copies a shop's size chart from a screenshot and picks the size that fits like your garment.", "Copia la tabla de medidas de una tienda desde una captura y elige la talla que queda como tu prenda.") },
-  cut: { name: L("원단 배치", "Cutting layout", "Colocación en la tela"), text: L("가진 원단 크기를 넣으면 식서를 지켜 조각이 들어가는지 봅니다.", "Enter the fabric you have and see whether the pieces fit, on grain.", "Indica la tela que tienes y mira si las piezas caben, al hilo.") },
+  grade: { name: L("그레이딩", "Grading", "Escalado"), text: L("한두 치수 크게, 또는 작게. 아래에서 바로 바꿔 볼 수 있습니다.", "One or two sizes up or down. Try it right below.", "Una o dos tallas más o menos. Pruébalo justo abajo.") },
+  size: { name: L("사이즈", "Size", "Talla"), text: L("쇼핑몰 실측표 스크린샷을 읽어, 내 옷과 핏이 같은 사이즈를 골라 줍니다.", "Reads a shop's size chart from a screenshot and picks the size that fits like your garment.", "Lee la tabla de medidas de una tienda desde una captura y elige la talla que queda como tu prenda.") },
+  cut: { name: L("원단 배치", "Cutting layout", "Colocación en la tela"), text: L("갖고 있는 원단 크기를 넣으면, 식서 방향을 지켜 조각이 다 들어가는지 배치해 봅니다.", "Enter the fabric you have and see whether the pieces fit, on grain.", "Indica la tela que tienes y mira si las piezas caben, al hilo.") },
 };
 
 const CARDS: Record<string, Local> = {
@@ -164,7 +164,7 @@ const STEPS = [
   },
   {
     verb: L("올리고", "Place", "Coloca"),
-    text: L("A4 용지를 옷 위나 옆에 둡니다. 네 모서리가 다 보이면 비스듬히 찍은 원근까지 펴서 잽니다.", "Put an A4 sheet on or beside the garment. With all four corners in view, even a slanted shot is straightened out before measuring.", "Pon una hoja A4 encima o al lado de la prenda. Con las cuatro esquinas a la vista, incluso una foto inclinada se endereza antes de medir."),
+    text: L("A4 용지를 옷 위나 옆에 둡니다. 네 모서리가 다 보이면 비스듬히 찍어도 반듯하게 펴서 잽니다.", "Put an A4 sheet on or beside the garment. With all four corners in view, even a slanted shot is straightened out before measuring.", "Pon una hoja A4 encima o al lado de la prenda. Con las cuatro esquinas a la vista, incluso una foto inclinada se endereza antes de medir."),
     alt: L("티셔츠 위의 A4 용지", "An A4 sheet on the T-shirt", "Una hoja A4 sobre la camiseta"),
   },
   {
@@ -213,7 +213,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
   const off = Math.abs(widest.photo - widest.tape).toFixed(1);
   const all = inside === compare.length;
   const tapeText = L(
-    `티셔츠를 사진 한 장으로 잰 값을, 같은 옷을 자로 쟀을 때와 비교했습니다. 가슴단면 ${pct("chest")}, 밑단단면 ${pct("hem")}, 소매단면 ${pct("sleeveOpening")}. ${all ? `${compare.length}곳 모두` : `${compare.length}곳 중 ${inside}곳이`} 사진이 함께 적은 오차(±) 안에 들었고, 가장 크게 다른 곳은 ${MEASURE_NAME[widest.key].ko} ${off} cm입니다.`,
+    `같은 티셔츠를 사진 한 장으로 잰 값과 자로 잰 값을 비교했습니다. 가슴단면 ${pct("chest")}, 밑단단면 ${pct("hem")}, 소매단면 ${pct("sleeveOpening")}. ${all ? `${compare.length}곳 모두` : `${compare.length}곳 중 ${inside}곳이`} 사진으로 잰 값의 오차(±) 안에 들었고, 가장 많이 차이 난 곳은 ${MEASURE_NAME[widest.key].ko}로 ${off} cm입니다.`,
     `A T-shirt measured from one photo, compared with the same shirt measured by hand. Chest ${pct("chest")}, hem ${pct("hem")}, sleeve opening ${pct("sleeveOpening")}. ${all ? `All ${compare.length}` : `${inside} of ${compare.length}`} measurements fell within the ± the photo gave them; the furthest off was the ${MEASURE_NAME[widest.key].en.toLowerCase()}, by ${off} cm.`,
     `Una camiseta medida con una foto, comparada con la misma camiseta medida a mano. Pecho ${pct("chest")}, bajo ${pct("hem")}, boca de manga ${pct("sleeveOpening")}. ${all ? `Las ${compare.length}` : `${inside} de ${compare.length}`} medidas quedaron dentro del ± que dio la foto; la que más se alejó fue ${MEASURE_NAME[widest.key].es.toLowerCase()}, por ${off} cm.`,
   );
@@ -238,7 +238,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
           </div>
         </div>
       ),
-      caption: L(`윤곽에서 잰 단면 ${compare.length}곳, 값마다 ±`, `${compare.length} flat measurements from the outline, each with a ±`, `${compare.length} medidas en plano del contorno, cada una con su ±`)[lang],
+      caption: L(`윤곽에서 잰 단면 ${compare.length}곳과 오차(±)`, `${compare.length} flat measurements from the outline, each with a ±`, `${compare.length} medidas en plano del contorno, cada una con su ±`)[lang],
     },
     {
       node: (
@@ -246,7 +246,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
           <PatternPreview sheet={sheet} dims className="h-auto w-full" />
         </div>
       ),
-      caption: L(`1:1 패턴, 솔기마다 길이, A4 ${cols * rows}장`, `1:1 pattern, every seam's length, ${cols * rows} A4 pages`, `Patrón 1:1, el largo de cada costura, ${cols * rows} hojas A4`)[lang],
+      caption: L(`1:1 패턴, 솔기마다 길이 표시, A4 ${cols * rows}장`, `1:1 pattern, every seam's length, ${cols * rows} A4 pages`, `Patrón 1:1, el largo de cada costura, ${cols * rows} hojas A4`)[lang],
     },
   ];
 
