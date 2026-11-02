@@ -1,29 +1,51 @@
 @import "tailwindcss";
 
-/* Pattern paper, pencil and tracing wheel. The marking colour is kept for what the maker must
-   act on: a value to measure before cutting, a size that doesn't fit. */
+/* Manila pattern paper and one cobalt drafting ink (taste skill: "Cobalt on sand", the app screens
+   "Framed sheet"). The landing page sits on the sand; app screens put a lighter paper sheet on it.
+   Status colours are kept for what the maker must act on: a value to measure before cutting, a
+   size that doesn't fit. */
 :root {
-  --paper: #f7f5ef;
-  --card: #ffffff;
-  --ink: #1d1d1b;
-  --muted: #6b6a63;
-  --line: #e2dfd4;
-  --mark: #d9432a;
-  --mark-soft: #fbe4de;
-  --chalk: #2a5bd7;
-  --chalk-soft: #e2e9fb;
-  --ok: #2d7a4c;
-  --ok-soft: #dcefe2;
-  --warn: #a5650c;
-  --warn-soft: #f6e9cf;
+  --sand: #e6dbc7; /* the ground: pattern paper */
+  --sand-2: #ddd0b9; /* one step down */
+  --sand-3: #cfbe9f; /* a field, two steps down */
+  --paper: #efedea; /* the app sheet: bone, not cream */
+  --well: #ece3d2; /* a well inside the sheet: the photo canvas */
+  --card: #efedea;
+  --field: #f7f7f5; /* inputs and the printable pattern: near white */
+  --ink: #062b8a; /* cobalt: text, drawings, the one action */
+  --ink-strong: #04206a;
+  --muted: #253f86; /* secondary text, 7:1 on the sand */
+  --line: #d6c8ad; /* panel and control edges inside the sheet */
+  --rule: #e4d9c5; /* row rules */
+  --mark: #b3261e; /* negative: missing, doesn't fit */
+  --mark-soft: #f7e1dc;
+  --chalk: #062b8a; /* data hue = the ink */
+  --chalk-soft: #dde3f2;
+  --ok: #1f6b45;
+  --ok-soft: #d7ecdc;
+  --warn: #8a4a0c;
+  --warn-soft: #f4e6c8;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-soft: cubic-bezier(0.33, 1, 0.68, 1);
+  --t-press: 140ms;
+  --t-hover: 180ms;
 }
 
 @theme inline {
+  --color-sand: var(--sand);
+  --color-sand-2: var(--sand-2);
+  --color-sand-3: var(--sand-3);
   --color-paper: var(--paper);
+  --color-well: var(--well);
   --color-card: var(--card);
+  --color-field: var(--field);
   --color-ink: var(--ink);
+  --color-ink-strong: var(--ink-strong);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-rule: var(--rule);
   --color-mark: var(--mark);
   --color-mark-soft: var(--mark-soft);
   --color-chalk: var(--chalk);
@@ -32,12 +54,116 @@
   --color-ok-soft: var(--ok-soft);
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
-  --font-sans: var(--font-geist-sans), "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-sans: var(--font-text), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-display: var(--font-display-face), var(--font-text), sans-serif;
 }
 
 body {
-  background: var(--paper);
+  background: var(--sand);
   color: var(--ink);
   font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+::selection {
+  background: var(--ink);
+  color: var(--sand);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Press and hover, one response everywhere. */
+.press {
+  transition:
+    transform var(--t-press) var(--ease-out),
+    background-color var(--t-hover) ease,
+    color var(--t-hover) ease,
+    border-color var(--t-hover) ease;
+}
+.press:active {
+  transform: scale(0.97);
+}
+.link {
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 0.07em;
+  transition: text-decoration-color var(--t-hover) ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .link:hover {
+    text-decoration-color: currentColor;
+  }
+}
+
+/* Reveal once on scroll. Hidden only after the page script has run, and only without reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .js [data-reveal] {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 700ms var(--ease-out),
+      transform 900ms var(--ease-expo);
+    transition-delay: calc(var(--d, 0) * 80ms);
+  }
+  .js [data-reveal].is-in {
+    opacity: 1;
+    transform: none;
+  }
+  .js [data-deal] {
+    opacity: 0;
+    transform: translateY(80px) rotate(0deg);
+    transition:
+      opacity 600ms var(--ease-out),
+      transform 1000ms var(--ease-expo);
+    transition-delay: calc(var(--d, 0) * 90ms);
+  }
+  .js [data-deal].is-in {
+    opacity: 1;
+    transform: rotate(var(--rot));
+  }
+  .drift {
+    animation: drift 18s var(--ease-soft) infinite alternate;
+  }
+  .marquee {
+    animation: marquee 48s linear infinite;
+  }
+}
+[data-deal] {
+  --rot: 0deg;
+  transform: rotate(var(--rot));
+}
+@media (min-width: 1024px) {
+  [data-deal] {
+    --rot: var(--r, 0deg);
+  }
+}
+@keyframes drift {
+  from {
+    transform: scale(1.02) translate(0, 0);
+  }
+  to {
+    transform: scale(1.08) translate(-1.5%, -1%);
+  }
+}
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
 }

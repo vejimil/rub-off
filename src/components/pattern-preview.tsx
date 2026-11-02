@@ -4,11 +4,11 @@ import { bounds } from "@/lib/geom/polygon";
 
 // The laid-out pattern at a glance: cutting lines, seam lines, grainlines and the A4 pages it
 // prints on. Units are cm.
-export function PatternPreview({ sheet }: { sheet: Sheet }) {
+export function PatternPreview({ sheet, className = "h-auto w-full rounded-xl bg-field" }: { sheet: Sheet; className?: string }) {
   const [cols, rows] = pagesFor(sheet.width, sheet.height);
   const W = (cols - 1) * A4_TILING.step[0] + A4_TILING.content[0], H = (rows - 1) * A4_TILING.step[1] + A4_TILING.content[1];
   return (
-    <svg viewBox={`-1 -1 ${W + 2} ${H + 2}`} className="h-auto w-full rounded-2xl border border-line bg-paper" role="img" aria-label="패턴 배치와 인쇄 페이지">
+    <svg viewBox={`-1 -1 ${W + 2} ${H + 2}`} className={className} role="img" aria-label="패턴 배치와 인쇄 페이지">
       {Array.from({ length: rows * cols }, (_, i) => {
         const r = Math.floor(i / cols), c = i % cols;
         return (
@@ -26,7 +26,7 @@ export function PatternPreview({ sheet }: { sheet: Sheet }) {
         const [g0, g1] = pp.piece.grain;
         return (
           <g key={pp.piece.id}>
-            <path d={svgPath(pp.cut, true)} fill="rgba(42,91,215,0.06)" stroke="var(--ink)" strokeWidth={0.25} />
+            <path d={svgPath(pp.cut, true)} fill="rgba(6,43,138,0.05)" stroke="var(--ink)" strokeWidth={0.25} />
             {pp.piece.edges.map((e, i) => (
               <path key={i} d={svgPath(e.pts)} fill="none" stroke={e.kind === "fold" ? "var(--chalk)" : "var(--muted)"} strokeWidth={0.12} strokeDasharray={e.kind === "fold" ? "1.2 0.4 0.2 0.4" : "0.5 0.3"} />
             ))}
@@ -40,6 +40,17 @@ export function PatternPreview({ sheet }: { sheet: Sheet }) {
           </g>
         );
       })}
+    </svg>
+  );
+}
+
+// Just the cut outlines of a garment's pieces, as laid out for printing: a drawing of the garment.
+export function PiecesOutline({ sheet, className = "h-full w-full" }: { sheet: Sheet; className?: string }) {
+  return (
+    <svg viewBox={`-2 -2 ${sheet.width + 4} ${sheet.height + 4}`} className={className} aria-hidden>
+      {sheet.pieces.map((pp) => (
+        <path key={pp.piece.id} d={svgPath(pp.cut, true)} fill="rgba(6,43,138,0.06)" stroke="var(--ink)" strokeWidth={Math.max(sheet.width, sheet.height) / 160} />
+      ))}
     </svg>
   );
 }

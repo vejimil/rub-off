@@ -5,7 +5,7 @@ import { CuttingPanel } from "@/components/cutting-panel";
 import { PatternPreview } from "@/components/pattern-preview";
 import { PhotoOverlay } from "@/components/photo-overlay";
 import { SizePanel } from "@/components/size-panel";
-import { Badge, buttonGhost, buttonPrimary, Card, Segmented, StepTitle } from "@/components/ui";
+import { Badge, buttonGhost, buttonPrimary, Card, Segmented, Tabs } from "@/components/ui";
 import { resizeToJpeg } from "@/lib/client/resize";
 import { combineMeasurements } from "@/lib/measure/combine";
 import type { FailedRun, OkRun, PhotoView } from "@/lib/client/types";
@@ -32,7 +32,23 @@ export const GARMENT_KO: Record<GarmentKind, string> = {
 const KEYS: Record<GarmentKind, string[]> = {
   shirt: ["length", "chest", "shoulder", "hem", "sleeve", "sleeveOpening", "bicep", "armholeDepth", "neckWidth", "shoulderDrop", "frontNeckDrop", "backNeckDrop"],
   "t-shirt": ["length", "chest", "shoulder", "hem", "sleeve", "sleeveOpening", "bicep", "armholeDepth", "neckWidth", "shoulderDrop", "frontNeckDrop", "backNeckDrop"],
-  hoodie: ["length", "chest", "shoulder", "hem", "sleeve", "sleeveOpening", "bicep", "armholeDepth", "neckWidth", "shoulderDrop", "frontNeckDrop", "backNeckDrop", "hoodHeight", "hoodDepth", "ribHeight"],
+  hoodie: [
+    "length",
+    "chest",
+    "shoulder",
+    "hem",
+    "sleeve",
+    "sleeveOpening",
+    "bicep",
+    "armholeDepth",
+    "neckWidth",
+    "shoulderDrop",
+    "frontNeckDrop",
+    "backNeckDrop",
+    "hoodHeight",
+    "hoodDepth",
+    "ribHeight",
+  ],
   pants: ["waist", "hip", "frontRise", "outseam", "thigh", "legOpening", "backRiseExtra"],
   skirt: ["length", "hem"],
   "eco-bag": ["width", "height", "handleLength", "handleWidth", "gusset"],
@@ -184,7 +200,7 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
   const activeIndex = Math.min(active, shots.length - 1);
   const isTop = TOPS.includes(garment);
   const tabs = [
-    { value: "measure" as const, label: <>치수{missing.length > 0 && <span className="ml-1 rounded-full bg-mark px-1.5 text-[10px] text-white">{missing.length}</span>}</> },
+    { value: "measure" as const, label: <>치수{missing.length > 0 && <span className="ml-1.5 rounded-full bg-mark px-1.5 text-xs text-white">재기 {missing.length}</span>}</> },
     { value: "pattern" as const, label: "패턴" },
     { value: "cut" as const, label: "원단 배치" },
     { value: "size" as const, label: "사이즈" },
@@ -193,7 +209,7 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start">
       {/* Left: the photo canvas */}
-      <div className="space-y-4 lg:sticky lg:top-20">
+      <div className="space-y-4 lg:sticky lg:top-16">
         <Card className="space-y-4">
           {garmentPicker && (
             <div className="flex flex-wrap gap-1.5">
@@ -202,7 +218,7 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
                   key={g}
                   type="button"
                   onClick={() => setGarment(g)}
-                  className={`rounded-full px-3 py-1.5 text-sm transition ${g === garment ? "bg-ink text-paper" : "bg-paper text-muted ring-1 ring-line hover:text-ink"}`}
+                  className={`press rounded-full px-3 py-1.5 text-sm ${g === garment ? "bg-ink text-sand" : "bg-well text-muted hover:text-ink"}`}
                 >
                   {GARMENT_KO[g]}
                 </button>
@@ -227,21 +243,23 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
           </div>
 
           {shot ? (
-            <PhotoOverlay
-              photo={shot.photo}
-              run={shot.run?.garment === garment ? shot.run : undefined}
-              taps={shot.taps}
-              onTap={shot.tapping ? (p) => update(activeIndex, { taps: [...(shot.taps ?? []), p].slice(-2) }) : undefined}
-            />
+            <div className="mx-auto w-full" style={{ maxWidth: `calc((100svh - 260px) * ${(shot.photo.width / shot.photo.height).toFixed(3)})` }}>
+              <PhotoOverlay
+                photo={shot.photo}
+                run={shot.run?.garment === garment ? shot.run : undefined}
+                taps={shot.taps}
+                onTap={shot.tapping ? (p) => update(activeIndex, { taps: [...(shot.taps ?? []), p].slice(-2) }) : undefined}
+              />
+            </div>
           ) : live ? (
-            <label className="flex aspect-[4/5] cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-line bg-paper text-center transition hover:border-ink">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-ink text-2xl text-paper">+</span>
+            <label className="flex aspect-[4/5] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-muted bg-well text-center transition-colors hover:border-ink">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-ink text-2xl text-sand">+</span>
               <span className="font-medium">옷 사진 올리기</span>
               <span className="max-w-64 text-sm text-muted">바닥에 펴고, A4 용지와 함께, 옷 전체가 들어오게 위에서</span>
               <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && choose(e.target.files[0])} />
             </label>
           ) : (
-            placeholder ?? <p className="rounded-2xl bg-paper p-6 text-sm text-muted">공개 데모에서는 샘플만 보여 드립니다.</p>
+            (placeholder ?? <p className="rounded-xl bg-well p-6 text-sm text-muted">공개 데모에서는 샘플만 보여 드립니다.</p>)
           )}
 
           {(shots.length > 1 || (live && shots.length > 0)) && (
@@ -251,7 +269,7 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
                   key={sh.photo.src}
                   type="button"
                   onClick={() => setActive(i)}
-                  className={`relative h-16 w-14 shrink-0 overflow-hidden rounded-lg ring-2 transition ${i === activeIndex ? "ring-ink" : "ring-transparent opacity-70 hover:opacity-100"}`}
+                  className={`relative h-16 w-14 shrink-0 overflow-hidden rounded-lg border-2 transition ${i === activeIndex ? "border-ink" : "border-transparent opacity-70 hover:opacity-100"}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- local thumbnails */}
                   <img src={sh.photo.src} alt="" className="h-full w-full object-cover" />
@@ -259,7 +277,10 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
                 </button>
               ))}
               {live && (
-                <label className="flex h-16 w-14 shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-line text-xs text-muted hover:border-ink" title="뒷면 등 사진 추가">
+                <label
+                  className="flex h-16 w-14 shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-line text-xs text-muted hover:border-ink"
+                  title="뒷면 등 사진 추가"
+                >
                   <span className="text-lg leading-none">+</span>뒷면
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && choose(e.target.files[0])} />
                 </label>
@@ -277,7 +298,13 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
                   어깨점 직접 찍기
                 </button>
               )}
-              <button onClick={() => { setShots((all) => all.filter((_, j) => j !== activeIndex)); setActive(0); }} className="ml-auto text-sm text-muted underline">
+              <button
+                onClick={() => {
+                  setShots((all) => all.filter((_, j) => j !== activeIndex));
+                  setActive(0);
+                }}
+                className="ml-auto text-sm text-muted underline"
+              >
                 사진 빼기
               </button>
             </div>
@@ -286,7 +313,9 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
 
           {shot?.tapping && (
             <div className="space-y-2 rounded-xl bg-chalk-soft p-3 text-sm">
-              <p>사진에서 양쪽 <b>어깨점</b>(소매 솔기가 어깨선과 만나는 점)을 하나씩 누르십시오. 단색 옷은 솔기가 잘 안 보여 SAM이 0.5–3 cm 벗어날 수 있습니다.</p>
+              <p>
+                사진에서 양쪽 <b>어깨점</b>(소매 솔기가 어깨선과 만나는 점)을 하나씩 누르십시오. 단색 옷은 솔기가 잘 안 보여 SAM이 0.5–3 cm 벗어날 수 있습니다.
+              </p>
               <div className="flex gap-2">
                 <button onClick={() => analyse(activeIndex)} disabled={(shot.taps?.length ?? 0) === 0 || busy !== null} className={buttonPrimary}>
                   이 점으로 다시 재기 · {shot.taps?.length ?? 0}/2
@@ -301,14 +330,16 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
           {shot?.missingA4 && (
             <div className="flex flex-wrap items-center gap-2 rounded-xl bg-warn-soft p-3 text-sm">
               A4 없이 재려면 줄자로 잰 치수 하나
-              <select value={ref.key} onChange={(e) => setRef({ ...ref, key: e.target.value })} className="rounded-lg border border-line bg-card px-2 py-1">
-                {KEYS[garment].filter((k) => REQUIRED[garment].includes(k)).map((k) => (
-                  <option key={k} value={k}>
-                    {MEASURE_KO[k]}
-                  </option>
-                ))}
+              <select value={ref.key} onChange={(e) => setRef({ ...ref, key: e.target.value })} className="rounded-lg border border-line bg-field px-2 py-1">
+                {KEYS[garment]
+                  .filter((k) => REQUIRED[garment].includes(k))
+                  .map((k) => (
+                    <option key={k} value={k}>
+                      {MEASURE_KO[k]}
+                    </option>
+                  ))}
               </select>
-              <input inputMode="decimal" value={ref.cm} onChange={(e) => setRef({ ...ref, cm: e.target.value })} className="w-16 rounded-lg border border-line bg-card px-2 py-1" /> cm
+              <input inputMode="decimal" value={ref.cm} onChange={(e) => setRef({ ...ref, cm: e.target.value })} className="w-16 rounded-lg border border-line bg-field px-2 py-1" /> cm
               <button onClick={() => analyse(activeIndex)} disabled={!ref.cm || busy !== null} className={buttonPrimary}>
                 이 값으로 재기
               </button>
@@ -356,14 +387,12 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
       </div>
 
       {/* Right: the steps */}
-      <div className="space-y-4">
-        <div className="sticky top-14 z-10 -mx-1 bg-paper/90 px-1 py-2 backdrop-blur">
-          <Segmented value={tab} onChange={setTab} options={tabs} />
-        </div>
+      <Card className="space-y-5">
+        <Tabs value={tab} onChange={setTab} options={tabs} />
 
         {tab === "measure" && (
-          <Card>
-            <StepTitle n={1} title="치수" sub="사진의 기하에서 잰 단면 값(cm). 줄자로 잰 값이 있으면 고쳐 쓰십시오." />
+          <div>
+            <p className="mb-4 text-sm text-muted">사진의 기하에서 잰 단면 값(cm). 줄자로 잰 값이 있으면 고쳐 쓰십시오.</p>
             <div className="divide-y divide-line">
               {rows.map((r) => (
                 <div key={r.key} className="flex items-center gap-3 py-2.5">
@@ -384,42 +413,33 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
                       {r.source === "missing" && (r.refused ? `사진 값 ${r.refused.cm.toFixed(1)}은 가능 범위 밖` : "사진으로 잴 수 없음")}
                     </p>
                   </div>
-                  <label className={`flex items-center gap-1 rounded-xl border px-2.5 py-1.5 ${r.source === "missing" ? "border-mark bg-mark-soft" : "border-line bg-paper"}`}>
+                  <label className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 ${r.source === "missing" ? "border-mark bg-mark-soft" : "border-line bg-field"}`}>
                     <input
                       inputMode="decimal"
                       value={edits[r.key] ?? (r.value !== undefined ? String(r.value) : "")}
                       placeholder="—"
                       onChange={(e) => setEdits({ ...edits, [r.key]: e.target.value })}
-                      className="w-14 bg-transparent text-right text-base font-semibold tabular-nums outline-none"
+                      className="num w-14 bg-transparent text-right text-base font-semibold outline-none"
                     />
                     <span className="text-xs text-muted">cm</span>
                   </label>
                 </div>
               ))}
             </div>
-          </Card>
+          </div>
         )}
 
         {tab === "pattern" && (
-          <Card className="space-y-4">
-            <StepTitle n={2} title="패턴" sub="시접·식서·너치·골선이 들어간 1:1 패턴. A4로 나눠 인쇄합니다." />
+          <div className="space-y-4">
+            <p className="mb-4 text-sm text-muted">시접·식서·너치·골선이 들어간 1:1 패턴. A4로 나눠 인쇄합니다.</p>
             <div className="flex flex-wrap items-center gap-3 text-sm">
               <label className="flex items-center gap-2">
                 <span className="text-muted">원래 사이즈</span>
-                <input value={baseSize} onChange={(e) => setBaseSize(e.target.value)} className="w-14 rounded-lg border border-line bg-paper px-2 py-1 text-center" />
+                <input value={baseSize} onChange={(e) => setBaseSize(e.target.value)} className="w-14 rounded-lg border border-line bg-field px-2 py-1 text-center" />
               </label>
-              <Segmented
-                size="sm"
-                value={steps}
-                onChange={setSteps}
-                options={[-2, -1, 0, 1, 2].map((v) => ({ value: v, label: v === 0 ? "원본" : gradedLabel(baseSize, v) }))}
-              />
+              <Segmented size="sm" value={steps} onChange={setSteps} options={[-2, -1, 0, 1, 2].map((v) => ({ value: v, label: v === 0 ? "원본" : gradedLabel(baseSize, v) }))} />
             </div>
-            {missing.length > 0 && (
-              <p className="rounded-xl bg-mark-soft p-3 text-sm">
-                패턴을 만들려면 먼저 재 주십시오: {missing.map((m) => MEASURE_KO[m.key]).join(", ")}
-              </p>
-            )}
+            {missing.length > 0 && <p className="rounded-xl bg-mark-soft p-3 text-sm">패턴을 만들려면 먼저 재 주십시오: {missing.map((m) => MEASURE_KO[m.key]).join(", ")}</p>}
             {sheet && pattern && (
               <>
                 <PatternPreview sheet={sheet} />
@@ -437,23 +457,23 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
                 </details>
               </>
             )}
-          </Card>
+          </div>
         )}
 
         {tab === "cut" && (
-          <Card>
-            <StepTitle n={3} title="내 원단에 배치" sub="가진 원단(자투리 포함)에 이 패턴이 들어가는지, 어디에 놓고 자를지." />
+          <div>
+            <p className="mb-4 text-sm text-muted">가진 원단(자투리 포함)에 이 패턴이 들어가는지, 어디에 놓고 자를지.</p>
             {pattern ? <CuttingPanel pattern={pattern} live={live} /> : <p className="text-sm text-muted">패턴이 만들어지면 배치할 수 있습니다.</p>}
-          </Card>
+          </div>
         )}
 
         {tab === "size" && (
-          <Card>
-            <StepTitle n={4} title="쇼핑몰 사이즈 고르기" sub="잘 맞는 이 옷을 기준으로, 실측표에서 같은 핏인 사이즈를 고릅니다." />
+          <div>
+            <p className="mb-4 text-sm text-muted">잘 맞는 이 옷을 기준으로, 실측표에서 같은 핏인 사이즈를 고릅니다.</p>
             {Object.keys(mine).length === 0 ? <p className="text-sm text-muted">먼저 사진으로 재거나 치수를 입력해 주십시오.</p> : <SizePanel mine={mine} fabric={fabric} sample={sampleTable} />}
-          </Card>
+          </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
@@ -463,16 +483,13 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
 function Analyzing() {
   const steps = ["SAM 3.1 · 옷, 소매, 모자, A4 분리", "A4 네 모서리로 cm 평면 맞추기", "Muse Spark · 소매 접힘과 주름 확인", "측정점과 ± 계산"];
   return (
-    <div className="rounded-xl bg-paper p-4">
+    <div className="rounded-xl bg-well p-4">
       <p className="mb-2 text-sm font-medium">사진을 읽는 중 · 보통 10–30초</p>
-      <ul className="space-y-1.5 text-sm text-muted">
-        {steps.map((s, i) => (
-          <li key={s} className="flex items-center gap-2">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-chalk" style={{ animationDelay: `${i * 200}ms` }} />
-            {s}
-          </li>
+      <ol className="list-decimal space-y-1.5 pl-5 text-sm text-muted">
+        {steps.map((s) => (
+          <li key={s}>{s}</li>
         ))}
-      </ul>
+      </ol>
     </div>
   );
 }

@@ -8,9 +8,9 @@ export const metadata: Metadata = { title: "샘플 · Rub-Off" };
 // happens on this page.
 export default function SamplePage() {
   return (
-    <main className="mx-auto w-full max-w-6xl px-5 py-8">
-      <h1 className="text-2xl font-semibold tracking-tight">샘플</h1>
-      <p className="mb-6 mt-1 text-sm text-muted">실제 사진은 SAM 3.1로 한 번 분석해 저장해 둔 결과입니다. 이 페이지는 API를 부르지 않습니다.</p>
+    <main className="mx-2 mb-2 flex-1 rounded-2xl border border-line bg-paper px-4 py-6 sm:px-6">
+      <h1 className="text-2xl font-semibold">샘플</h1>
+      <p className="mb-6 mt-1 text-[15px] text-muted">실제 사진 두 벌은 SAM 3.1로 한 번 분석해 저장해 둔 결과입니다. 이 페이지는 API를 부르지 않습니다.</p>
       <SampleGallery />
     </main>
   );

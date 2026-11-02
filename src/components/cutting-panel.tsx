@@ -70,7 +70,7 @@ export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolea
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <label>
           원단 크기(cm, 가로x세로, 여러 장은 쉼표){" "}
-          <input value={sizes} onChange={(e) => { setSizes(e.target.value); setPhoto(null); }} className="w-44 rounded-lg border border-line bg-paper px-2 py-1" />
+          <input value={sizes} onChange={(e) => { setSizes(e.target.value); setPhoto(null); }} className="w-44 rounded-lg border border-line bg-field px-2 py-1" />
         </label>
         {live && (
           <label className={`${buttonGhost} cursor-pointer`}>
@@ -102,25 +102,25 @@ export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolea
             </ul>
           )}
           {photo ? (
-            <figure className="relative overflow-hidden rounded-2xl border border-line">
+            <figure className="relative overflow-hidden rounded-xl bg-well">
               {/* eslint-disable-next-line @next/next/no-img-element -- the user's own fabric photo */}
               <img src={photo.src} alt="원단" className="block h-auto w-full" />
               <svg viewBox={`0 0 ${photo.width} ${photo.height}`} className="absolute inset-0 h-full w-full" aria-hidden>
                 {result.placed.map((p) => (
-                  <path key={p.piece.id} d={svgPath(p.outline.map((q) => applyH(photo.cmToPx, q)), true)} fill="rgba(42,91,215,0.25)" stroke="var(--chalk)" strokeWidth={photo.width / 300} />
+                  <path key={p.piece.id} d={svgPath(p.outline.map((q) => applyH(photo.cmToPx, q)), true)} fill="rgba(6,43,138,0.25)" stroke="var(--ink)" strokeWidth={photo.width / 300} />
                 ))}
               </svg>
             </figure>
           ) : (
-            <svg viewBox={`${fb.minX - 2} ${fb.minY - 2} ${fb.maxX - fb.minX + 4} ${fb.maxY - fb.minY + 4}`} className="h-auto w-full rounded-2xl border border-line bg-paper" role="img" aria-label="원단 위 재단 배치">
+            <svg viewBox={`${fb.minX - 2} ${fb.minY - 2} ${fb.maxX - fb.minX + 4} ${fb.maxY - fb.minY + 4}`} className="h-auto w-full rounded-xl bg-well" role="img" aria-label="원단 위 재단 배치">
               {fabric.map((f, i) => (
-                <path key={i} d={svgPath(f, true)} fill="var(--warn-soft)" stroke="var(--warn)" strokeWidth={0.3} />
+                <path key={i} d={svgPath(f, true)} fill="var(--sand)" stroke="var(--muted)" strokeWidth={0.3} />
               ))}
               {result.placed.map((p) => {
                 const b = bounds(p.outline);
                 return (
                   <g key={p.piece.id}>
-                    <path d={svgPath(p.outline, true)} fill="rgba(42,91,215,0.15)" stroke="var(--chalk)" strokeWidth={0.3} />
+                    <path d={svgPath(p.outline, true)} fill="rgba(6,43,138,0.12)" stroke="var(--ink)" strokeWidth={0.3} />
                     <text x={(b.minX + b.maxX) / 2} y={(b.minY + b.maxY) / 2} fontSize={2.5} textAnchor="middle" fill="var(--ink)">
                       {p.piece.nameKo}
                     </text>

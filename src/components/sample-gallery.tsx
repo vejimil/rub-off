@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { PiecesOutline } from "@/components/pattern-preview";
 import { Badge } from "@/components/ui";
 import { GARMENT_KO, Workbench } from "@/components/workbench";
 import type { SampleRun } from "@/lib/client/types";
-import { svgPath } from "@/lib/geom/point";
 import { draft } from "@/lib/pattern/draft";
 import { EXAMPLES } from "@/lib/pattern/examples";
 import { layOut } from "@/lib/pattern/layout";
@@ -31,7 +31,7 @@ const TOPS_TABLE = { read: tablesTops as ReadTable, src: "/samples/size-table.pn
 const BOTTOMS_TABLE = { read: tablesBottoms as ReadTable, src: "/samples/size-table-bottoms.png" };
 
 const SAMPLES: Sample[] = [
-  { id: "tee", label: "티셔츠", garment: "t-shirt", run: tee as unknown as SampleRun, sub: "실제 사진 · 어깨점 직접 찍음" },
+  { id: "tee", label: "티셔츠", garment: "t-shirt", run: tee as unknown as SampleRun, sub: "실제 사진, 어깨점은 사진에서 직접 찍음" },
   { id: "shorts", label: "반바지", garment: "pants", run: shorts as unknown as SampleRun, sub: "실제 사진" },
   ...(["shirt", "hoodie", "skirt", "eco-bag"] as const).map((g) => ({ id: g, label: GARMENT_KO[g], garment: g, sub: "예시 치수로 그린 패턴" })),
 ];
@@ -52,9 +52,9 @@ export function SampleGallery() {
             key={x.id}
             type="button"
             onClick={() => setId(x.id)}
-            className={`flex w-36 shrink-0 flex-col overflow-hidden rounded-2xl border bg-card text-left transition ${x.id === id ? "border-ink ring-1 ring-ink" : "border-line hover:border-ink"}`}
+            className={`press flex w-36 shrink-0 flex-col overflow-hidden rounded-xl border-2 bg-paper text-left ${x.id === id ? "border-ink" : "border-line hover:border-muted"}`}
           >
-            <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-paper">
+            <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-well">
               {x.run ? (
                 // eslint-disable-next-line @next/next/no-img-element -- local sample photos
                 <img src={x.run.photo.src} alt="" className="h-full w-full object-cover" />
@@ -63,7 +63,7 @@ export function SampleGallery() {
               )}
             </div>
             <div className="p-2.5">
-              <div className="text-sm font-medium">{x.label}</div>
+              <div className="text-[15px] font-medium">{x.label}</div>
               <div className="mt-1">
                 <Badge tone={x.run ? "chalk" : "muted"}>{x.run ? "실제 사진" : "예시 치수"}</Badge>
               </div>
@@ -72,7 +72,7 @@ export function SampleGallery() {
         ))}
       </div>
       <p className="text-sm text-muted">
-        <b className="text-ink">{s.label}</b> · {s.sub}
+        <b className="text-ink">{s.label}</b>: {s.sub}
       </p>
       <Workbench
         key={s.id}
@@ -84,7 +84,7 @@ export function SampleGallery() {
         initialTab={s.run ? "measure" : "pattern"}
         sampleTable={isTop ? TOPS_TABLE : s.garment === "pants" ? BOTTOMS_TABLE : undefined}
         placeholder={
-          <div className="flex aspect-[4/5] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-line bg-paper p-6 text-center">
+          <div className="flex aspect-[4/5] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-muted bg-well p-6 text-center">
             <div className="w-2/3">
               <PieceThumb garment={s.garment} />
             </div>
@@ -101,17 +101,10 @@ export function SampleGallery() {
   );
 }
 
-// The cut outlines of a garment's pieces, as laid out for printing.
 function PieceThumb({ garment }: { garment: GarmentKind }) {
   const sheet = useMemo(() => {
     const ex = EXAMPLES[garment];
     return layOut(draft({ garment, measures: ex.m, fabric: ex.fabric }));
   }, [garment]);
-  return (
-    <svg viewBox={`-2 -2 ${sheet.width + 4} ${sheet.height + 4}`} className="h-full max-h-full w-full p-2" aria-hidden>
-      {sheet.pieces.map((pp) => (
-        <path key={pp.piece.id} d={svgPath(pp.cut, true)} fill="rgba(42,91,215,0.07)" stroke="var(--ink)" strokeWidth={Math.max(sheet.width, sheet.height) / 160} />
-      ))}
-    </svg>
-  );
+  return <PiecesOutline sheet={sheet} className="h-full max-h-full w-full p-2" />;
 }

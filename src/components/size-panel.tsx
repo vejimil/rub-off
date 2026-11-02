@@ -76,7 +76,7 @@ export function SizePanel({ mine, fabric, sample }: { mine: Partial<Record<SizeK
                   {read.columns.map((col, c) => (
                     <th key={c} className="whitespace-nowrap border-b border-line p-2 text-left font-normal">
                       <div className="font-semibold">{col.header}</div>
-                      <select value={col.meaning} onChange={(e) => setMeaning(c, e.target.value)} className="mt-1 rounded-md border border-line bg-paper px-1 py-0.5 text-xs">
+                      <select value={col.meaning} onChange={(e) => setMeaning(c, e.target.value)} className="mt-1 rounded-md border border-line bg-field px-1 py-0.5 text-xs">
                         {[...SIZE_KEYS, "other"].map((k) => (
                           <option key={k} value={k}>
                             {k === "other" ? "비교 안 함" : SIZE_KEY_KO[k as SizeKey]}
@@ -96,7 +96,7 @@ export function SizePanel({ mine, fabric, sample }: { mine: Partial<Record<SizeK
                         <input
                           value={cell ?? ""}
                           onChange={(e) => setCell(r, c, e.target.value)}
-                          className={`w-12 rounded-lg border px-1.5 py-1 text-right tabular-nums ${parsed.unreadable.some((u) => u.row === row.label && u.header === read.columns[c].header) ? "border-mark bg-mark-soft" : "border-line bg-paper"}`}
+                          className={`w-12 rounded-lg border px-1.5 py-1 text-right tabular-nums ${parsed.unreadable.some((u) => u.row === row.label && u.header === read.columns[c].header) ? "border-mark bg-mark-soft" : "border-line bg-field"}`}
                         />
                       </td>
                     ))}
@@ -109,14 +109,14 @@ export function SizePanel({ mine, fabric, sample }: { mine: Partial<Record<SizeK
           <div className="flex flex-wrap gap-4 text-sm">
             <label>
               단위{" "}
-              <select value={read.unit} onChange={(e) => setRead({ ...read, unit: e.target.value as ReadTable["unit"] })} className="rounded border border-line bg-card">
+              <select value={read.unit} onChange={(e) => setRead({ ...read, unit: e.target.value as ReadTable["unit"] })} className="rounded-md border border-line bg-field">
                 <option value="cm">cm</option>
                 <option value="inch">inch</option>
               </select>
             </label>
             <label className={read.basis === "unknown" ? "rounded bg-warn-soft px-1" : ""}>
               폭 기준{" "}
-              <select value={read.basis} onChange={(e) => setRead({ ...read, basis: e.target.value as ReadTable["basis"] })} className="rounded border border-line bg-card">
+              <select value={read.basis} onChange={(e) => setRead({ ...read, basis: e.target.value as ReadTable["basis"] })} className="rounded-md border border-line bg-field">
                 <option value="flat">단면</option>
                 <option value="circumference">둘레</option>
                 <option value="unknown">표에 없음</option>
@@ -141,11 +141,11 @@ export function SizePanel({ mine, fabric, sample }: { mine: Partial<Record<SizeK
 
           {decision && !decision.ok && <p className="rounded-md bg-warn-soft p-3 text-sm">{decision.reason === "ask-basis" ? "표의 폭이 단면인지 둘레인지 골라 주십시오." : "표와 내 옷에 같은 측정 항목이 없습니다."}</p>}
           {decision?.ok && (
-            <div className="overflow-hidden rounded-2xl border border-line">
-              <div className="flex items-center gap-4 bg-ink p-5 text-paper">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-paper text-3xl font-semibold text-ink">{decision.best.label}</div>
+            <div className="overflow-hidden rounded-xl border border-line">
+              <div className="flex items-center gap-4 bg-ink p-5 text-sand">
+                <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-sand text-3xl font-semibold text-ink">{decision.best.label}</div>
                 <div>
-                  <p className="text-xs uppercase tracking-widest text-paper/60">추천 사이즈</p>
+                  <p className="text-sm">추천 사이즈</p>
                   <p className="mt-1 text-sm">{decision.sentences[0]?.replace(/^[^:]+:\s*/, "")}</p>
                 </div>
               </div>
@@ -163,12 +163,12 @@ export function SizePanel({ mine, fabric, sample }: { mine: Partial<Record<SizeK
                     <div className="flex flex-wrap gap-1.5">
                       {r.checks.map((c) => (
                         <Badge key={c.key} tone={c.verdict === "fits" ? "ok" : "mark"}>
-                          {c.verdict === "fits" ? "✓" : "✗"} {SIZE_KEY_KO[c.key]} {c.diff > 0 ? "+" : c.diff < 0 ? "−" : ""}
+                          <Verdict fits={c.verdict === "fits"} /> {SIZE_KEY_KO[c.key]} {c.diff > 0 ? "+" : c.diff < 0 ? "−" : ""}
                           {Math.abs(c.diff)}
                         </Badge>
                       ))}
                     </div>
-                    <span className="ml-auto text-xs text-muted">
+                    <span className="num ml-auto text-xs text-muted">
                       {r.fits}/{r.checks.length}
                     </span>
                   </div>
@@ -179,5 +179,14 @@ export function SizePanel({ mine, fabric, sample }: { mine: Partial<Record<SizeK
         </>
       )}
     </section>
+  );
+}
+
+// A check or a cross, drawn, with the words for screen readers.
+function Verdict({ fits }: { fits: boolean }) {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" role="img" aria-label={fits ? "맞음" : "안 맞음"}>
+      <path d={fits ? "M1.5 5.5 L4 8 L8.5 2" : "M2 2 L8 8 M8 2 L2 8"} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
   );
 }

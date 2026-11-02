@@ -7,11 +7,11 @@ import type { OkRun, PhotoView } from "@/lib/client/types";
 // The photo with what the pipeline found: the A4 sheet, the garment outline, the SAM part masks
 // and each measured line with its cm. With onTap, a click reports where on the photo it landed
 // (as fractions of its width and height), and taps are drawn as rings.
-export function PhotoOverlay({ photo, run, onTap, taps = [] }: { photo: PhotoView; run?: OkRun; onTap?: (p: Pt) => void; taps?: Pt[] }) {
+export function PhotoOverlay({ photo, run, onTap, taps = [], className = "rounded-xl" }: { photo: PhotoView; run?: OkRun; onTap?: (p: Pt) => void; taps?: Pt[]; className?: string }) {
   const fs = Math.round(Math.max(photo.width, photo.height) / 55);
   return (
     <figure
-      className={`relative overflow-hidden rounded-2xl border bg-card ${onTap ? "cursor-crosshair border-chalk ring-2 ring-chalk/40" : "border-line"}`}
+      className={`relative overflow-hidden bg-well ${className} ${onTap ? "cursor-crosshair ring-2 ring-ink" : ""}`}
       onClick={(e) => {
         if (!onTap) return;
         const r = e.currentTarget.getBoundingClientRect();
@@ -19,21 +19,21 @@ export function PhotoOverlay({ photo, run, onTap, taps = [] }: { photo: PhotoVie
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- a local object URL or a sample, shown at its own size */}
-      <img src={photo.src} alt="펴놓은 옷과 A4 용지" className="block h-auto w-full" />
+      <img src={photo.src} alt="펴놓은 옷과 A4 용지" width={photo.width} height={photo.height} className="block h-auto w-full" />
       {run && (
         <svg viewBox={`0 0 ${photo.width} ${photo.height}`} className="absolute inset-0 h-full w-full" aria-hidden>
-          <path d={svgPath(run.scale.cornersPx, true)} fill="rgba(42,91,215,0.12)" stroke="var(--chalk)" strokeWidth={fs / 5} />
+          <path d={svgPath(run.scale.cornersPx, true)} fill="rgba(255,255,255,0.35)" stroke="var(--ink)" strokeWidth={fs / 5} />
           {run.overlay.partsPx.map((p, i) => (
-            <path key={i} d={svgPath(p, true)} fill="rgba(165,101,12,0.18)" stroke="var(--warn)" strokeWidth={fs / 7} />
+            <path key={i} d={svgPath(p, true)} fill="rgba(6,43,138,0.10)" stroke="var(--muted)" strokeWidth={fs / 7} />
           ))}
-          <path d={svgPath(run.overlay.outlinePx, true)} fill="none" stroke="#fff" strokeWidth={fs / 3} opacity={0.8} />
-          <path d={svgPath(run.overlay.outlinePx, true)} fill="none" stroke="var(--ink)" strokeWidth={fs / 7} />
+          <path d={svgPath(run.overlay.outlinePx, true)} fill="none" stroke="var(--sand)" strokeWidth={fs / 3} opacity={0.8} />
+          <path d={svgPath(run.overlay.outlinePx, true)} fill="none" stroke="var(--ink)" strokeWidth={fs / 7} strokeDasharray={`${fs / 2} ${fs / 3}`} />
           {run.overlay.segmentsPx.map((s) => (
             <g key={`${s.key}-${s.a[0]}`}>
-              <line x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke="#fff" strokeWidth={fs / 2.2} strokeLinecap="round" opacity={0.85} />
-              <line x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke="var(--mark)" strokeWidth={fs / 5} strokeLinecap="round" />
-              <circle cx={s.a[0]} cy={s.a[1]} r={fs / 3} fill="var(--mark)" stroke="#fff" strokeWidth={fs / 10} />
-              <circle cx={s.b[0]} cy={s.b[1]} r={fs / 3} fill="var(--mark)" stroke="#fff" strokeWidth={fs / 10} />
+              <line x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke="var(--sand)" strokeWidth={fs / 2.2} strokeLinecap="round" opacity={0.85} />
+              <line x1={s.a[0]} y1={s.a[1]} x2={s.b[0]} y2={s.b[1]} stroke="var(--ink)" strokeWidth={fs / 5} strokeLinecap="round" />
+              <circle cx={s.a[0]} cy={s.a[1]} r={fs / 3} fill="var(--ink)" stroke="var(--sand)" strokeWidth={fs / 10} />
+              <circle cx={s.b[0]} cy={s.b[1]} r={fs / 3} fill="var(--ink)" stroke="var(--sand)" strokeWidth={fs / 10} />
             </g>
           ))}
           {/* Labels last, so no line crosses a label. */}
@@ -45,8 +45,8 @@ export function PhotoOverlay({ photo, run, onTap, taps = [] }: { photo: PhotoVie
             const y = Math.min(photo.height - h, Math.max(h, (s.a[1] + s.b[1]) / 2));
             return (
               <g key={`label-${s.key}`}>
-                <rect x={x - w / 2} y={y - h / 2} width={w} height={h} rx={h / 2} fill="var(--ink)" opacity={0.88} />
-                <text x={x} y={y + fs * 0.36} fontSize={fs} textAnchor="middle" fill="#fff" fontWeight={600}>
+                <rect x={x - w / 2} y={y - h / 2} width={w} height={h} rx={h / 2} fill="var(--ink)" />
+                <text x={x} y={y + fs * 0.36} fontSize={fs} textAnchor="middle" fill="var(--sand)" fontWeight={600} className="num">
                   {label}
                 </text>
               </g>

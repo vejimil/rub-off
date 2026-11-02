@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Black_Han_Sans, IBM_Plex_Sans_KR } from "next/font/google";
 import Link from "next/link";
+import { PageScript } from "@/components/page-script";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// Two faces: a heavy, constructed Korean display face for the few big words, and a grotesk for
+// everything else (tabular figures for the measurements).
+const display = Black_Han_Sans({ variable: "--font-display-face", weight: "400", subsets: ["latin"], preload: false });
+const text = IBM_Plex_Sans_KR({ variable: "--font-text", weight: ["400", "500", "600"], subsets: ["latin"], preload: false });
 
 export const metadata: Metadata = {
   title: "Rub-Off",
@@ -20,46 +16,41 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
-        <header className="sticky top-0 z-20 border-b border-line bg-paper/85 backdrop-blur">
-          <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-5">
-            <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+    <html lang="ko" className={`${display.variable} ${text.variable} h-full antialiased`}>
+      <body className="flex min-h-full flex-col">
+        <PageScript />
+        <header className="sticky top-0 z-30 bg-sand">
+          <div className="flex h-12 w-full items-center gap-6 px-4 sm:px-8">
+            <Link href="/" className="flex items-center gap-2 font-display text-lg tracking-tight">
               <Mark />
               Rub-Off
             </Link>
-            <nav className="ml-auto flex items-center gap-1 text-sm">
-              <Link href="/sample" className="rounded-full px-3 py-1.5 text-muted hover:text-ink">
+            <nav className="ml-auto flex items-center gap-1 text-[15px]">
+              <Link href="/#how" className="link hidden px-3 py-1.5 sm:block">
+                방법
+              </Link>
+              <Link href="/sample" className="link px-3 py-1.5">
                 샘플
               </Link>
-              <Link href="/make" className="rounded-full bg-ink px-4 py-1.5 text-paper">
-                만들기
+              <Link href="/make" className="press ml-2 rounded-full bg-ink px-4 py-1.5 font-medium text-sand hover:bg-ink-strong">
+                패턴 만들기
               </Link>
             </nav>
           </div>
         </header>
-        <div className="flex-1">{children}</div>
-        <footer className="border-t border-line">
-          <div className="mx-auto flex w-full max-w-6xl flex-wrap gap-x-6 gap-y-1 px-5 py-6 text-xs text-muted">
-            <span>Rub-Off · Meta SAM 3.1 · Muse Spark</span>
-            <span>숫자는 모델이 아니라 사진의 기하와 규칙표에서 나옵니다. 재단 전에 확인하십시오.</span>
-          </div>
-        </footer>
+        <div className="flex flex-1 flex-col">{children}</div>
       </body>
     </html>
   );
 }
 
-// A pattern corner: cutting line, dashed seam line inside it, a notch.
+// A pattern corner: the cutting line, the seam line 1 cm inside it, and a notch.
 function Mark() {
   return (
     <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden>
-      <path d="M3 19 V5 Q3 3 5 3 H19" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M7 19 V8.5 Q7 7 8.5 7 H19" fill="none" stroke="#d9432a" strokeWidth="1.4" strokeDasharray="2 2" />
-      <path d="M3 12 H6" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3 19 V5 Q3 3 5 3 H19" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M7.5 19 V9 Q7.5 7.5 9 7.5 H19" fill="none" stroke="currentColor" strokeWidth="1.3" strokeDasharray="2 2" />
+      <path d="M1 12 H6" stroke="currentColor" strokeWidth="1.8" />
     </svg>
   );
 }

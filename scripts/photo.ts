@@ -105,7 +105,7 @@ for (const source of sources) {
         .map((p) => `<path d="${svgPath(p, true)}" fill="#fff" stroke="#fff" stroke-width="${grow}" stroke-linejoin="round"/>`)
         .join("")}</svg>`;
       const cut = await sharp(photo.bytes).ensureAlpha().composite([{ input: Buffer.from(mask), blend: "dest-in" }]).png().toBuffer();
-      bytes = await sharp(cut).flatten({ background: "#e9e4da" }).jpeg({ quality: 85 }).toBuffer();
+      bytes = await sharp(cut).flatten({ background: "#e6dbc7" }).jpeg({ quality: 85 }).toBuffer(); // the site's sand ground
     }
     await writeFile(path.resolve("public", publicPhoto), bytes);
     const { pattern: _pattern, ...rest } = run;
