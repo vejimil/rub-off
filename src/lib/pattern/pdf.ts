@@ -190,6 +190,9 @@ function drawPiece(page: PDFPage, to: ToPage, pp: PlacedPiece, pattern: Pattern,
       polyline(page, to, [m.a, m.b], W_MARK);
       polyline(page, to, [add(m.a, scale(n, 0.6)), add(m.b, scale(n, 0.6))], W_MARK);
       label(page, to, T.lengthen[lang], add(lerp(m.a, m.b, 0.5), scale(n, 1.2)), 6, font, d, GREY);
+    } else if (m.kind === "pocket") {
+      polyline(page, to, [m.a, m.b], W_MARK, false, [3, 2]);
+      if (m.label) label(page, to, m.label[lang], add(lerp(m.a, m.b, 0.5), scale(n, 0.9)), 6, font, d, GREY);
     } else {
       polyline(page, to, [m.a, m.b], W_MARK, false, [8, 2, 2, 2]);
       label(page, to, T.centreFront[lang], add(lerp(m.a, m.b, 0.35), scale(n, -0.5)), 6, font, d, GREY);

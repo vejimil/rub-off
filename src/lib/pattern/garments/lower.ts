@@ -1,11 +1,13 @@
-// Elastic-waist pants, a gathered elastic skirt and a tote bag, drafted from flat measurements.
+// Elastic-waist pants, a gathered elastic skirt, an A-line skirt and a tote bag, drafted from flat
+// measurements.
 // Origin at the centre front (or centre back) waist, x toward the side seam, y down, cm.
 
 import type { Pt } from "../../geom/point.ts";
-import { dist } from "../../geom/point.ts";
+import { add, dist, scale, xAt } from "../../geom/point.ts";
 import { casingAllowance } from "../../rules/seam-rules.ts";
-import { line, quad } from "../curves.ts";
-import type { BagMeasures, PantsMeasures, SkirtMeasures } from "../measures.ts";
+import { cubic, line, quad } from "../curves.ts";
+import { rect } from "./top.ts";
+import type { ALineMeasures, BagMeasures, PantsMeasures, SkirtMeasures } from "../measures.ts";
 import { L, type Local } from "../../i18n/lang.ts";
 import { named, type Piece } from "../types.ts";
 
@@ -120,6 +122,61 @@ export function draftSkirt(m: SkirtMeasures, elastic = ELASTIC_CM): { pieces: Pi
         `허리 통(시접 ${casing.toFixed(1)} cm): 1 cm 접고 다시 ${(casing - 1).toFixed(1)} cm 접어 박습니다.`,
         `Waist casing (${casing.toFixed(1)} cm allowance): turn under 1 cm, then fold ${(casing - 1).toFixed(1)} cm.`,
         `Jareta (margen de ${casing.toFixed(1)} cm): dobla 1 cm y luego ${(casing - 1).toFixed(1)} cm.`,
+      ),
+    ],
+  };
+}
+
+// [A] A-line skirt rules, owner to confirm.
+export const WAISTBAND_CM = 3; // finished
+const BAND_OVERLAP = 3; // the waistband's underlap at the zip
+export const ZIP_CM = 18; // invisible zip in the left side seam
+const HIP_DOWN = 18; // hip line below the waist seam
+const HIP_PASS = 4; // the hip line must be at least the wearer's hip plus this, around
+const SIDE_RISE_SHARE = 0.08; // the side waist rises with the flare, so the waist meets the side square
+
+export function draftALine(m: ALineMeasures): { pieces: Piece[]; notes: Local[] } {
+  const len = m.length - WAISTBAND_CM; // the panel, below the waistband
+  const wq = m.waist / 2, hq = m.hem / 2; // a quarter of the waist and of the hem, around
+  const rise = Math.min(2, SIDE_RISE_SHARE * Math.max(0, hq - wq));
+  const sideTop: Pt = [wq, -rise];
+  // The side seam is as long as the centre: the hem curves up toward the side.
+  const d = [hq - wq, len + rise] as const, dl = Math.hypot(d[0], d[1]);
+  const u: Pt = [d[0] / dl, d[1] / dl];
+  const sideHem = add(sideTop, scale(u, len));
+  const waist = quad([0, 0], [0.55 * wq, 0], sideTop);
+  // Leaves the side square to it and meets the centre fold square.
+  const hem = cubic(sideHem, add(sideHem, scale([-u[1], u[0]], 0.25 * hq)), [0.45 * hq, len], [0, len]);
+  const panel: Piece = {
+    id: "panel",
+    ...named(L("앞·뒤판", "Front & back", "Delantero y trasero")),
+    cut: { count: 2, onFold: true, mirror: false },
+    edges: [
+      { kind: "waist", pts: waist },
+      { kind: "side", pts: line(sideTop, sideHem) },
+      { kind: "hem", pts: hem },
+      { kind: "fold", pts: line([0, len], [0, 0]) },
+    ],
+    grain: [[0.4 * wq, 0.2 * len], [0.4 * wq, 0.8 * len]],
+    // The zip's end on the side seam.
+    notches: [{ at: add(sideTop, scale(u, ZIP_CM)), count: 1 }],
+    marks: [{ kind: "lengthen", a: [0.1 * wq, 0.6 * len], b: [0.9 * xAt([sideTop, sideHem], 0.6 * len), 0.6 * len] }],
+  };
+  const bandLen = 2 * m.waist + BAND_OVERLAP;
+  const band = rect("waistband", L("허리단", "Waistband", "Cinturilla"), bandLen, 2 * WAISTBAND_CM, { count: 1, onFold: false, mirror: false });
+  const hipAround = 4 * xAt([sideTop, sideHem], HIP_DOWN);
+  return {
+    pieces: [panel, band],
+    notes: [
+      L(
+        `A라인 스커트: 왼쪽 옆선에 콘솔 지퍼 ${ZIP_CM} cm(맞춤점까지). 허리단 ${bandLen.toFixed(1)} cm는 길이 방향으로 반 접어 완성 ${WAISTBAND_CM} cm.`,
+        `A-line skirt: a ${ZIP_CM} cm invisible zip in the left side seam (to the notch). The ${bandLen.toFixed(1)} cm waistband folds lengthwise to ${WAISTBAND_CM} cm finished.`,
+        `Falda en A: cremallera invisible de ${ZIP_CM} cm en el costado izquierdo (hasta el piquete). La cinturilla de ${bandLen.toFixed(1)} cm se dobla a lo largo y queda de ${WAISTBAND_CM} cm.`,
+      ),
+      L(
+        `허리선 ${HIP_DOWN} cm 아래 둘레가 ${hipAround.toFixed(1)} cm입니다. 입을 사람의 엉덩이둘레에 ${HIP_PASS} cm를 더한 값보다 작으면 옆선을 늘려 그리십시오.`,
+        `${HIP_DOWN} cm below the waist the skirt is ${hipAround.toFixed(1)} cm around. If that is less than the wearer's hip plus ${HIP_PASS} cm, widen the side seams.`,
+        `${HIP_DOWN} cm por debajo de la cintura la falda mide ${hipAround.toFixed(1)} cm de contorno. Si es menos que la cadera de quien la lleva más ${HIP_PASS} cm, ensancha los costados.`,
       ),
     ],
   };

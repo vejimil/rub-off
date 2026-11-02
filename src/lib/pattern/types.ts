@@ -42,8 +42,9 @@ export interface Piece {
   edges: Edge[];
   grain: [Pt, Pt]; // grainline arrow, parallel to the selvage
   notches: Notch[];
-  // Lines inside the piece: placement marks, "lengthen or shorten here" double lines.
-  marks?: { kind: "lengthen" | "placement"; a: Pt; b: Pt }[];
+  // Lines inside the piece: placement marks, "lengthen or shorten here" double lines, where a
+  // pocket is sewn on (its outline, segment by segment; the first carries the label).
+  marks?: { kind: "lengthen" | "placement" | "pocket"; a: Pt; b: Pt; label?: Local }[];
   // Values that could not be measured safely and were set from a rule or a default instead.
   unmeasured?: string[];
 }
@@ -62,7 +63,27 @@ export interface Pattern {
   unmeasured: string[];
 }
 
-export type GarmentKind = "shirt" | "t-shirt" | "hoodie" | "skirt" | "eco-bag" | "pants";
+export type GarmentKind =
+  | "t-shirt"
+  | "long-sleeve"
+  | "sweatshirt"
+  | "dress"
+  | "shirt"
+  | "hoodie"
+  | "pants"
+  | "skirt"
+  | "a-line-skirt"
+  | "eco-bag"
+  | "apron"
+  | "cushion"
+  | "pouch";
+
+// Tops share one draft and one photo measurement: a body with set-in sleeves.
+export type TopKind = "t-shirt" | "long-sleeve" | "sweatshirt" | "dress" | "shirt" | "hoodie";
+export const TOP_KINDS: readonly TopKind[] = ["t-shirt", "long-sleeve", "sweatshirt", "dress", "shirt", "hoodie"];
+export const isTop = (g: GarmentKind): g is TopKind => (TOP_KINDS as readonly string[]).includes(g);
+// Things that aren't worn: nothing to fit or alter.
+export const NOT_WORN: readonly GarmentKind[] = ["eco-bag", "apron", "cushion", "pouch"];
 
 // A piece's names in every language, with the English and Korean fields older code reads.
 export const named = (names: Local) => ({ name: names.en, nameKo: names.ko, names });

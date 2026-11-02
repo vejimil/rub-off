@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { GarmentFlat } from "@/components/garment-flat";
 import { PiecesOutline } from "@/components/pattern-preview";
 import { LangProvider, useLang } from "@/components/lang";
 import type { Lang } from "@/lib/i18n/lang";
@@ -10,8 +11,8 @@ import { Workbench } from "@/components/workbench";
 import type { SampleRun } from "@/lib/client/types";
 import { draft } from "@/lib/pattern/draft";
 import { EXAMPLES } from "@/lib/pattern/examples";
-import { layOut } from "@/lib/pattern/layout";
-import type { GarmentKind } from "@/lib/pattern/types";
+import { drawingSheet } from "@/lib/pattern/layout";
+import { isTop, type GarmentKind } from "@/lib/pattern/types";
 import shorts from "@/lib/sample/shorts-run.json";
 import tablesBottoms from "@/lib/sample/size-table-bottoms-read.json";
 import tablesTops from "@/lib/sample/size-table-read.json";
@@ -20,6 +21,9 @@ import tee from "@/lib/sample/tee-run.json";
 import { L, type Local } from "@/lib/i18n/lang";
 import { GARMENT_NAME } from "@/lib/i18n/names";
 import type { ReadTable } from "@/lib/size/table";
+import { fromComplaint, guarded } from "@/lib/fit/alter";
+import { flatFor } from "@/lib/fit/flat";
+import { parse } from "@/lib/fit/read-complaint";
 
 // The sample page: two garments the owner photographed (replayed runs, no API call) and the
 // other garment types drafted from typical measurements.
@@ -30,7 +34,8 @@ interface Sample {
   garment: GarmentKind;
   run?: SampleRun;
   sub: Local;
-  tab?: "measure" | "pattern" | "fit";
+  tab?: "measure" | "pattern";
+  alter?: boolean; // opens on the alteration screen
 }
 
 const TOPS_TABLE = { read: tablesTops as ReadTable, src: "/samples/size-table.png" };
@@ -54,9 +59,8 @@ const SAMPLES: Sample[] = [
       "What a wheelchair user wrote about their elastic-waist trousers (in Korean), and the alteration order made from it",
       "Lo que una persona en silla de ruedas escribió sobre su pantalón de cintura elástica (en coreano), y la orden de arreglos que sale de ahí",
     ),
-    tab: "fit",
+    alter: true,
   },
-  ...(["shirt", "hoodie", "skirt", "eco-bag"] as const).map((g) => ({ id: g, label: GARMENT_NAME[g], garment: g, sub: L("예시 치수로 그린 패턴", "A pattern drafted from example measurements", "Un patrón trazado con medidas de ejemplo") })),
 ];
 
 // Tee: the owner's tape values for what a photo can't see (the neck drops are below the rib).
@@ -64,16 +68,18 @@ const TEE_TAPE = { frontNeckDrop: "12", backNeckDrop: "2.5" };
 
 const T = {
   real: L("실제 사진", "Real photo", "Foto real"),
-  example: L("예시 치수", "Example sizes", "Medidas de ejemplo"),
+  photoGroup: L("실제 사진으로 해 본 것", "Measured from real photos", "Medido en fotos reales"),
+  alterGroup: L("수선 의뢰서 예시", "Alteration order", "Orden de arreglos"),
+  words: L("적은 글에서", "From written words", "De un texto escrito"),
   tape: L("줄자", "Tape", "Cinta"),
   exampleValue: L("예시 값", "Example", "Ejemplo"),
   tryMine: L("내 옷 사진으로 해 보기", "Try it with a photo of your garment", "Pruébalo con una foto de tu prenda"),
 };
 const drawnFrom = (size: string) =>
   L(
-    `기성복 ${size} 사이즈의 보통 치수로 그린 패턴입니다. 치수 탭에서 값을 고치면 패턴이 바로 바뀝니다.`,
-    `Drafted from typical ready-to-wear size ${size} measurements. Change a value in the Measurements tab and the pattern redraws.`,
-    `Trazado con medidas típicas de la talla ${size} de confección. Cambia un valor en la pestaña Medidas y el patrón se vuelve a dibujar.`,
+    `이 예시는 사진 대신 기성복 ${size} 사이즈 고무줄 바지의 보통 치수를 썼습니다. 아래 '이 옷의 치수'에서 값을 고치면 의뢰서가 바로 바뀝니다.`,
+    `This example uses typical measurements of ready-to-wear size ${size} elastic-waist trousers instead of a photo. Change a value under "This garment's measurements" and the order updates.`,
+    `Este ejemplo usa medidas típicas de un pantalón de cintura elástica de talla ${size} en lugar de una foto. Cambia un valor en «Medidas de esta prenda» y la orden se actualiza.`,
   );
 
 // The page passes its language in, for the same reason as the workbench.
@@ -91,11 +97,18 @@ function Gallery({ initial }: { initial?: string }) {
   const [id, setId] = useState(SAMPLES.some((x) => x.id === initial) ? initial! : SAMPLES[0].id);
   const s = SAMPLES.find((x) => x.id === id)!;
   const ex = EXAMPLES[s.garment];
-  const isTop = s.garment === "t-shirt" || s.garment === "shirt" || s.garment === "hoodie";
+  const top = isTop(s.garment);
   return (
     <div className="space-y-6">
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-        {SAMPLES.map((x) => (
+      <div className="flex flex-wrap gap-x-8 gap-y-4">
+        {[
+          { title: T.photoGroup, items: SAMPLES.filter((x) => !x.alter) },
+          { title: T.alterGroup, items: SAMPLES.filter((x) => x.alter) },
+        ].map((group) => (
+          <div key={group.title.en}>
+            <p className="mb-2 text-sm font-medium text-muted">{group.title[lang]}</p>
+            <div className="flex gap-2">
+        {group.items.map((x) => (
           <button
             key={x.id}
             type="button"
@@ -107,16 +120,19 @@ function Gallery({ initial }: { initial?: string }) {
                 // eslint-disable-next-line @next/next/no-img-element -- local sample photos
                 <img src={x.run.photo.src} alt="" className="h-full w-full object-cover" />
               ) : (
-                <PieceThumb garment={x.garment} />
+                <OrderThumb />
               )}
             </div>
             <div className="p-2.5">
               <div className="text-[15px] font-medium">{x.label[lang]}</div>
               <div className="mt-1">
-                <Badge tone={x.run ? "chalk" : "muted"}>{(x.run ? T.real : T.example)[lang]}</Badge>
+                <Badge tone={x.run ? "chalk" : "muted"}>{(x.run ? T.real : T.words)[lang]}</Badge>
               </div>
             </div>
           </button>
+        ))}
+            </div>
+          </div>
         ))}
       </div>
       <p className="text-sm text-muted">
@@ -130,15 +146,16 @@ function Gallery({ initial }: { initial?: string }) {
         initialEdits={s.id === "tee" ? TEE_TAPE : s.run ? undefined : Object.fromEntries(Object.entries(ex.m).map(([k, v]) => [k, String(v)]))}
         editedLabel={s.run ? T.tape : T.exampleValue}
         initialTab={s.tab ?? (s.run ? "measure" : "pattern")}
+        mode={s.alter ? "alter" : "pattern"}
         sampleText={{ ...COMPLAINT_EXAMPLE[lang], garment: "pants" }}
-        sampleTable={isTop ? TOPS_TABLE : s.garment === "pants" ? BOTTOMS_TABLE : undefined}
+        sampleTable={top ? TOPS_TABLE : s.garment === "pants" ? BOTTOMS_TABLE : undefined}
         placeholder={
           <div className="flex aspect-[4/5] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-muted bg-well p-6 text-center">
-            <div className="w-2/3">
-              <PieceThumb garment={s.garment} />
+            <div className="aspect-square w-2/3">
+              <PieceThumb garment={s.garment} aspect={1} />
             </div>
             <p className="max-w-72 text-sm text-muted">{drawnFrom(ex.size)[lang]}</p>
-            <Link href={`/${lang}/make${s.tab === "fit" ? "?tab=fit" : ""}`} className="text-sm font-medium underline">
+            <Link href={`/${lang}/${s.alter ? "alter" : "make"}`} className="text-sm font-medium underline">
               {T.tryMine[lang]}
             </Link>
           </div>
@@ -148,10 +165,21 @@ function Gallery({ initial }: { initial?: string }) {
   );
 }
 
-function PieceThumb({ garment }: { garment: GarmentKind }) {
+// The alteration example's card: the trousers' technical flat with the order's marks.
+function OrderThumb() {
+  const lang = useLang();
+  const views = useMemo(() => {
+    const ex = COMPLAINT_EXAMPLE[lang];
+    const order = parse(ex.read, ex.text, "pants").map((c) => guarded(fromComplaint("pants", c)));
+    return flatFor("pants", EXAMPLES.pants.m as unknown as Record<string, number>, EXAMPLES.pants.fabric, order);
+  }, [lang]);
+  return views ? <div className="h-full w-full bg-field p-1.5 [&_svg]:h-full [&_svg]:w-full">{<GarmentFlat views={views} />}</div> : null;
+}
+
+function PieceThumb({ garment, aspect = 4 / 3 }: { garment: GarmentKind; aspect?: number }) {
   const sheet = useMemo(() => {
     const ex = EXAMPLES[garment];
-    return layOut(draft({ garment, measures: ex.m, fabric: ex.fabric }));
-  }, [garment]);
+    return drawingSheet(draft({ garment, measures: ex.m, fabric: ex.fabric }), aspect);
+  }, [garment, aspect]);
   return <PiecesOutline sheet={sheet} className="h-full max-h-full w-full p-2" />;
 }

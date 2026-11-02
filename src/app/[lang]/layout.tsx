@@ -33,7 +33,9 @@ export async function generateMetadata({ params }: LayoutProps<"/[lang]">): Prom
 
 const NAV = {
   how: L("방법", "How", "Cómo"),
-  alter: L("옷 고치기", "Alterations", "Arreglos"),
+  alter: L("수선 의뢰서", "Alterations", "Arreglos"),
+  alterShort: L("수선", "Alter", "Arreglos"),
+  makeShort: L("패턴", "Pattern", "Patrón"),
   sample: L("예시", "Examples", "Ejemplos"),
   make: L("패턴 만들기", "Make a pattern", "Crear patrón"),
 };
@@ -49,23 +51,25 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[la
         <LangProvider lang={lang}>
           <header className="sticky top-0 z-30 bg-sand">
             <div className="flex h-12 w-full items-center gap-6 px-5 sm:px-10 lg:px-16">
-              <Link href={`/${lang}`} className="flex items-center gap-2 font-display text-lg tracking-tight">
+              <Link href={`/${lang}`} className="flex items-center gap-2 whitespace-nowrap font-display text-lg tracking-tight">
                 <Mark />
-                Rub-Off
+                <span className="hidden min-[400px]:inline">Rub-Off</span>
               </Link>
-              <nav className="ml-auto flex items-center gap-1 text-[15px]">
+              <nav className="ml-auto flex items-center gap-1 whitespace-nowrap text-[15px]">
                 <Link href={`/${lang}#how`} className="link hidden px-3 py-1.5 lg:block">
                   {NAV.how[lang]}
-                </Link>
-                <Link href={`/${lang}#alter`} className="link hidden px-3 py-1.5 sm:block">
-                  {NAV.alter[lang]}
                 </Link>
                 <Link href={`/${lang}/sample`} className="link hidden px-3 py-1.5 sm:block">
                   {NAV.sample[lang]}
                 </Link>
                 <LangSwitch lang={lang} />
-                <Link href={`/${lang}/make`} className="press ml-2 whitespace-nowrap rounded-full bg-ink px-4 py-1.5 font-medium text-sand hover:bg-ink-strong">
-                  {NAV.make[lang]}
+                <Link href={`/${lang}/alter`} className="press ml-2 whitespace-nowrap rounded-full border border-ink px-3 py-1 font-medium hover:bg-sand-3 sm:px-4">
+                  <span className="hidden sm:inline">{NAV.alter[lang]}</span>
+                  <span className="sm:hidden">{NAV.alterShort[lang]}</span>
+                </Link>
+                <Link href={`/${lang}/make`} className="press ml-1 whitespace-nowrap rounded-full border border-ink bg-ink px-3 py-1 font-medium text-sand hover:bg-ink-strong sm:px-4">
+                  <span className="hidden sm:inline">{NAV.make[lang]}</span>
+                  <span className="sm:hidden">{NAV.makeShort[lang]}</span>
                 </Link>
               </nav>
             </div>

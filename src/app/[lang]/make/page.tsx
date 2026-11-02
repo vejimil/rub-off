@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Workbench } from "@/components/workbench";
 import { LangProvider } from "@/components/lang";
 import { isLang, L, type Lang } from "@/lib/i18n/lang";
 import { liveAllowed } from "@/lib/limits";
+import { EXAMPLES } from "@/lib/pattern/examples";
+import type { GarmentKind } from "@/lib/pattern/types";
 
 const T = {
   title: L("사진으로 패턴 만들기", "Make a pattern from a photo", "Crea un patrón con una foto"),
@@ -20,11 +22,11 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/make">): P
   return { title: `${T.title[isLang(lang) ? lang : "ko"]} · Rub-Off` };
 }
 
-const TABS = ["measure", "pattern", "fit", "cut", "size"] as const;
+const TABS = ["measure", "pattern", "cut", "size"] as const;
 type Tab = (typeof TABS)[number];
 
-// `?tab=fit` opens the workbench on that tab (the landing's "fix your garment" button). The page
-// itself stays prerendered; only the workbench waits for the URL.
+// `?garment=shirt` picks the garment (the landing's garment cards), `?tab=size` opens that tab; `?tab=fit` (older links) goes to the alteration
+// screen. The page itself stays prerendered; only the workbench waits for the URL.
 export default async function MakePage({ params, searchParams }: PageProps<"/[lang]/make">) {
   const { lang } = await params;
   if (!isLang(lang)) notFound();
@@ -45,11 +47,12 @@ export default async function MakePage({ params, searchParams }: PageProps<"/[la
 }
 
 async function Chosen({ searchParams, live, lang }: { searchParams: PageProps<"/[lang]/make">["searchParams"]; live: boolean; lang: Lang }) {
-  const { tab } = await searchParams;
+  const { tab, garment } = await searchParams;
+  if (tab === "fit") redirect(`/${lang}/alter`);
   const initialTab = TABS.includes(tab as Tab) ? (tab as Tab) : undefined;
   return (
     <LangProvider lang={lang}>
-      <Workbench live={live} initialTab={initialTab} lang={lang} />
+      <Workbench live={live} initialTab={initialTab} lang={lang} initial={typeof garment === "string" && garment in EXAMPLES ? { garment: garment as GarmentKind, fabric: EXAMPLES[garment as GarmentKind].fabric } : undefined} />
     </LangProvider>
   );
 }

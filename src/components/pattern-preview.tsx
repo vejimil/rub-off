@@ -43,6 +43,11 @@ export function PatternPreview({ sheet, dims = false, className = "h-auto w-full
             {pp.piece.edges.map((e, i) => (
               <path key={i} d={svgPath(e.pts)} fill="none" stroke={e.kind === "fold" ? "var(--chalk)" : "var(--muted)"} strokeWidth={0.12} strokeDasharray={e.kind === "fold" ? "1.2 0.4 0.2 0.4" : "0.5 0.3"} />
             ))}
+            {pp.piece.marks
+              ?.filter((m) => m.kind === "pocket")
+              .map((m, i) => (
+                <line key={`m${i}`} x1={f2(m.a[0])} y1={f2(m.a[1])} x2={f2(m.b[0])} y2={f2(m.b[1])} stroke="var(--ink)" strokeWidth={0.15} strokeDasharray="0.6 0.4" />
+              ))}
             <line x1={f2(g0[0])} y1={f2(g0[1])} x2={f2(g1[0])} y2={f2(g1[1])} stroke="var(--ink)" strokeWidth={0.12} />
             {dims &&
               edgeDims(pp.piece).map((d, i) => {

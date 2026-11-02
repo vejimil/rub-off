@@ -1,4 +1,5 @@
-// Shirt and T-shirt with set-in sleeves, drafted from flat measurements. Origin at the high point of
+// Tops with set-in sleeves (T-shirt, long-sleeve T, sweatshirt, T-shirt dress, shirt, zip hoodie),
+// drafted from flat measurements. Origin at the high point of
 // the shoulder on the centre line, x toward the side seam, y down, cm. Front and back are half
 // pieces: the T-shirt is cut on the fold at centre front and back; the shirt front is cut twice
 // with a button stand and facing past the centre front.
@@ -7,9 +8,9 @@
 
 import { mirrorX, type Pt } from "../../geom/point.ts";
 import { cubic, line, polylineLength, quad, solveIncreasing } from "../curves.ts";
-import type { HoodieMeasures, TopMeasures } from "../measures.ts";
+import type { HoodieMeasures, RibTopMeasures, TopMeasures } from "../measures.ts";
 import { L, type Local } from "../../i18n/lang.ts";
-import { named, type Edge, type Fabric, type Piece } from "../types.ts";
+import { named, type Edge, type Fabric, type Piece, type TopKind } from "../types.ts";
 import { pointAlong } from "../../geom/point.ts";
 
 const CAP_EASE: Record<Fabric, number> = { woven: 1.5, knit: 0 };
@@ -23,6 +24,9 @@ const ZIP_ALLOWANCE = 1;
 // the sleeve end above the cuff rib is this much wider than the relaxed cuff.
 const RIB_BODY_SHARE = 0.95;
 const RIB_SLEEVE_RATIO = 1.3;
+// [A] Sweatshirt neck rib: cut this share of the neckline (it is stretched on), this high finished.
+const NECK_RIB_SHARE = 0.85;
+const NECK_RIB_HEIGHT = 2.5;
 
 interface Body {
   edges: Edge[];
@@ -59,15 +63,16 @@ function body(m: TopMeasures, neckDrop: number, hemDepth: number): Body {
 // arrives at the top level, an S-curve.
 const halfCap = (b: number, h: number): Pt[] => cubic([-b, h], [-0.55 * b, h], [-0.45 * b, 0], [0, 0]);
 
-export function draftTop(kind: "shirt" | "t-shirt" | "hoodie", mIn: TopMeasures | HoodieMeasures, fabric: Fabric, unmeasured: string[]): { pieces: Piece[]; notes: Local[] } {
+export function draftTop(kind: TopKind, mIn: TopMeasures | HoodieMeasures, fabric: Fabric, unmeasured: string[]): { pieces: Piece[]; notes: Local[] } {
   const notes: Local[] = [];
   const shirt = kind === "shirt";
   const hoodie = kind === "hoodie";
+  const ribbed = hoodie || kind === "sweatshirt";
   const hm = mIn as HoodieMeasures;
-  // A hoodie's hem and cuffs are rib bands: the body and sleeve stop short of them, and the body
-  // above the band is as wide as the chest (the band gathers it in).
-  const rib = hoodie ? hm.ribHeight : 0;
-  const m: TopMeasures = hoodie ? { ...mIn, hem: Math.max(mIn.hem, RIB_BODY_SHARE * mIn.chest), sleeveOpening: RIB_SLEEVE_RATIO * mIn.sleeveOpening } : mIn;
+  // A sweatshirt's or hoodie's hem and cuffs are rib bands: the body and sleeve stop short of them,
+  // and the body above the band is as wide as the chest (the band gathers it in).
+  const rib = ribbed ? (mIn as RibTopMeasures).ribHeight : 0;
+  const m: TopMeasures = ribbed ? { ...mIn, hem: Math.max(mIn.hem, RIB_BODY_SHARE * mIn.chest), sleeveOpening: RIB_SLEEVE_RATIO * mIn.sleeveOpening } : mIn;
   const front = body(m, m.frontNeckDrop, m.length - rib);
   const back = body(m, m.backNeckDrop, m.length - rib);
   const armholeTotal = polylineLength(front.armhole) + polylineLength(back.armhole);
@@ -100,7 +105,7 @@ export function draftTop(kind: "shirt" | "t-shirt" | "hoodie", mIn: TopMeasures 
       { kind: "sleeve-cap", pts: left },
       { kind: "sleeve-cap", pts: right },
       { kind: "underarm", pts: line([b, capH], sleeveHemR) },
-      { kind: shirt || hoodie ? "seam" : "sleeve-hem", pts: line(sleeveHemR, sleeveHemL) },
+      { kind: shirt || ribbed ? "seam" : "sleeve-hem", pts: line(sleeveHemR, sleeveHemL) },
       { kind: "underarm", pts: line(sleeveHemL, [-b, capH]) },
     ],
     grain: [[0, 0.25 * sleeveLength], [0, 0.85 * sleeveLength]],
@@ -145,16 +150,40 @@ export function draftTop(kind: "shirt" | "t-shirt" | "hoodie", mIn: TopMeasures 
     frontPiece.edges = frontPiece.edges.map((e) => (e.kind === "fold" ? { kind: "seam", pts: e.pts, allowanceCm: ZIP_ALLOWANCE } : e));
     frontPiece.edges = frontPiece.edges.map((e) => (e.kind === "hem" ? { ...e, kind: "seam" } : e));
   }
+  if (kind === "sweatshirt") frontPiece.edges = frontPiece.edges.map((e) => (e.kind === "hem" ? { ...e, kind: "seam" } : e));
   const backPiece = bodyPiece("back", back, 2);
-  if (hoodie) backPiece.edges = backPiece.edges.map((e) => (e.kind === "hem" ? { ...e, kind: "seam" } : e));
+  if (ribbed) backPiece.edges = backPiece.edges.map((e) => (e.kind === "hem" ? { ...e, kind: "seam" } : e));
   const pieces: Piece[] = [frontPiece, backPiece, sleeve];
 
-  if (hoodie) {
-    const halfNeck = polylineLength(front.neck) + polylineLength(back.neck);
-    pieces.push(hood(hm, halfNeck, polylineLength(front.neck)));
+  const neckline = 2 * (polylineLength(front.neck) + polylineLength(back.neck));
+  if (ribbed) {
     // Rib bands: the measured hem and cuff are the bands' relaxed width, folded in half lengthwise.
     pieces.push(rect("hem-rib", L("밑단 시보리", "Hem rib", "Canalé del bajo"), 2 * mIn.hem, 2 * rib, { count: 1, onFold: false, mirror: false }));
     pieces.push(rect("cuff-rib", L("소매 시보리", "Cuff rib", "Canalé de puño"), 2 * mIn.sleeveOpening, 2 * rib, { count: 2, onFold: false, mirror: false }));
+  }
+  if (kind === "sweatshirt") {
+    const neckRib = NECK_RIB_SHARE * neckline;
+    pieces.push(rect("neck-rib", L("목 시보리", "Neck rib", "Canalé del cuello"), neckRib, 2 * NECK_RIB_HEIGHT, { count: 1, onFold: false, mirror: false }));
+    const bodyLen = (m.length - rib).toFixed(1);
+    notes.push(
+      L(
+        `맨투맨: 몸판 길이 ${bodyLen} cm 아래에 시보리 ${rib} cm. 목 시보리는 목둘레 ${neckline.toFixed(1)} cm보다 짧은 ${neckRib.toFixed(1)} cm로 잘라 늘려 가며 박습니다. 시보리는 모두 길이 방향으로 반 접습니다.`,
+        `Sweatshirt: body ${bodyLen} cm long above a ${rib} cm hem rib. The neck rib is cut ${neckRib.toFixed(1)} cm, shorter than the ${neckline.toFixed(1)} cm neckline, and stretched on. Every rib folds lengthwise.`,
+        `Sudadera: cuerpo de ${bodyLen} cm sobre un canalé de ${rib} cm en el bajo. El canalé del cuello se corta de ${neckRib.toFixed(1)} cm, más corto que el escote de ${neckline.toFixed(1)} cm, y se cose estirándolo. Todos los canalés se doblan a lo largo.`,
+      ),
+    );
+  }
+  if (kind === "dress" && fabric === "woven")
+    notes.push(
+      L(
+        `원피스 목둘레 ${neckline.toFixed(1)} cm: 바이어스 테이프를 이 길이에 시접 2 cm를 더해 자르고, 감싸 박습니다.`,
+        `Dress neckline ${neckline.toFixed(1)} cm: cut bias binding to this length plus 2 cm and bind the edge.`,
+        `Escote del vestido ${neckline.toFixed(1)} cm: corta un bies de este largo más 2 cm y ribetea el borde.`,
+      ),
+    );
+  if (hoodie) {
+    const halfNeck = polylineLength(front.neck) + polylineLength(back.neck);
+    pieces.push(hood(hm, halfNeck, polylineLength(front.neck)));
     const bodyLen = (m.length - rib).toFixed(1);
     notes.push(
       L(
@@ -173,7 +202,6 @@ export function draftTop(kind: "shirt" | "t-shirt" | "hoodie", mIn: TopMeasures 
   }
 
   if (shirt) {
-    const neckline = 2 * (polylineLength(front.neck) + polylineLength(back.neck));
     const collarLen = neckline + 2 * BUTTON_STAND;
     pieces.push(rect("collar", L("칼라", "Collar", "Cuello"), collarLen, 2 * COLLAR_HEIGHT, { count: 1, onFold: false, mirror: false }));
     const cuffLen = 2 * m.sleeveOpening + CUFF_OVERLAP;

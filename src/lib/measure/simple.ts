@@ -1,10 +1,11 @@
-// Skirts and tote bags lying flat. A skirt is a waist band on top and a hem below: the wider end
-// is the hem. A bag's body is the wide part at the bottom; the handles rise above it, narrower.
+// Skirts, aprons, tote bags and plain rectangles (cushion covers, pouches) lying flat. A skirt is a
+// waist band on top and a hem below: the wider end is the hem; an apron is the same shape, its bib
+// on top. A bag's body is the wide part at the bottom; the handles rise above it, narrower.
 
 import type { Pt } from "../geom/point.ts";
 import { polygonArea, perimeter, rotation, translation } from "../geom/polygon.ts";
 import { L, type Local } from "../i18n/lang.ts";
-import type { BagMeasures, SkirtMeasures } from "../pattern/measures.ts";
+import type { ApronMeasures, BagMeasures, SkirtMeasures } from "../pattern/measures.ts";
 import { argBest, compose, dist, inRange, quarterTurns, transform, valueOf, widthAt, type Measured, type Shape, type Value } from "./shape.ts";
 
 export type SkirtKey = keyof SkirtMeasures | "waist";
@@ -72,6 +73,47 @@ export function measureSkirt(shape: Shape): Measured<SkirtKey> | { ok: false; de
     ],
     outline: poly,
     frame: m,
+    notes: shape.notes,
+  };
+}
+
+// An apron measures like a skirt: the bib's top edge where the waist is, the skirt's hem below.
+export type ApronKey = Extract<keyof ApronMeasures, "width" | "length" | "bibWidth">;
+const APRON_KEY: Record<SkirtKey, ApronKey> = { waist: "bibWidth", hem: "width", length: "length" };
+
+export function measureApron(shape: Shape): Measured<ApronKey> | { ok: false; detail: Local } {
+  const m = measureSkirt(shape);
+  if ("ok" in m) return m;
+  return {
+    ...m,
+    values: Object.fromEntries(Object.entries(m.values).map(([k, v]) => [APRON_KEY[k as SkirtKey], v])) as Partial<Record<ApronKey, Value>>,
+    refused: m.refused.map((r) => ({ ...r, key: APRON_KEY[r.key] })),
+    segments: m.segments.map((s) => ({ ...s, key: APRON_KEY[s.key as SkirtKey] })),
+    notes: [...m.notes, L("가슴판 높이와 끈 길이는 사진으로 잴 수 없습니다. 재단 전에 재 주십시오.", "The bib height and the strap lengths can't be read from the photo. Measure them before cutting.", "El alto del peto y el largo de las tiras no se pueden medir en la foto. Mídelos antes de cortar.")],
+  };
+}
+
+// A cushion cover or a pouch: a rectangle, its width across the middle and its full height.
+export type RectKey = "width" | "height";
+const RECT_RANGES: Record<RectKey, [number, number]> = { width: [8, 100], height: [8, 100] };
+
+export function measureRect(shape: Shape): Measured<RectKey> | { ok: false; detail: Local } {
+  const m = upright(shape.outline, true);
+  let poly = transform(m, shape.outline);
+  const ys = poly.map((p) => p[1]);
+  const top = Math.min(...ys), height = Math.max(...ys) - top;
+  const frame = compose(translation(0, -top), m);
+  poly = transform(frame, shape.outline);
+  const width = bandWidth(poly, 0.2, 0.8);
+  const { values, refused } = inRange<RectKey>({ width: valueOf(width, shape), height: valueOf(height, shape) }, RECT_RANGES);
+  const w = widthAt(poly, height / 2);
+  return {
+    values,
+    refused,
+    landmarks: {},
+    segments: w ? [{ key: "width", a: [w.left, height / 2], b: [w.right, height / 2] }, { key: "height", a: [(w.left + w.right) / 2, 0], b: [(w.left + w.right) / 2, height] }] : [],
+    outline: poly,
+    frame,
     notes: shape.notes,
   };
 }

@@ -21,10 +21,14 @@ export interface TopMeasures {
   shoulderDrop: number; // high point of shoulder straight down to the shoulder point level
 }
 
-export interface HoodieMeasures extends TopMeasures {
+// A sweatshirt: hem and cuffs are rib bands.
+export interface RibTopMeasures extends TopMeasures {
+  ribHeight: number; // finished height of the rib bands at the hem and cuffs
+}
+
+export interface HoodieMeasures extends RibTopMeasures {
   hoodHeight: number; // neck seam at the shoulder to the top of the hood
   hoodDepth: number; // face opening to the back of the hood, at its widest
-  ribHeight: number; // finished height of the rib bands at the hem and cuffs
 }
 
 export interface PantsMeasures {
@@ -42,6 +46,36 @@ export interface SkirtMeasures {
   hem: number; // flat hem width
 }
 
+// A skirt with a waistband and a side zip, flaring from the waist to the hem.
+export interface ALineMeasures {
+  waist: number; // flat
+  length: number; // top of the waistband to hem
+  hem: number; // flat hem width
+}
+
+// A bib apron: a bib at the top, widening to the skirt at the waist ties.
+export interface ApronMeasures {
+  width: number; // the skirt's width, flat
+  length: number; // top of the bib to hem
+  bibWidth: number; // across the top of the bib
+  bibHeight: number; // top of the bib down to the waist ties
+  neckStrap: number; // finished, end to end
+  tieLength: number; // finished, each
+}
+
+// An envelope cushion cover: one front and two backs that overlap.
+export interface CushionMeasures {
+  width: number;
+  height: number;
+  overlap: number; // how far the two backs overlap
+}
+
+export interface PouchMeasures {
+  width: number;
+  height: number;
+  gusset: number; // box-corner depth; 0 for a flat pouch
+}
+
 export interface BagMeasures {
   width: number;
   height: number; // bottom to opening
@@ -51,22 +85,36 @@ export interface BagMeasures {
 }
 
 export interface MeasuresOf {
-  shirt: TopMeasures;
   "t-shirt": TopMeasures;
+  "long-sleeve": TopMeasures;
+  sweatshirt: RibTopMeasures;
+  dress: TopMeasures;
+  shirt: TopMeasures;
   hoodie: HoodieMeasures;
   pants: PantsMeasures;
   skirt: SkirtMeasures;
+  "a-line-skirt": ALineMeasures;
   "eco-bag": BagMeasures;
+  apron: ApronMeasures;
+  cushion: CushionMeasures;
+  pouch: PouchMeasures;
 }
 
 // Typical values for what a flat photo can't show well. [A] Owner to confirm.
 export const DEFAULTS: { [K in GarmentKind]: Partial<MeasuresOf[K]> } = {
-  shirt: { frontNeckDrop: 7.5, backNeckDrop: 2, shoulderDrop: 4, neckWidth: 17 },
   "t-shirt": { frontNeckDrop: 9, backNeckDrop: 2, shoulderDrop: 4, neckWidth: 18 },
+  "long-sleeve": { frontNeckDrop: 9, backNeckDrop: 2, shoulderDrop: 4, neckWidth: 18 },
+  sweatshirt: { frontNeckDrop: 8, backNeckDrop: 2, shoulderDrop: 4, neckWidth: 18, ribHeight: 6 },
+  dress: { frontNeckDrop: 10, backNeckDrop: 2, shoulderDrop: 4, neckWidth: 19 },
+  shirt: { frontNeckDrop: 7.5, backNeckDrop: 2, shoulderDrop: 4, neckWidth: 17 },
   hoodie: { frontNeckDrop: 8, backNeckDrop: 2, shoulderDrop: 4, neckWidth: 18, hoodHeight: 34, hoodDepth: 24, ribHeight: 6 },
   pants: { backRiseExtra: 4 },
   skirt: {},
+  "a-line-skirt": {},
   "eco-bag": { handleWidth: 3, gusset: 0 },
+  apron: { bibHeight: 26, neckStrap: 60, tieLength: 70 },
+  cushion: { overlap: 12 },
+  pouch: { gusset: 0 },
 };
 
 export const MEASURE_NAME: Record<string, Local> = {
@@ -98,6 +146,11 @@ export const MEASURE_NAME: Record<string, Local> = {
   hoodHeight: L("모자 높이", "Hood height", "Alto de capucha"),
   hoodDepth: L("모자 폭", "Hood depth", "Fondo de capucha"),
   ribHeight: L("시보리 높이", "Rib height", "Alto del puño de canalé"),
+  bibWidth: L("가슴판 너비", "Bib width", "Ancho del peto"),
+  bibHeight: L("가슴판 높이", "Bib height", "Alto del peto"),
+  neckStrap: L("목끈 길이", "Neck strap", "Tira del cuello"),
+  tieLength: L("허리끈 길이", "Waist tie", "Cinta de la cintura"),
+  overlap: L("겹침 길이", "Overlap", "Solapa"),
 };
 
 // Single-language views of the same table, for code that already knows its language.

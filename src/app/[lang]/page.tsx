@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GarmentFlat } from "@/components/garment-flat";
+import { GarmentToPattern } from "@/components/garment-to-pattern";
 import { GarmentRow, GradeDemo, HeroReel, type GarmentCard } from "@/components/landing";
 import { PatternPreview, PiecesOutline } from "@/components/pattern-preview";
 import { PageScript } from "@/components/page-script";
@@ -11,7 +12,7 @@ import { bounds } from "@/lib/geom/polygon";
 import { nest, piecesToCut } from "@/lib/nest/nest";
 import { draft } from "@/lib/pattern/draft";
 import { EXAMPLES } from "@/lib/pattern/examples";
-import { layOut, pagesFor, type Sheet } from "@/lib/pattern/layout";
+import { layOut, pagesFor } from "@/lib/pattern/layout";
 import { MEASURE_NAME } from "@/lib/pattern/measures";
 import type { GarmentKind } from "@/lib/pattern/types";
 import { DIFFICULTY_NAME, fromComplaint, guarded } from "@/lib/fit/alter";
@@ -44,12 +45,12 @@ const FABRIC: [number, number] = [150, 100];
 
 // The page's words. Headlines stay short in every language: two lines at most.
 const T = {
-  heroLeft: L("펴 놓은 옷을", "Flat garment", "Prenda plana"),
+  heroLeft: L("내 옷을", "Your garment", "Tu prenda"),
   heroRight: L("1:1 패턴으로", "1:1 pattern", "patrón 1:1"),
   heroSentence: L(
-    "옷을 A4 용지와 함께 바닥에 펴고 위에서 한 장 찍으면, 인쇄해 바로 자를 수 있는 패턴이 나옵니다. 맞는 사이즈를 고르고, 입을 사람에게 맞게 고칠 곳도 알려 드립니다.",
-    "Lay a garment flat with an A4 sheet and take one photo from above: you get a pattern you can print and cut. It also picks the size that fits and tells you what to alter for the person who wears it.",
-    "Extiende una prenda con una hoja A4 y hazle una foto desde arriba: obtienes un patrón para imprimir y cortar. También elige la talla que te queda y te dice qué arreglar para quien la lleva.",
+    "옷을 A4 용지와 함께 바닥에 펴고 위에서 한 장 찍으면, 인쇄해 바로 자를 수 있는 패턴이 나옵니다.",
+    "Lay a garment flat with an A4 sheet and take one photo from above: you get a pattern you can print and cut.",
+    "Extiende una prenda con una hoja A4 y hazle una foto desde arriba: obtienes un patrón para imprimir y cortar.",
   ),
   photoAlt: L("A4 용지를 올려 바닥에 편 티셔츠", "A T-shirt laid flat with an A4 sheet on it", "Una camiseta extendida con una hoja A4 encima"),
   framePhoto: L("A4 용지를 올리고 위에서 찍은 티셔츠", "The T-shirt with an A4 sheet, shot from above", "La camiseta con una hoja A4, fotografiada desde arriba"),
@@ -64,15 +65,14 @@ const T = {
   colHand: L("자로 잼", "By hand", "A mano"),
   colPhoto: L("사진으로 잼", "From photo", "En la foto"),
   colDiff: L("차이", "Difference", "Diferencia"),
-  garmentsTitle: L("여섯 가지 옷", "Six garments", "Seis prendas"),
+  garmentsTitle: L("옷과 소품 열세 가지", "Thirteen things to sew", "Trece cosas para coser"),
   garmentsSub: L(
-    "티셔츠와 반바지는 실제로 찍어 잰 옷, 나머지는 보통 치수로 그린 조각입니다. 옆으로 넘겨 보세요.",
-    "The T-shirt and the shorts were photographed and measured; the others are pieces drafted from typical measurements. Scroll sideways.",
-    "La camiseta y el pantalón corto se fotografiaron y midieron; los demás son piezas trazadas con medidas típicas. Desliza hacia el lado.",
+    "만들 수 있는 옷을 고르면 그 옷으로 바로 시작합니다. 내 옷 사진으로 재거나, 사진이 없으면 보통 치수로 먼저 그려 볼 수 있습니다.",
+    "Pick what you want to make and start right there: measure your own garment from a photo, or without one, draft it from typical measurements first.",
+    "Elige lo que quieres hacer y empieza ahí mismo: mide tu prenda con una foto o, sin foto, trázala primero con medidas típicas.",
   ),
-  garmentsRow: L("여섯 가지 옷, 옆으로 넘기기", "Six garments, scroll sideways", "Seis prendas, desliza hacia el lado"),
-  shorts: L("반바지", "Shorts", "Pantalón corto"),
-  shortsAlt: L("A4 용지 옆에 편 반바지", "Shorts laid flat beside an A4 sheet", "Pantalón corto extendido junto a una hoja A4"),
+  garmentsRow: L("옷과 소품 열세 가지, 옆으로 넘기기", "Thirteen things to sew, scroll sideways", "Trece cosas para coser, desliza hacia el lado"),
+  startWith: L("이 옷으로 시작", "Start with this", "Empezar con esta"),
   outputsTitle: L("사진 한 장에서 네 가지", "Four things from one photo", "Cuatro cosas de una foto"),
   outputsSub: L(
     "AI는 사진에서 옷과 A4 용지를 찾는 데만 쓰고, 치수는 그 윤곽을 직접 재서 냅니다. 사진으로 잴 수 없는 곳은 숫자를 지어내지 않고 줄자로 재 달라고 알려 드립니다.",
@@ -106,7 +106,7 @@ const T = {
       `Pantalón de cintura elástica, ${n} cambios. El rayado es tela que se añade, el cuadriculado es tela que se quita, la línea roja discontinua es una costura o abertura nueva. Pruébatelo y comprueba antes de arreglar.`,
     ),
   alterMine: L("내 옷 찍어서 고치기", "Photograph your garment and fix it", "Fotografía tu prenda y arréglala"),
-  alterExample: L("이 예시에서 직접 고르고 적어 보기", "Try this example yourself", "Prueba este ejemplo"),
+  alterExample: L("샘플로 해 보기", "Try it on a sample", "Pruébalo con una muestra"),
   gradeTitle: L("한 치수 크게 그려 보기", "Draft it a size up", "Trázalo una talla más"),
   gradeSub: L(
     "사진으로 잰 그 티셔츠입니다. 치수를 고르면 잰 값을 옮기고 패턴을 처음부터 다시 그립니다.",
@@ -118,7 +118,7 @@ const T = {
   ctaWord: L("만들기", "Make", "Crear"),
   footMake: L("패턴 만들기", "Make a pattern", "Crear patrón"),
   footExamples: L("예시 보기", "Examples", "Ejemplos"),
-  footAlter: L("옷 고치기", "Alterations", "Arreglos"),
+  footAlter: L("수선 의뢰서 만들기", "Make an alteration order", "Crear una orden de arreglos"),
   footHow: L("찍는 법", "How to shoot", "Cómo hacer la foto"),
   builtTitle: L("만든 방법", "How it's made", "Cómo está hecho"),
   built: L(
@@ -147,6 +147,13 @@ const CARDS: Record<string, Local> = {
   hoodie: L("지퍼 앞판 2장, 두 쪽 모자, 밑단·소매 시보리.", "Two zip fronts, a two-piece hood, rib bands at the hem and cuffs.", "Dos delanteros con cremallera, capucha de dos piezas, canalé en el bajo y los puños."),
   skirt: L("총장과 밑단단면, 두 값이면 그립니다.", "Two values are enough: length and hem width.", "Bastan dos valores: largo y ancho del bajo."),
   "eco-bag": L("몸판 골선 1장과 손잡이 2장, 바닥 모서리는 접어 박기.", "One body on the fold and two handles; box the bottom corners.", "Un cuerpo al doblez y dos asas; esquinas del fondo cosidas en caja."),
+  "long-sleeve": L("티셔츠와 같은 조각에 긴 소매. 소매길이와 소매단면을 잽니다.", "The T-shirt's pieces with long sleeves. Measures the sleeve length and opening.", "Las piezas de la camiseta con manga larga. Mide el largo y la boca de manga."),
+  sweatshirt: L("앞판·뒤판 골선, 소매 2장, 밑단·소매·목 시보리.", "Front and back on the fold, two sleeves, rib at the hem, cuffs and neck.", "Delantero y espalda al doblez, dos mangas, canalé en el bajo, los puños y el cuello."),
+  dress: L("티셔츠 몸판을 무릎까지. 목둘레 바이어스 길이도 계산합니다.", "A T-shirt body down to the knee; works out the neck binding's length too.", "Un cuerpo de camiseta hasta la rodilla; calcula también el largo del bies del escote."),
+  "a-line-skirt": L("허리단과 옆 지퍼. 허리·총장·밑단 세 값이면 그립니다.", "A waistband and a side zip. Three values: waist, length and hem.", "Cinturilla y cremallera lateral. Tres valores: cintura, largo y bajo."),
+  apron: L("몸판 골선 1장, 목끈과 허리끈. 가슴판 너비까지 사진에서 잽니다.", "One body on the fold, a neck strap and ties. Even the bib width comes from the photo.", "Un cuerpo al doblez, tira del cuello y cintas. Hasta el ancho del peto sale de la foto."),
+  cushion: L("앞판 1장, 겹쳐 여미는 뒤판 2장. 가로·세로만 잽니다.", "One front and two overlapping backs. Only width and height.", "Un delantero y dos espaldas solapadas. Solo ancho y alto."),
+  pouch: L("겉감·안감 2장씩. 맞는 지퍼 길이를 알려 줍니다.", "Two outer and two lining pieces; tells you what zip length to buy.", "Dos piezas de exterior y dos de forro; te dice qué largo de cremallera comprar."),
 };
 
 const STEPS = [
@@ -165,8 +172,6 @@ const STEPS = [
     text: L("폰을 바닥과 평행하게 들고 옷 전체가 들어오게 한 장. 뒷면도 찍으면 서로 모자란 값을 채웁니다.", "Hold the phone parallel to the floor and get the whole garment in one shot. A photo of the back fills in what the front misses.", "Sostén el móvil paralelo al suelo y saca la prenda entera en una foto. Una foto de la espalda completa lo que falta en la del delantero."),
   },
 ];
-
-const exampleSheet = (g: GarmentKind): Sheet => layOut(draft({ garment: g, measures: EXAMPLES[g].m, fabric: EXAMPLES[g].fabric }));
 
 export default async function Home({ params }: PageProps<"/[lang]">) {
   const { lang: raw } = await params;
@@ -252,29 +257,32 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
   );
   const drawing = (g: GarmentKind) => (
     <div className="absolute inset-0 p-6">
-      <PiecesOutline sheet={exampleSheet(g)} />
+      <GarmentToPattern garment={g} />
     </div>
   );
   const cards: GarmentCard[] = [
-    { name: GARMENT_NAME["t-shirt"][lang], text: CARDS["t-shirt"][lang], picture: cover(run.photo.src, T.photoAlt[lang]), tone: tones[0] },
-    { name: T.shorts[lang], text: CARDS.shorts[lang], picture: cover(shortsRun.photo.src, T.shortsAlt[lang]), tone: tones[1] },
-    { name: GARMENT_NAME.shirt[lang], text: CARDS.shirt[lang], picture: drawing("shirt"), tone: tones[2] },
-    { name: GARMENT_NAME.hoodie[lang], text: CARDS.hoodie[lang], picture: drawing("hoodie"), tone: tones[3] },
-    { name: GARMENT_NAME.skirt[lang], text: CARDS.skirt[lang], picture: drawing("skirt"), tone: tones[4] },
-    { name: GARMENT_NAME["eco-bag"][lang], text: CARDS["eco-bag"][lang], picture: drawing("eco-bag"), tone: tones[5] },
+    { name: GARMENT_NAME["t-shirt"][lang], text: CARDS["t-shirt"][lang], picture: drawing("t-shirt"), tone: tones[0], href: `/${lang}/make?garment=t-shirt` },
+    { name: GARMENT_NAME.pants[lang], text: CARDS.shorts[lang], picture: drawing("pants"), tone: tones[1], href: `/${lang}/make?garment=pants` },
+    ...(["long-sleeve", "sweatshirt", "dress", "shirt", "hoodie", "skirt", "a-line-skirt", "eco-bag", "apron", "cushion", "pouch"] as const).map((g, i) => ({
+      name: GARMENT_NAME[g][lang],
+      text: CARDS[g][lang],
+      picture: drawing(g),
+      tone: tones[(i + 2) % tones.length],
+      href: `/${lang}/make?garment=${g}`,
+    })),
   ];
 
   const outputs = [
-    { name: OUTPUTS.pdf.name[lang], text: OUTPUTS.pdf.text[lang], bg: "bg-paper text-ink", pic: <PatternPreview sheet={sheet} className="h-auto w-full" /> },
-    { name: OUTPUTS.grade.name[lang], text: OUTPUTS.grade.text[lang], bg: "bg-sand-3 text-ink", pic: <PiecesOutline sheet={sheet} className="h-auto w-full" /> },
+    { name: OUTPUTS.pdf.name[lang], text: OUTPUTS.pdf.text[lang], bg: "bg-paper text-ink", pic: <PatternPreview sheet={sheet} className="absolute inset-0 h-full w-full" /> },
+    { name: OUTPUTS.grade.name[lang], text: OUTPUTS.grade.text[lang], bg: "bg-sand-3 text-ink", pic: <PiecesOutline sheet={sheet} className="absolute inset-0 h-full w-full" /> },
     {
       name: OUTPUTS.size.name[lang],
       text: OUTPUTS.size.text[lang],
       bg: "bg-ink text-sand",
       // eslint-disable-next-line @next/next/no-img-element -- self-made sample size table
-      pic: <img src="/samples/size-table.png" alt={T.sizeTableAlt[lang]} loading="lazy" className="h-auto w-full rounded-[2px]" />,
+      pic: <img src="/samples/size-table.png" alt={T.sizeTableAlt[lang]} loading="lazy" className="absolute inset-0 h-full w-full object-contain" />,
     },
-    { name: OUTPUTS.cut.name[lang], text: OUTPUTS.cut.text[lang], bg: "bg-muted text-sand", pic: <CutLayout fabric={fabric} placed={cut.placed} label={T.cutAlt[lang]} light /> },
+    { name: OUTPUTS.cut.name[lang], text: OUTPUTS.cut.text[lang], bg: "bg-muted text-sand", pic: <CutLayout fabric={fabric} placed={cut.placed} label={T.cutAlt[lang]} light className="absolute inset-0 h-full w-full" /> },
   ];
 
   // A wheelchair user's words about elastic-waist trousers (an example text, read once by Spark and
@@ -311,73 +319,6 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
         sentence={T.heroSentence[lang]}
         frames={frames}
       />
-
-      {/* Proof: the photo values against the tape. */}
-      <section aria-labelledby="tape-title">
-        <div className="grid gap-10 px-5 py-32 sm:px-10 lg:px-16 lg:grid-cols-12 lg:gap-x-12 lg:gap-y-8 lg:py-48">
-          <div className="lg:col-span-5" data-reveal>
-            <h2 id="tape-title" className="font-display text-[9vw] leading-[1.05] tracking-[-0.02em] sm:text-[8vw] lg:text-[clamp(32px,3.2vw,50px)]">
-              {T.tapeTitle[lang]}
-            </h2>
-            <p className="mt-6 max-w-md text-lg leading-relaxed">{tapeText[lang]}</p>
-            <p className="mt-4 max-w-md text-lg">{T.tapeNote[lang]}</p>
-          </div>
-          <div className="lg:col-span-7" data-reveal style={{ ["--d" as string]: 1 }}>
-            <table className="w-full text-lg">
-              <caption className="sr-only">{T.tapeCaption[lang]}</caption>
-              <thead>
-                <tr className="text-left text-[15px] text-muted">
-                  <th className="pb-4 font-normal">{T.colFlat[lang]}</th>
-                  <th className="pb-4 text-right font-normal">{T.colHand[lang]}</th>
-                  <th className="pb-4 text-right font-normal">{T.colPhoto[lang]}</th>
-                  <th className="pb-4 text-right font-normal">{T.colDiff[lang]}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {compare.map((c) => {
-                  const d = c.photo - c.tape;
-                  return (
-                    <tr key={c.key} /* taste-skill-ignore: rule between table rows */ className="border-t border-sand-3">
-                      <td className="py-3.5">{MEASURE_NAME[c.key][lang]}</td>
-                      <td className="num py-3.5 text-right">{c.tape.toFixed(1)}</td>
-                      <td className="num py-3.5 text-right">
-                        {c.photo.toFixed(1)} <span className="text-muted">± {c.pm.toFixed(1)}</span>
-                      </td>
-                      <td className="num py-3.5 text-right">
-                        {d >= 0 ? "+" : "−"}
-                        {Math.abs(d).toFixed(1)} cm
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <GarmentRow heading={T.garmentsTitle[lang]} sub={T.garmentsSub[lang]} rowLabel={T.garmentsRow[lang]} cards={cards} />
-
-      {/* What comes out: four results. */}
-      <section aria-labelledby="outputs-title" className="bg-sand-2 px-5 py-32 sm:px-10 lg:px-16 lg:py-48">
-        <div className="grid gap-6 lg:grid-cols-12 lg:gap-x-12 lg:gap-y-8">
-          <h2 id="outputs-title" className="font-display text-[9vw] leading-[1.05] tracking-[-0.02em] sm:text-[8vw] lg:col-span-6 lg:text-[clamp(32px,3.2vw,50px)]" data-reveal>
-            {T.outputsTitle[lang]}
-          </h2>
-          <p className="max-w-lg text-lg leading-relaxed lg:col-span-5 lg:col-start-8 lg:self-end" data-reveal style={{ ["--d" as string]: 1 }}>
-            {T.outputsSub[lang]}
-          </p>
-        </div>
-        <div className="mt-24 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-          {outputs.map((c, i) => (
-            <article key={c.name} data-reveal style={{ ["--d" as string]: i }} className={`flex flex-col rounded-[4px] p-7 ${c.bg}`}>
-              <h3 className={`font-display leading-none ${big ? "text-[32px]" : "text-[22px]"}`}>{c.name}</h3>
-              <div className="order-first mb-6 flex aspect-[4/3] items-center">{c.pic}</div>
-              <p className="mt-3 text-lg leading-snug">{c.text}</p>
-            </article>
-          ))}
-        </div>
-      </section>
 
       {/* Fit it to the wearer: their words become a work order on a technical flat. */}
       <section id="alter" aria-labelledby="alter-title" className="bg-ink px-5 py-32 text-sand sm:px-10 lg:px-16 lg:py-48">
@@ -428,7 +369,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
               <p className="px-4 pb-3 pt-4 text-[15px] lg:px-6">{T.orderFoot(order.length)[lang]}</p>
             </div>
             <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
-              <Link href={`/${lang}/make?tab=fit`} className="press inline-flex rounded-[4px] bg-sand px-6 py-3 font-medium text-ink hover:bg-sand-3">
+              <Link href={`/${lang}/alter`} className="press inline-flex rounded-[4px] bg-sand px-6 py-3 font-medium text-ink hover:bg-sand-3">
                 {T.alterMine[lang]}
               </Link>
               <Link href={`/${lang}/sample?s=pants`} className="link text-[15px]">
@@ -436,6 +377,73 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
               </Link>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Proof: the photo values against the tape. */}
+      <section aria-labelledby="tape-title">
+        <div className="grid gap-10 px-5 py-32 sm:px-10 lg:px-16 lg:grid-cols-12 lg:gap-x-12 lg:gap-y-8 lg:py-48">
+          <div className="lg:col-span-5" data-reveal>
+            <h2 id="tape-title" className="font-display text-[9vw] leading-[1.05] tracking-[-0.02em] sm:text-[8vw] lg:text-[clamp(32px,3.2vw,50px)]">
+              {T.tapeTitle[lang]}
+            </h2>
+            <p className="mt-6 max-w-md text-lg leading-relaxed">{tapeText[lang]}</p>
+            <p className="mt-4 max-w-md text-lg">{T.tapeNote[lang]}</p>
+          </div>
+          <div className="lg:col-span-7" data-reveal style={{ ["--d" as string]: 1 }}>
+            <table className="w-full text-lg">
+              <caption className="sr-only">{T.tapeCaption[lang]}</caption>
+              <thead>
+                <tr className="text-left text-[15px] text-muted">
+                  <th className="pb-4 font-normal">{T.colFlat[lang]}</th>
+                  <th className="pb-4 text-right font-normal">{T.colHand[lang]}</th>
+                  <th className="pb-4 text-right font-normal">{T.colPhoto[lang]}</th>
+                  <th className="pb-4 text-right font-normal">{T.colDiff[lang]}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {compare.map((c) => {
+                  const d = c.photo - c.tape;
+                  return (
+                    <tr key={c.key} /* taste-skill-ignore: rule between table rows */ className="border-t border-sand-3">
+                      <td className="py-3.5">{MEASURE_NAME[c.key][lang]}</td>
+                      <td className="num py-3.5 text-right">{c.tape.toFixed(1)}</td>
+                      <td className="num py-3.5 text-right">
+                        {c.photo.toFixed(1)} <span className="text-muted">± {c.pm.toFixed(1)}</span>
+                      </td>
+                      <td className="num py-3.5 text-right">
+                        {d >= 0 ? "+" : "−"}
+                        {Math.abs(d).toFixed(1)} cm
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <GarmentRow heading={T.garmentsTitle[lang]} sub={T.garmentsSub[lang]} rowLabel={T.garmentsRow[lang]} cta={T.startWith[lang]} cards={cards} />
+
+      {/* What comes out: four results. */}
+      <section aria-labelledby="outputs-title" className="bg-sand-2 px-5 py-32 sm:px-10 lg:px-16 lg:py-48">
+        <div className="grid gap-6 lg:grid-cols-12 lg:gap-x-12 lg:gap-y-8">
+          <h2 id="outputs-title" className="font-display text-[9vw] leading-[1.05] tracking-[-0.02em] sm:text-[8vw] lg:col-span-6 lg:text-[clamp(32px,3.2vw,50px)]" data-reveal>
+            {T.outputsTitle[lang]}
+          </h2>
+          <p className="max-w-lg text-lg leading-relaxed lg:col-span-5 lg:col-start-8 lg:self-end" data-reveal style={{ ["--d" as string]: 1 }}>
+            {T.outputsSub[lang]}
+          </p>
+        </div>
+        <div className="mt-24 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+          {outputs.map((c, i) => (
+            <article key={c.name} data-reveal style={{ ["--d" as string]: i }} className={`flex flex-col rounded-[4px] p-7 ${c.bg}`}>
+              <h3 className={`font-display leading-none ${big ? "text-[32px]" : "text-[22px]"}`}>{c.name}</h3>
+              <div className="relative order-first mb-6 aspect-[4/3]">{c.pic}</div>
+              <p className="mt-3 text-lg leading-snug">{c.text}</p>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -505,13 +513,13 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
               </Link>
             </li>
             <li>
-              <Link href={`/${lang}/sample`} className="link">
-                {T.footExamples[lang]}
+              <Link href={`/${lang}/alter`} className="link">
+                {T.footAlter[lang]}
               </Link>
             </li>
             <li>
-              <Link href={`/${lang}/make?tab=fit`} className="link">
-                {T.footAlter[lang]}
+              <Link href={`/${lang}/sample`} className="link">
+                {T.footExamples[lang]}
               </Link>
             </li>
             <li>
@@ -543,10 +551,10 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
 }
 
 // Pieces placed on a fabric rectangle (cm), drawn in the page's ink (or in sand on a dark card).
-function CutLayout({ fabric, placed, label, light = false }: { fabric: Pt[]; placed: { piece: { id: string }; outline: Pt[] }[]; label: string; light?: boolean }) {
+function CutLayout({ fabric, placed, label, light = false, className = "h-auto w-full" }: { fabric: Pt[]; placed: { piece: { id: string }; outline: Pt[] }[]; label: string; light?: boolean; className?: string }) {
   const b = bounds(fabric);
   return (
-    <svg viewBox={`${b.minX - 2} ${b.minY - 2} ${b.maxX - b.minX + 4} ${b.maxY - b.minY + 4}`} className="h-auto w-full" role="img" aria-label={label}>
+    <svg viewBox={`${b.minX - 2} ${b.minY - 2} ${b.maxX - b.minX + 4} ${b.maxY - b.minY + 4}`} className={className} role="img" aria-label={label}>
       <path d={svgPath(fabric, true)} fill={light ? "rgba(230,219,199,0.15)" : "var(--sand)"} stroke={light ? "var(--sand)" : "var(--ink)"} strokeWidth={0.6} />
       {placed.map((p, i) => (
         <path key={`${p.piece.id}-${i}`} d={svgPath(p.outline, true)} fill={light ? "rgba(230,219,199,0.35)" : "rgba(6,43,138,0.12)"} stroke={light ? "var(--sand)" : "var(--ink)"} strokeWidth={0.5} />

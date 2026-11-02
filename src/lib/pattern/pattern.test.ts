@@ -11,7 +11,8 @@ import { patternPdf } from "./pdf.ts";
 import { readPdfFont } from "./pdf-font-node.ts";
 import { edgeDims, matchText, seamMatches } from "./dims.ts";
 import { cuttingLine, normalized } from "./seam.ts";
-import { seamLine, type Piece } from "./types.ts";
+import { seamLine, type GarmentKind, type Piece } from "./types.ts";
+import { EXAMPLES } from "./examples.ts";
 
 const TEE = { length: 70, chest: 54, shoulder: 47, hem: 53, sleeve: 21, sleeveOpening: 17, bicep: 20, armholeDepth: 23 };
 
@@ -148,8 +149,34 @@ function insidePolygon([x, y]: Pt, poly: readonly Pt[]): boolean {
   return inside;
 }
 
+test("every garment's example drafts, lays out on A4 pages and has a name for every piece", () => {
+  for (const [g, ex] of Object.entries(EXAMPLES) as [GarmentKind, (typeof EXAMPLES)[GarmentKind]][]) {
+    const p = draft({ garment: g, measures: ex.m, fabric: ex.fabric });
+    assert.ok(p.pieces.length > 0, g);
+    const sheet = layOut(p);
+    assert.ok(sheet.width > 0 && sheet.height > 0, g);
+    for (const pp of sheet.pieces) assert.ok(polygonArea(pp.cut) > 0, `${g} ${pp.piece.id}`);
+  }
+});
+
+test("an A-line skirt's side seam is as long as its centre, and it flares from the waist to the hem", () => {
+  const p = draft({ garment: "a-line-skirt", measures: { waist: 35, length: 60, hem: 60 }, fabric: "woven" });
+  const panel = p.pieces.find((x) => x.id === "panel")!;
+  const side = panel.edges.find((e) => e.kind === "side")!, fold = panel.edges.find((e) => e.kind === "fold")!;
+  assert.ok(Math.abs(polylineLength(side.pts) - polylineLength(fold.pts)) < 0.01);
+  assert.ok(Math.abs(polylineLength(panel.edges.find((e) => e.kind === "waist")!.pts) - 35 / 2) < 0.5);
+  assert.equal(p.pieces.find((x) => x.id === "waistband")!.cut.count, 1);
+});
+
+test("a sweatshirt has rib bands at the hem, cuffs and neck, and no zip", () => {
+  const p = draft({ garment: "sweatshirt", measures: EXAMPLES.sweatshirt.m, fabric: "knit" });
+  assert.deepEqual(p.pieces.map((x) => x.id).sort(), ["back", "cuff-rib", "front", "hem-rib", "neck-rib", "sleeve"]);
+  assert.ok(p.pieces.find((x) => x.id === "front")!.cut.onFold);
+});
+
 test("every note says the same numbers in Korean, English and Spanish", () => {
   const all = [
+    ...(Object.entries(EXAMPLES) as [GarmentKind, (typeof EXAMPLES)[GarmentKind]][]).map(([g, ex]) => draft({ garment: g, measures: ex.m, fabric: ex.fabric })),
     draft({ garment: "shirt", measures: TEE, fabric: "knit" }),
     draft({ garment: "hoodie", measures: { ...TEE, sleeve: 62, sleeveOpening: 9 }, fabric: "knit" }),
     draft({ garment: "pants", measures: { waist: 34, hip: 52, frontRise: 28, outseam: 98, thigh: 40, legOpening: 20 }, fabric: "woven" }),

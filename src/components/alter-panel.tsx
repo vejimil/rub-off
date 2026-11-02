@@ -9,9 +9,10 @@ import { BODY_HOW, BODY_KEYS, BODY_NAME, targetsFromBody, type BodyFit, type Bod
 import { flatFor } from "@/lib/fit/flat";
 import { MAX_TEXT, parse, type ReadComplaints } from "@/lib/fit/read-complaint";
 import { L } from "@/lib/i18n/lang";
+import { GARMENT_NAME } from "@/lib/i18n/names";
 import { REQUIRED } from "@/lib/pattern/draft";
 import { MEASURE_NAME } from "@/lib/pattern/measures";
-import type { Fabric, GarmentKind } from "@/lib/pattern/types";
+import { NOT_WORN, type Fabric, type GarmentKind } from "@/lib/pattern/types";
 
 const ERRORS = {
   live_disabled: L("지금은 글 읽기를 쉬고 있습니다. 위 목록에서 골라 주십시오.", "Reading written text is paused right now. Please pick from the list above.", "Ahora mismo no se pueden leer textos. Elige de la lista de arriba."),
@@ -22,7 +23,7 @@ const ERRORS = {
 };
 
 const T = {
-  bag: L("가방은 입는 옷이 아니어서 고칠 치수가 없습니다.", "A bag isn't worn, so there are no fit measurements to change.", "Una bolsa no se lleva puesta, así que no hay medidas de ajuste que cambiar."),
+  bag: L("몸에 맞춰 입는 옷이 아니어서 고칠 치수가 없습니다.", "This isn't fitted to a body, so there are no fit measurements to change.", "Esto no se ajusta al cuerpo, así que no hay medidas de ajuste que cambiar."),
   needMeasures: L(
     "먼저 이 옷의 치수가 필요합니다. 옷 사진을 올리거나, 치수 탭에 줄자로 잰 값을 넣어 주십시오. 불편한 점은 지금 골라도 됩니다.",
     "This garment's measurements come first: upload a photo of it, or type tape measurements in the measurements tab. You can already pick what bothers you.",
@@ -81,6 +82,31 @@ const T = {
   toMeasureAria: L("수선집에서 재서 정함", "The tailor measures it", "Lo mide el taller"),
   reversible: L("되돌릴 수 있음", "Reversible", "Reversible"),
   checkFirst: L("고치기 전에 옷을 입고 한 번 더 확인하십시오.", "Try the garment on and check once more before altering it.", "Pruébate la prenda y compruébalo otra vez antes de arreglarla."),
+  leadNeedMeasures: L(
+    "고칠 옷의 사진을 올리면 그 옷의 치수로 길이를 계산합니다. 사진 없이도 불편한 점을 적으면 의뢰서는 만들어지고, 길이는 수선집에서 잽니다.",
+    "Upload a photo of the garment and the lengths are worked out from its own measurements. Without one, write what bothers you and you still get the order; the tailor measures the lengths.",
+    "Sube una foto de la prenda y los largos se calculan con sus propias medidas. Sin foto, escribe lo que te molesta y tendrás igualmente la orden; el taller toma las medidas.",
+  ),
+  leadEmpty: L(
+    "불편한 점을 적거나 목록에서 고르면, 수선집에 그대로 보여 줄 수 있는 의뢰서가 여기에 만들어집니다.",
+    "Write or pick what bothers you, and an order you can hand to a tailor as it is appears here.",
+    "Escribe o elige lo que te molesta, y aquí aparecerá una orden que puedes llevar tal cual al taller.",
+  ),
+  leadTitle: L("어디가 불편한가요?", "What bothers you?", "¿Qué te molesta?"),
+  leadSub: L(
+    "입었을 때 불편한 점을 말하듯 적어 주십시오. 길이를 재 봤다면 숫자도 같이 적으면 그 값이 들어갑니다.",
+    "Write what bothers you when you wear it, the way you'd say it. If you've measured how much, put the number in too and it is used.",
+    "Escribe lo que te molesta al llevarla, como lo dirías. Si has medido cuánto, pon también el número y se usará.",
+  ),
+  leadPlaceholder: L(
+    "예: 소매가 3 cm쯤 길고, 바지통이 너무 넓어요. 앉으면 뒤 허리가 내려가요.",
+    "e.g. The sleeves are about 3 cm too long and the legs are too wide. When I sit, the back of the waist drops.",
+    "p. ej.: Las mangas me sobran unos 3 cm y las perneras son demasiado anchas. Al sentarme se me baja la cintura por detrás.",
+  ),
+  makeOrder: L("수선 의뢰서 만들기", "Make the alteration order", "Crear la orden de arreglos"),
+  orPick: L("또는 목록에서 고르기", "Or pick from the list", "O elige de la lista"),
+  bodyMore: L("몸 치수로 더 정확하게 (선택)", "More exact with body measurements (optional)", "Más exacto con medidas del cuerpo (opcional)"),
+  print: L("인쇄 · PDF로 저장", "Print · save as PDF", "Imprimir · guardar en PDF"),
 };
 const count = (n: number) => L(`고칠 곳 ${n}군데`, `${n} change${n > 1 ? "s" : ""}`, `${n} arreglo${n > 1 ? "s" : ""}`);
 const numbered = (n: number) => L(`${n}번`, `Number ${n}`, `Número ${n}`);
@@ -95,12 +121,13 @@ export interface AlterPanelProps {
   fabric: Fabric;
   measures: Record<string, number>; // the garment as measured (and corrected)
   sampleText?: { text: string; read: ReadComplaints };
+  lead?: boolean; // the alteration screen: the wearer's words first, body measurements folded away
 }
 
 // Mode 4: fit this garment to its wearer. Tape-measured body sizes become target garment sizes;
 // what the wearer says is wrong (picked, or written and sorted by Muse Spark) goes through the
 // alteration rules; the result is a work order with a technical flat of the garment, marked.
-export function AlterPanel({ garment, fabric, measures, sampleText }: AlterPanelProps) {
+export function AlterPanel({ garment, fabric, measures, sampleText, lead = false }: AlterPanelProps) {
   const lang = useLang();
   const [body, setBody] = useState<Partial<Record<BodyKey, string>>>({});
   const [fit, setFit] = useState<BodyFit>("regular");
@@ -142,7 +169,7 @@ export function AlterPanel({ garment, fabric, measures, sampleText }: AlterPanel
     }
   }
 
-  if (garment === "eco-bag") return <p className="text-[15px] text-muted">{T.bag[lang]}</p>;
+  if (NOT_WORN.includes(garment)) return <p className="text-[15px] text-muted">{T.bag[lang]}</p>;
 
   const seated = options.filter((o) => o.seated);
   const general = options.filter((o) => !o.seated);
@@ -174,94 +201,250 @@ export function AlterPanel({ garment, fabric, measures, sampleText }: AlterPanel
   };
   const verdict = (key: string, v: "fits" | "big" | "small") => (v === "fits" ? T.fits : LONG.includes(key) ? (v === "big" ? T.long : T.short) : T[v])[lang];
 
+  const bodySection = (
+    <section aria-labelledby="body-title" className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h3 id="body-title" className="text-lg font-semibold">
+            {T.bodyTitle[lang]}
+          </h3>
+          <p className="mt-1 text-[15px] text-muted">{T.bodySub[lang]}</p>
+        </div>
+        <button type="button" className={buttonGhost} onClick={() => setBody(Object.fromEntries(BODY_KEYS[garment].map((k) => [k, String(EXAMPLE_BODY[k])])))}>
+          {T.example[lang]}
+        </button>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {BODY_KEYS[garment].map((k) => (
+          <label key={k} className="rounded-xl bg-field px-4 py-3">
+            <span className="flex items-center gap-2">
+              <span className="flex-1 font-medium">{BODY_NAME[k][lang]}</span>
+              <input
+                inputMode="decimal"
+                value={body[k] ?? ""}
+                onChange={(e) => setBody({ ...body, [k]: e.target.value })}
+                aria-describedby={`how-${k}`}
+                className="num w-20 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-right text-lg"
+              />
+              <span className="text-muted">cm</span>
+            </span>
+            <span id={`how-${k}`} className="mt-1.5 block text-[13px] leading-snug text-muted">
+              {BODY_HOW[k][lang]}
+            </span>
+          </label>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-[15px] text-muted">{T.fit[lang]}</span>
+        <Segmented
+          size="sm"
+          label={T.fit[lang]}
+          value={fit}
+          onChange={setFit}
+          options={[
+            { value: "slim", label: T.slim[lang] },
+            { value: "regular", label: T.regular[lang] },
+            { value: "loose", label: T.loose[lang] },
+          ]}
+        />
+      </div>
+      {comparisons.length > 0 && (
+        <table className="w-full text-[15px]">
+          <caption className="sr-only">{T.caption[lang]}</caption>
+          <thead>
+            <tr className="text-left text-[13px] text-muted">
+              <th className="pb-2 font-normal">{T.thFlat[lang]}</th>
+              <th className="pb-2 text-right font-normal">{T.thThis[lang]}</th>
+              <th className="pb-2 text-right font-normal">{T.thFits[lang]}</th>
+              <th className="pb-2 pl-4 font-normal">
+                <span className="sr-only">{T.thVerdict[lang]}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {comparisons.map((c) => (
+              <tr key={c.key} /* taste-skill-ignore: rule between table rows */ className="border-t border-line align-top">
+                <td className="py-2.5 pr-3">
+                  <span className="font-medium">{MEASURE_NAME[c.key]?.[lang] ?? c.key}</span>
+                  <span className="mt-0.5 block text-[13px] text-muted">{c.target.how[lang]}</span>
+                </td>
+                <td className="num py-2.5 text-right">{c.mine.toFixed(1)}</td>
+                <td className="num py-2.5 text-right">
+                  {c.target.cm.toFixed(1)}
+                  {c.target.min ? T.atLeast[lang] : ""}
+                </td>
+                <td className="py-2.5 pl-4 text-right">
+                  <Badge tone={c.verdict === "fits" ? "ok" : "mark"}>
+                    {verdict(c.key, c.verdict)}
+                    {c.verdict !== "fits" && ` ${Math.abs(c.diff)}`}
+                  </Badge>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+
+  const chips = (
+    <>
+      {seated.length > 0 && (
+        <div>
+          <p className="mb-2 text-[13px] text-muted">{T.seated[lang]}</p>
+          <div className="flex flex-wrap gap-2">{seated.map(chip)}</div>
+        </div>
+      )}
+      {general.length > 0 && (
+        <div>
+          <p className="mb-2 text-[13px] text-muted">{T.general[lang]}</p>
+          <div className="flex flex-wrap gap-2">{general.map(chip)}</div>
+        </div>
+      )}
+      {options.some((o) => o.id in picked && o.ask) && (
+        <div className="space-y-2 rounded-xl bg-field p-4">
+          <p className="text-[13px] text-muted">{T.askNote[lang]}</p>
+          {options
+            .filter((o) => o.id in picked && o.ask)
+            .map((o) => (
+              <label key={o.id} className="flex items-center gap-2 text-[15px]">
+                <span className="flex-1">{o.ask![lang]}</span>
+                <input inputMode="decimal" value={picked[o.id]} onChange={(e) => setPicked({ ...picked, [o.id]: e.target.value })} className="num w-20 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-right" />
+                <span className="text-muted">cm</span>
+              </label>
+            ))}
+        </div>
+      )}
+    </>
+  );
+
+  const writing = (
+      <div>
+        <label htmlFor="say-text" className={lead ? "sr-only" : "mb-2 block text-[13px] text-muted"}>
+          {T.write[lang]}
+        </label>
+        <textarea
+          id="say-text"
+          value={text}
+          maxLength={MAX_TEXT}
+          onChange={(e) => setText(e.target.value)}
+          rows={lead ? 5 : 4}
+          placeholder={(lead ? T.leadPlaceholder : T.placeholder)[lang]}
+          className={`w-full rounded-xl border border-line bg-field p-4 leading-relaxed ${lead ? "text-base" : "text-[15px]"}`}
+        />
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button type="button" className={buttonPrimary} disabled={busy || !text.trim()} onClick={analyse}>
+            {busy ? T.reading[lang] : (lead ? T.makeOrder : T.find)[lang]}
+          </button>
+          {error && <span className="text-[15px] text-mark">{ERRORS[error][lang]}</span>}
+        </div>
+        {found.length > 0 && (
+          <div className="mt-4">
+            <p className="mb-2 text-[13px] text-muted">{T.found[lang]}</p>
+            <ul className="flex flex-wrap gap-2">
+              {found.map(({ c, label }, i) => (
+                <li key={i} className="rounded-full bg-chalk-soft px-3.5 py-2 text-[15px]">
+                  {label}
+                  {c.amountCm !== undefined && <span className="num ml-1.5 font-medium">{c.amountCm} cm</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+  );
+
+  const orderSection = (
+    <section aria-labelledby="order-title" className="print-order overflow-hidden rounded-xl bg-field">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 bg-ink px-5 py-4 text-sand">
+        <h3 id="order-title" className="font-display text-2xl">
+          {T.order[lang]}
+            <span className="ml-2 font-sans text-[15px]">{GARMENT_NAME[garment][lang]}</span>
+          </h3>
+        <span className="text-[15px]">{alterations.length > 0 ? count(alterations.length)[lang] : T.empty[lang]}</span>
+      </div>
+      {alterations.length === 0 ? (
+        <p className="px-5 py-8 text-[15px] text-muted">{(lead ? T.leadEmpty : T.emptyText)[lang]}</p>
+      ) : (
+        <ol className="space-y-1 p-1">
+          {views && (
+            <li className="rounded-lg bg-paper p-4" aria-label={T.flat[lang]}>
+              <GarmentFlat views={views} />
+            </li>
+          )}
+          {alterations.map((a, i) => (
+            <li key={a.id} className="rounded-lg bg-paper px-4 py-4">
+              <div className="flex items-start justify-between gap-4">
+                <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                  <span className="num inline-flex h-6 w-6 shrink-0 translate-y-[-1px] items-center justify-center self-center rounded-full bg-mark text-[13px] font-semibold text-white" aria-label={numbered(i + 1)[lang]}>
+                    {i + 1}
+                  </span>
+                  <span className="text-lg font-semibold">{a.action[lang]}</span>
+                  <span className="text-[15px] text-muted">{a.part[lang]}</span>
+                </p>
+                <p className="num shrink-0 text-right font-display text-3xl leading-none" aria-label={a.amountCm !== undefined ? `${a.amountCm} cm` : T.toMeasureAria[lang]}>
+                  {a.amountCm !== undefined ? (
+                    <>
+                      {a.amountCm}
+                      <span className="ml-1 font-sans text-base">cm</span>
+                    </>
+                  ) : (
+                    <span className="font-sans text-[15px] text-muted">{T.toMeasure[lang]}</span>
+                  )}
+                </p>
+              </div>
+              <p className="mt-1.5 text-[15px] leading-relaxed">{a.instruction[lang]}</p>
+              <p className="mt-2 flex flex-wrap items-center gap-1.5">
+                <Badge tone={a.difficulty === "hard" ? "mark" : a.difficulty === "medium" ? "warn" : "ok"}>{DIFFICULTY_NAME[a.difficulty][lang]}</Badge>
+                {a.reversible && <Badge tone="chalk">{T.reversible[lang]}</Badge>}
+                <span className="text-[13px] text-muted">{a.from[lang]}</span>
+              </p>
+            </li>
+          ))}
+        </ol>
+      )}
+      {alterations.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-4 pt-2">
+          <p className="text-[13px] text-muted">{T.checkFirst[lang]}</p>
+          <button type="button" className={`${buttonGhost} no-print`} onClick={() => window.print()}>
+            {T.print[lang]}
+          </button>
+        </div>
+      )}
+    </section>
+  );
+
+  if (lead)
+    return (
+      <div className="space-y-10">
+        {missing.length > 0 && <p className="rounded-xl bg-chalk-soft p-4 text-[15px]">{T.leadNeedMeasures[lang]}</p>}
+        <section aria-labelledby="lead-title" className="space-y-4">
+          <div>
+            <h3 id="lead-title" className="text-xl font-semibold">
+              {T.leadTitle[lang]}
+            </h3>
+            <p className="mt-1 text-[15px] text-muted">{T.leadSub[lang]}</p>
+          </div>
+          {writing}
+          <details className="group rounded-xl bg-field p-4">
+            <summary className="cursor-pointer select-none text-[15px] font-medium">{T.orPick[lang]}</summary>
+            <div className="mt-4 space-y-5">{chips}</div>
+          </details>
+          <details className="group rounded-xl bg-field p-4">
+            <summary className="cursor-pointer select-none text-[15px] font-medium">{T.bodyMore[lang]}</summary>
+            <div className="mt-4">{bodySection}</div>
+          </details>
+        </section>
+        {orderSection}
+      </div>
+    );
+
   return (
     <div className="space-y-12">
       {missing.length > 0 && <p className="rounded-xl bg-mark-soft p-4 text-[15px]">{T.needMeasures[lang]}</p>}
 
       {/* The body, against this garment. */}
-      <section aria-labelledby="body-title" className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h3 id="body-title" className="text-lg font-semibold">
-              {T.bodyTitle[lang]}
-            </h3>
-            <p className="mt-1 text-[15px] text-muted">{T.bodySub[lang]}</p>
-          </div>
-          <button type="button" className={buttonGhost} onClick={() => setBody(Object.fromEntries(BODY_KEYS[garment].map((k) => [k, String(EXAMPLE_BODY[k])])))}>
-            {T.example[lang]}
-          </button>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {BODY_KEYS[garment].map((k) => (
-            <label key={k} className="rounded-xl bg-field px-4 py-3">
-              <span className="flex items-center gap-2">
-                <span className="flex-1 font-medium">{BODY_NAME[k][lang]}</span>
-                <input
-                  inputMode="decimal"
-                  value={body[k] ?? ""}
-                  onChange={(e) => setBody({ ...body, [k]: e.target.value })}
-                  aria-describedby={`how-${k}`}
-                  className="num w-20 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-right text-lg"
-                />
-                <span className="text-muted">cm</span>
-              </span>
-              <span id={`how-${k}`} className="mt-1.5 block text-[13px] leading-snug text-muted">
-                {BODY_HOW[k][lang]}
-              </span>
-            </label>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-[15px] text-muted">{T.fit[lang]}</span>
-          <Segmented
-            size="sm"
-            label={T.fit[lang]}
-            value={fit}
-            onChange={setFit}
-            options={[
-              { value: "slim", label: T.slim[lang] },
-              { value: "regular", label: T.regular[lang] },
-              { value: "loose", label: T.loose[lang] },
-            ]}
-          />
-        </div>
-        {comparisons.length > 0 && (
-          <table className="w-full text-[15px]">
-            <caption className="sr-only">{T.caption[lang]}</caption>
-            <thead>
-              <tr className="text-left text-[13px] text-muted">
-                <th className="pb-2 font-normal">{T.thFlat[lang]}</th>
-                <th className="pb-2 text-right font-normal">{T.thThis[lang]}</th>
-                <th className="pb-2 text-right font-normal">{T.thFits[lang]}</th>
-                <th className="pb-2 pl-4 font-normal">
-                  <span className="sr-only">{T.thVerdict[lang]}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {comparisons.map((c) => (
-                <tr key={c.key} /* taste-skill-ignore: rule between table rows */ className="border-t border-line align-top">
-                  <td className="py-2.5 pr-3">
-                    <span className="font-medium">{MEASURE_NAME[c.key]?.[lang] ?? c.key}</span>
-                    <span className="mt-0.5 block text-[13px] text-muted">{c.target.how[lang]}</span>
-                  </td>
-                  <td className="num py-2.5 text-right">{c.mine.toFixed(1)}</td>
-                  <td className="num py-2.5 text-right">
-                    {c.target.cm.toFixed(1)}
-                    {c.target.min ? T.atLeast[lang] : ""}
-                  </td>
-                  <td className="py-2.5 pl-4 text-right">
-                    <Badge tone={c.verdict === "fits" ? "ok" : "mark"}>
-                      {verdict(c.key, c.verdict)}
-                      {c.verdict !== "fits" && ` ${Math.abs(c.diff)}`}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+      {bodySection}
 
       {/* What the wearer says. */}
       <section aria-labelledby="say-title" className="space-y-5">
@@ -271,117 +454,12 @@ export function AlterPanel({ garment, fabric, measures, sampleText }: AlterPanel
           </h3>
           <p className="mt-1 text-[15px] text-muted">{T.saySub[lang]}</p>
         </div>
-        {seated.length > 0 && (
-          <div>
-            <p className="mb-2 text-[13px] text-muted">{T.seated[lang]}</p>
-            <div className="flex flex-wrap gap-2">{seated.map(chip)}</div>
-          </div>
-        )}
-        {general.length > 0 && (
-          <div>
-            <p className="mb-2 text-[13px] text-muted">{T.general[lang]}</p>
-            <div className="flex flex-wrap gap-2">{general.map(chip)}</div>
-          </div>
-        )}
-        {options.some((o) => o.id in picked && o.ask) && (
-          <div className="space-y-2 rounded-xl bg-field p-4">
-            <p className="text-[13px] text-muted">{T.askNote[lang]}</p>
-            {options
-              .filter((o) => o.id in picked && o.ask)
-              .map((o) => (
-                <label key={o.id} className="flex items-center gap-2 text-[15px]">
-                  <span className="flex-1">{o.ask![lang]}</span>
-                  <input inputMode="decimal" value={picked[o.id]} onChange={(e) => setPicked({ ...picked, [o.id]: e.target.value })} className="num w-20 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-right" />
-                  <span className="text-muted">cm</span>
-                </label>
-              ))}
-          </div>
-        )}
-        <div>
-          <label htmlFor="say-text" className="mb-2 block text-[13px] text-muted">
-            {T.write[lang]}
-          </label>
-          <textarea
-            id="say-text"
-            value={text}
-            maxLength={MAX_TEXT}
-            onChange={(e) => setText(e.target.value)}
-            rows={4}
-            placeholder={T.placeholder[lang]}
-            className="w-full rounded-xl border border-line bg-field p-4 text-[15px] leading-relaxed"
-          />
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <button type="button" className={buttonPrimary} disabled={busy || !text.trim()} onClick={analyse}>
-              {busy ? T.reading[lang] : T.find[lang]}
-            </button>
-            {error && <span className="text-[15px] text-mark">{ERRORS[error][lang]}</span>}
-          </div>
-          {found.length > 0 && (
-            <div className="mt-4">
-              <p className="mb-2 text-[13px] text-muted">{T.found[lang]}</p>
-              <ul className="flex flex-wrap gap-2">
-                {found.map(({ c, label }, i) => (
-                  <li key={i} className="rounded-full bg-chalk-soft px-3.5 py-2 text-[15px]">
-                    {label}
-                    {c.amountCm !== undefined && <span className="num ml-1.5 font-medium">{c.amountCm} cm</span>}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+        {chips}
+        {writing}
       </section>
 
       {/* The work order. */}
-      <section aria-labelledby="order-title" className="overflow-hidden rounded-xl bg-field">
-        <div className="flex flex-wrap items-baseline justify-between gap-2 bg-ink px-5 py-4 text-sand">
-          <h3 id="order-title" className="font-display text-2xl">
-            {T.order[lang]}
-          </h3>
-          <span className="text-[15px]">{alterations.length > 0 ? count(alterations.length)[lang] : T.empty[lang]}</span>
-        </div>
-        {alterations.length === 0 ? (
-          <p className="px-5 py-8 text-[15px] text-muted">{T.emptyText[lang]}</p>
-        ) : (
-          <ol className="space-y-1 p-1">
-            {views && (
-              <li className="rounded-lg bg-paper p-4" aria-label={T.flat[lang]}>
-                <GarmentFlat views={views} />
-              </li>
-            )}
-            {alterations.map((a, i) => (
-              <li key={a.id} className="rounded-lg bg-paper px-4 py-4">
-                <div className="flex items-start justify-between gap-4">
-                  <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                    <span className="num inline-flex h-6 w-6 shrink-0 translate-y-[-1px] items-center justify-center self-center rounded-full bg-mark text-[13px] font-semibold text-white" aria-label={numbered(i + 1)[lang]}>
-                      {i + 1}
-                    </span>
-                    <span className="text-lg font-semibold">{a.action[lang]}</span>
-                    <span className="text-[15px] text-muted">{a.part[lang]}</span>
-                  </p>
-                  <p className="num shrink-0 text-right font-display text-3xl leading-none" aria-label={a.amountCm !== undefined ? `${a.amountCm} cm` : T.toMeasureAria[lang]}>
-                    {a.amountCm !== undefined ? (
-                      <>
-                        {a.amountCm}
-                        <span className="ml-1 font-sans text-base">cm</span>
-                      </>
-                    ) : (
-                      <span className="font-sans text-[15px] text-muted">{T.toMeasure[lang]}</span>
-                    )}
-                  </p>
-                </div>
-                <p className="mt-1.5 text-[15px] leading-relaxed">{a.instruction[lang]}</p>
-                <p className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <Badge tone={a.difficulty === "hard" ? "mark" : a.difficulty === "medium" ? "warn" : "ok"}>{DIFFICULTY_NAME[a.difficulty][lang]}</Badge>
-                  {a.reversible && <Badge tone="chalk">{T.reversible[lang]}</Badge>}
-                  <span className="text-[13px] text-muted">{a.from[lang]}</span>
-                </p>
-              </li>
-            ))}
-          </ol>
-        )}
-        {alterations.length > 0 && <p className="px-5 pb-4 pt-2 text-[13px] text-muted">{T.checkFirst[lang]}</p>}
-      </section>
+      {orderSection}
     </div>
   );
 }

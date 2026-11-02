@@ -4,6 +4,7 @@ import { numbersIn } from "../rules/numbers.ts";
 import { compare, COMPLAINTS, fromBody, fromComplaint, guarded, jo, patternDelta } from "./alter.ts";
 import { targetsFromBody } from "./body.ts";
 import { parse } from "./read-complaint.ts";
+import type { GarmentKind } from "../pattern/types.ts";
 
 const TEE = { length: 70, chest: 54, shoulder: 47, hem: 53, sleeve: 21, sleeveOpening: 17, bicep: 20, armholeDepth: 23 };
 
@@ -121,4 +122,41 @@ test("every alteration says the same numbers in Korean, English and Spanish", ()
     for (const l of ["ko", "en", "es"] as const) assert.ok(a.action[l] && a.part[l] && a.from[l], `${a.id} ${l}`);
   }
   for (const c of COMPLAINTS) assert.ok(c.label.en && c.label.es && (!c.ask || (c.ask.en && c.ask.es)), c.id);
+});
+
+test("every garment that is worn has a flat with every complaint marked; the rest have none", async () => {
+  const { flatFor } = await import("./flat.ts");
+  const { EXAMPLES } = await import("../pattern/examples.ts");
+  const { complaintsFor, WORN } = await import("./alter.ts");
+  for (const [g, ex] of Object.entries(EXAMPLES) as [GarmentKind, (typeof EXAMPLES)[GarmentKind]][]) {
+    const order = complaintsFor(g).map((c, i) => ({ ...fromComplaint(g, { id: c.id, amountCm: c.ask ? 3 : undefined }), id: `say-${c.id}-${i}` }));
+    const views = flatFor(g, ex.m as unknown as Record<string, number>, ex.fabric, order);
+    assert.equal(views !== null, WORN.includes(g), g);
+  }
+});
+
+test("an A-line skirt's waist is taken in at the side seams, not with elastic", async () => {
+  const { flatFor } = await import("./flat.ts");
+  const t = targetsFromBody("a-line-skirt", { waistGirth: 66 }, "regular", "woven");
+  assert.deepEqual(t.map((x) => [x.key, x.cm]), [["waist", 34]]);
+  const [a] = fromBody("a-line-skirt", compare(t, { waist: 37, length: 60, hem: 60 }, "woven"));
+  assert.match(a.action.en, /Take in the side seams/);
+  const [front] = flatFor("a-line-skirt", { waist: 37, length: 60, hem: 60 }, "woven", [a])!;
+  assert.equal(front.remove.length, 2);
+});
+
+test("everyday complaints: a hem lets down within its spare, past it a band; each one is marked on the flat", async () => {
+  const { flatFor } = await import("./flat.ts");
+  const within = fromComplaint("pants", { id: "pants-short", amountCm: 2 });
+  const past = fromComplaint("pants", { id: "pants-short", amountCm: 6 });
+  assert.match(within.action.en, /Let the hem down/);
+  assert.equal(within.difficulty, "easy");
+  assert.match(past.action.en, /hem band/);
+  assert.equal(past.difficulty, "hard");
+  assert.deepEqual(patternDelta([within]), { outseam: 2 });
+  assert.equal(fromComplaint("t-shirt", { id: "body-loose", amountCm: 6 }).difficulty, "hard");
+  assert.deepEqual(patternDelta([fromComplaint("pants", { id: "leg-wide", amountCm: 3 })]), { legOpening: -3 });
+  const order = ["sleeve-short", "body-loose", "shoulder-wide"].map((id) => fromComplaint("t-shirt", { id, amountCm: 2 }));
+  const [front] = flatFor("t-shirt", { length: 70, chest: 56, shoulder: 51, hem: 55, sleeve: 23, sleeveOpening: 18, bicep: 23, armholeDepth: 30, neckWidth: 16, shoulderDrop: 6, frontNeckDrop: 12, backNeckDrop: 2.5 }, "knit", order)!;
+  assert.deepEqual([...new Set(front.tags.map((t) => t.n))].sort(), [1, 2, 3]);
 });

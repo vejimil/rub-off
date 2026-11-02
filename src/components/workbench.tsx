@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { AlterPanel } from "@/components/alter-panel";
 import { LangProvider, useLang } from "@/components/lang";
 import { CuttingPanel } from "@/components/cutting-panel";
 import { PatternPreview, SeamChecks } from "@/components/pattern-preview";
 import { PhotoOverlay } from "@/components/photo-overlay";
+import { PocketEditor } from "@/components/pocket-editor";
 import { SizePanel } from "@/components/size-panel";
 import { Badge, buttonGhost, buttonPrimary, Card, Segmented, Tabs } from "@/components/ui";
 import { resizeToJpeg } from "@/lib/client/resize";
@@ -15,9 +16,11 @@ import type { Pt } from "@/lib/geom/point";
 import { draft, REQUIRED } from "@/lib/pattern/draft";
 import { layOut } from "@/lib/pattern/layout";
 import { DEFAULTS, MEASURE_NAME, type MeasuresOf } from "@/lib/pattern/measures";
+import { EXAMPLES } from "@/lib/pattern/examples";
 import { patternPdf } from "@/lib/pattern/pdf";
+import { pocketKinds, withPockets, type Pocket } from "@/lib/pattern/pockets";
 import { loadPdfFont } from "@/lib/pattern/pdf-font";
-import type { Fabric, GarmentKind } from "@/lib/pattern/types";
+import { isTop, NOT_WORN, type Fabric, type GarmentKind } from "@/lib/pattern/types";
 import { SIZE_KEYS, type SizeKey } from "@/lib/rules/fit-tolerance";
 import { grade, gradedLabel } from "@/lib/rules/grading";
 import type { Mine } from "@/lib/size/decide";
@@ -26,29 +29,21 @@ import type { ReadComplaints } from "@/lib/fit/read-complaint";
 import { L, type Lang, type Local } from "@/lib/i18n/lang";
 import { GARMENT_NAME } from "@/lib/i18n/names";
 
+const TOP_KEYS = ["length", "chest", "shoulder", "hem", "sleeve", "sleeveOpening", "bicep", "armholeDepth", "neckWidth", "shoulderDrop", "frontNeckDrop", "backNeckDrop"];
 const KEYS: Record<GarmentKind, string[]> = {
-  shirt: ["length", "chest", "shoulder", "hem", "sleeve", "sleeveOpening", "bicep", "armholeDepth", "neckWidth", "shoulderDrop", "frontNeckDrop", "backNeckDrop"],
-  "t-shirt": ["length", "chest", "shoulder", "hem", "sleeve", "sleeveOpening", "bicep", "armholeDepth", "neckWidth", "shoulderDrop", "frontNeckDrop", "backNeckDrop"],
-  hoodie: [
-    "length",
-    "chest",
-    "shoulder",
-    "hem",
-    "sleeve",
-    "sleeveOpening",
-    "bicep",
-    "armholeDepth",
-    "neckWidth",
-    "shoulderDrop",
-    "frontNeckDrop",
-    "backNeckDrop",
-    "hoodHeight",
-    "hoodDepth",
-    "ribHeight",
-  ],
+  "t-shirt": TOP_KEYS,
+  "long-sleeve": TOP_KEYS,
+  sweatshirt: [...TOP_KEYS, "ribHeight"],
+  dress: TOP_KEYS,
+  shirt: TOP_KEYS,
+  hoodie: [...TOP_KEYS, "hoodHeight", "hoodDepth", "ribHeight"],
   pants: ["waist", "hip", "frontRise", "outseam", "thigh", "legOpening", "backRiseExtra"],
   skirt: ["length", "hem"],
+  "a-line-skirt": ["waist", "length", "hem"],
   "eco-bag": ["width", "height", "handleLength", "handleWidth", "gusset"],
+  apron: ["width", "length", "bibWidth", "bibHeight", "neckStrap", "tieLength"],
+  cushion: ["width", "height", "overlap"],
+  pouch: ["width", "height", "gusset"],
 };
 
 const RUN_ERRORS: Record<string, Local> = {
@@ -69,12 +64,14 @@ const STAGE: Record<FailedRun["stage"], Local> = {
 
 // Everything else the workbench says, in each language.
 const T = {
+  fillTypical: L("사진 없이 보통 치수로 채우기", "No photo? Fill in typical measurements", "¿Sin foto? Rellena con medidas típicas"),
   failedRun: L("사진을 분석하지 못했습니다.", "Couldn't measure this photo.", "No se pudo medir esta foto."),
   noServer: L("서버에 연결하지 못했습니다.", "Couldn't reach the server.", "No se pudo conectar con el servidor."),
   tabMeasure: L("치수", "Measurements", "Medidas"),
   toMeasure: L("재기", "to measure", "por medir"),
   tabPattern: L("패턴", "Pattern", "Patrón"),
-  tabFit: L("맞춤·수선", "Fit & alterations", "Ajuste y arreglos"),
+  pockets: L("주머니 달기", "Add pockets", "Añadir bolsillos"),
+  garmentMeasures: L("이 옷의 치수", "This garment's measurements", "Medidas de esta prenda"),
   tabCut: L("원단 배치", "Cutting layout", "Colocación en la tela"),
   tabSize: L("사이즈", "Size", "Talla"),
   woven: L("우븐 (직물)", "Woven", "Tejido plano"),
@@ -133,16 +130,6 @@ const T = {
     "Print at “Actual size (100%)” and check the 10 cm square on the first page with a ruler.",
     "Imprime a “Tamaño real (100 %)” y comprueba con una regla el cuadrado de 10 cm de la primera hoja.",
   ),
-  fitIntro: L(
-    "이 옷을 입을 사람에게 맞춥니다. 몸 치수와 불편한 점에서, 도식화에 고칠 곳을 표시한 수선 의뢰서를 만듭니다.",
-    "Fit this garment to the person who wears it. From body measurements and what bothers them, you get an alteration order with each change marked on a technical drawing.",
-    "Ajusta esta prenda a quien la lleva. Con sus medidas y lo que le molesta, obtienes una orden de arreglos con cada cambio marcado en un dibujo técnico.",
-  ),
-  fitNoPhoto: L(
-    "고칠 옷을 바닥에 펴고 A4 용지와 함께 찍어 올리면, 그 옷의 치수로 의뢰서를 만듭니다. 사진이 없으면 보통 치수로 그립니다.",
-    "Photograph the garment you want to alter, lying flat with an A4 sheet, and the order uses its own measurements. Without a photo it uses typical ones.",
-    "Fotografía la prenda que quieres arreglar, extendida con una hoja A4, y la orden usará sus propias medidas. Sin foto, usa medidas típicas.",
-  ),
   cutIntro: L("가진 원단(자투리 포함)에 이 패턴이 들어가는지, 어디에 놓고 자를지.", "Whether this pattern fits on the fabric you have (scraps included), and where to place each piece.", "Si este patrón cabe en la tela que tienes (retazos incluidos) y dónde colocar cada pieza."),
   cutNeedsPattern: L("패턴이 만들어지면 배치할 수 있습니다.", "Once the pattern is drafted you can lay it out.", "Cuando el patrón esté trazado podrás colocarlo."),
   sizeIntro: L("잘 맞는 이 옷을 기준으로, 실측표에서 같은 핏인 사이즈를 고릅니다.", "Taking this well-fitting garment as the reference, pick the size in a shop's size chart that fits the same way.", "Con esta prenda que te queda bien como referencia, elige en la tabla de medidas de una tienda la talla que queda igual."),
@@ -168,9 +155,10 @@ export interface WorkbenchProps {
   initialEdits?: Record<string, string>; // e.g. tape-measured values for a sample
   initialTab?: Tab;
   sampleText?: { garment: GarmentKind; text: string; read: ReadComplaints }; // a wearer's words already sorted by Spark
+  mode?: "pattern" | "alter"; // alter: the photo, then the wearer's words and the work order
 }
 
-type Tab = "measure" | "pattern" | "fit" | "cut" | "size";
+export type Tab = "measure" | "pattern" | "cut" | "size";
 
 interface Shot {
   photo: PhotoView;
@@ -181,8 +169,6 @@ interface Shot {
   taps?: Pt[]; // shoulder points tapped on this photo, as fractions of its size
   tapping?: boolean;
 }
-
-const TOPS: readonly GarmentKind[] = ["shirt", "t-shirt", "hoodie"];
 
 const SIDE: Record<string, Local> = { front: L("앞면", "Front", "Delantero"), back: L("뒷면", "Back", "Espalda"), unclear: L("앞뒤 불분명", "Front or back unclear", "Delantero o espalda, no está claro") };
 const WRINKLE: Record<string, Local> = {
@@ -210,7 +196,8 @@ export function Workbench(props: WorkbenchProps & { lang?: Lang }) {
   );
 }
 
-function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, initialTab, garmentPicker = true, placeholder, editedLabel = T.typed }: WorkbenchProps) {
+function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, initialTab, garmentPicker = true, placeholder, editedLabel = T.typed, mode = "pattern" }: WorkbenchProps) {
+  const alter = mode === "alter";
   const lang: Lang = useLang();
   const [garment, setGarment] = useState<GarmentKind>(initial?.garment ?? "t-shirt");
   const [fabric, setFabric] = useState<Fabric>(initial?.fabric ?? "woven");
@@ -222,7 +209,37 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
   const [steps, setSteps] = useState(0);
   const [active, setActive] = useState(0);
   const [tab, setTab] = useState<Tab>(initialTab ?? "measure");
+  const [filled, setFilled] = useState<Record<string, string>>({}); // typical values filled in, until changed
 
+
+  // Typical ready-to-wear measurements for this garment, to draft a pattern without a photo.
+  function fillTypical() {
+    const ex = EXAMPLES[garment];
+    const vals = Object.fromEntries(Object.entries(ex.m).map(([k, v]) => [k, String(v)]));
+    setEdits((all) => ({ ...all, ...vals }));
+    setFilled(vals);
+    setFabric(ex.fabric);
+    if (!alter) setTab("pattern");
+  }
+  const filledLabel = EXAMPLES[garment].size === "One" ? L("보통 크기", "Typical size", "Tamaño típico") : L(`기성복 ${EXAMPLES[garment].size}`, `Typical ${EXAMPLES[garment].size}`, `Talla ${EXAMPLES[garment].size} típica`);
+  const typicalNote = (() => {
+    const size = EXAMPLES[garment].size;
+    return size === "One"
+      ? L("보통 크기로 그립니다. 치수는 언제든 고칠 수 있습니다.", "Drafted at a typical size; change any value whenever you like.", "Se traza a un tamaño típico; cambia cualquier valor cuando quieras.")
+      : L(
+          `기성복 ${size} 사이즈의 보통 치수로 그립니다. 내 옷과는 다르니 줄자로 재서 고쳐 쓰십시오.`,
+          `Drafted from typical ready-to-wear size ${size} measurements. Your garment will differ, so measure it with a tape and change them.`,
+          `Se traza con medidas típicas de la talla ${size} de confección. Tu prenda será distinta: mídela con cinta y cámbialas.`,
+        );
+  })();
+  const fillButton = (
+    <div className="space-y-1.5">
+      <button type="button" onClick={fillTypical} className={`${buttonGhost} w-full`}>
+        {T.fillTypical[lang]}
+      </button>
+      <p className="text-center text-xs text-muted">{typicalNote[lang]}</p>
+    </div>
+  );
 
   const update = (i: number, s: Partial<Shot>) => setShots((all) => all.map((x, j) => (j === i ? { ...x, ...s } : x)));
 
@@ -245,7 +262,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
       form.set("refKey", ref.key);
       form.set("refCm", ref.cm);
     }
-    if (shot.taps?.length && TOPS.includes(garment)) form.set("shoulders", JSON.stringify(shot.taps));
+    if (shot.taps?.length && isTop(garment)) form.set("shoulders", JSON.stringify(shot.taps));
     try {
       const res = await fetch("/api/photo", { method: "POST", body: form });
       const body = await res.json();
@@ -282,7 +299,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
 
   // measures is rebuilt every render; its JSON is what changes.
   const measuresKey = JSON.stringify(measures);
-  const pattern = useMemo(() => {
+  const base = useMemo(() => {
     const m = JSON.parse(measuresKey) as Partial<MeasuresOf[GarmentKind]>;
     try {
       return draft({ garment, measures: grade(garment, m, steps), fabric, sizeLabel: steps ? gradedLabel(baseSize, steps) : "Original" });
@@ -290,6 +307,11 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
       return null; // a required measurement is missing; the page says which
     }
   }, [garment, fabric, steps, baseSize, measuresKey]);
+  // Pockets belong to a garment: another garment's pieces have other names.
+  const [pocketsBy, setPocketsBy] = useState<Partial<Record<GarmentKind, Pocket[]>>>({});
+  const pockets = useMemo(() => pocketsBy[garment] ?? [], [pocketsBy, garment]);
+  const setPockets: Dispatch<SetStateAction<Pocket[]>> = (f) => setPocketsBy((all) => ({ ...all, [garment]: typeof f === "function" ? f(all[garment] ?? []) : f }));
+  const pattern = useMemo(() => (base ? withPockets(base, pockets) : null), [base, pockets]);
   const sheet = useMemo(() => (pattern ? layOut(pattern) : null), [pattern]);
 
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -319,7 +341,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
 
   const shot = shots[Math.min(active, shots.length - 1)];
   const activeIndex = Math.min(active, shots.length - 1);
-  const isTop = TOPS.includes(garment);
+  const top = isTop(garment);
   const tabs = [
     {
       value: "measure" as const,
@@ -335,10 +357,50 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
       ),
     },
     { value: "pattern" as const, label: T.tabPattern[lang] },
-    { value: "fit" as const, label: T.tabFit[lang] },
     { value: "cut" as const, label: T.tabCut[lang] },
     { value: "size" as const, label: T.tabSize[lang] },
   ];
+
+  const measureList = (
+    <div className="divide-y divide-line">
+      {rows.map((r) => (
+        <div key={r.key} className="flex items-center gap-3 py-3.5">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-sm font-medium">{MEASURE_NAME[r.key]?.[lang] ?? r.key}</span>
+              {r.source === "photo" && <Badge tone="chalk">{T.photo[lang]}</Badge>}
+              {r.source === "edited" && <Badge tone={filled[r.key] === edits[r.key] ? "warn" : "ink"}>{(initialEdits?.[r.key] === edits[r.key] ? editedLabel : filled[r.key] === edits[r.key] ? filledLabel : T.typed)[lang]}</Badge>}
+              {r.source === "default" && <Badge tone="warn">{T.typical[lang]}</Badge>}
+              {r.source === "missing" && <Badge tone="mark">{T.measureFirst[lang]}</Badge>}
+              {r.conflict && <Badge tone="warn">{T.differs[lang]}</Badge>}
+            </div>
+            <p className="mt-0.5 truncate text-xs text-muted">
+              {r.source === "photo" && r.measured && `${r.measured.bound === "max" ? `${T.max[lang]} · ` : r.measured.bound === "min" ? `${T.min[lang]} · ` : ""}± ${r.measured.plusMinusCm.toFixed(1)} cm`}
+              {r.conflict && ` · ${r.conflict.values.map((x) => x.toFixed(1)).join(" / ")}`}
+              {r.source === "edited" && r.measured && `${T.fromPhoto[lang]} ${r.measured.cm.toFixed(1)}`}
+              {r.source === "default" && T.notMeasured[lang]}
+              {r.source === "missing" &&
+                (r.refused
+                  ? lang === "ko"
+                    ? `사진 값 ${r.refused.cm.toFixed(1)}${T.outOfRange.ko}`
+                    : `${T.fromPhoto[lang]} ${r.refused.cm.toFixed(1)} ${T.outOfRange[lang]}`
+                  : T.cantMeasure[lang])}
+            </p>
+          </div>
+          <label className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 ${r.source === "missing" ? "border-mark bg-mark-soft" : "border-line bg-field"}`}>
+            <input
+              inputMode="decimal"
+              value={edits[r.key] ?? (r.value !== undefined ? String(r.value) : "")}
+              placeholder="—"
+              onChange={(e) => setEdits({ ...edits, [r.key]: e.target.value })}
+              className="num w-14 bg-transparent text-right text-base font-semibold outline-none"
+            />
+            <span className="text-xs text-muted">cm</span>
+          </label>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start lg:gap-10">
@@ -347,7 +409,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
         <Card className="space-y-4">
           {garmentPicker && (
             <div className="flex flex-wrap gap-1.5">
-              {(Object.keys(GARMENT_NAME) as GarmentKind[]).map((g) => (
+              {(Object.keys(GARMENT_NAME) as GarmentKind[]).filter((g) => !alter || !NOT_WORN.includes(g)).map((g) => (
                 <button
                   key={g}
                   type="button"
@@ -386,7 +448,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
               />
             </div>
           ) : live ? (
-            <label className="flex aspect-[4/5] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-muted bg-well text-center transition-colors hover:border-ink">
+            <label className="flex aspect-[4/3] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-muted bg-well text-center transition-colors hover:border-ink">
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-ink text-2xl text-sand">+</span>
               <span className="font-medium">{T.upload[lang]}</span>
               <span className="max-w-64 text-sm text-muted">{T.uploadHint[lang]}</span>
@@ -395,6 +457,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
           ) : (
             (placeholder ?? <p className="rounded-xl bg-well p-6 text-sm text-muted">{T.paused[lang]}</p>)
           )}
+          {shots.length === 0 && garmentPicker && fillButton}
 
           {(shots.length > 1 || (live && shots.length > 0)) && (
             <div className="flex gap-2 overflow-x-auto pb-1">
@@ -428,7 +491,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
               <button onClick={() => analyse(activeIndex)} disabled={busy !== null} className={buttonPrimary}>
                 {(shot.run ? T.measureAgain : T.measure)[lang]}
               </button>
-              {shot.run && isTop && !shot.tapping && (
+              {shot.run && top && !shot.tapping && (
                 <button onClick={() => update(activeIndex, { tapping: true, taps: [] })} className={buttonGhost}>
                   {T.tapShoulders[lang]}
                 </button>
@@ -520,51 +583,27 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
         )}
       </div>
 
-      {/* Right: the steps */}
+      {/* Right: the steps; on the alteration screen, the wearer's words and the work order */}
+      {alter ? (
+        <Card className="space-y-6">
+          <AlterPanel lead garment={garment} fabric={fabric} measures={measures as Record<string, number>} sampleText={sampleText?.garment === garment ? sampleText : undefined} />
+          <details className="no-print rounded-xl border border-line p-4">
+            <summary className="cursor-pointer select-none text-[15px] font-medium">
+              {T.garmentMeasures[lang]}
+              {missing.length > 0 && <span className="ml-2 rounded-full bg-mark px-1.5 text-xs text-white">{lang === "ko" ? `${T.toMeasure.ko} ${missing.length}` : `${missing.length} ${T.toMeasure[lang]}`}</span>}
+            </summary>
+            <p className="mb-2 mt-3 text-sm text-muted">{T.measureIntro[lang]}</p>
+            {measureList}
+          </details>
+        </Card>
+      ) : (
       <Card className="space-y-5">
         <Tabs value={tab} onChange={setTab} options={tabs} />
 
         {tab === "measure" && (
           <div>
             <p className="mb-4 text-sm text-muted">{T.measureIntro[lang]}</p>
-            <div className="divide-y divide-line">
-              {rows.map((r) => (
-                <div key={r.key} className="flex items-center gap-3 py-3.5">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-sm font-medium">{MEASURE_NAME[r.key]?.[lang] ?? r.key}</span>
-                      {r.source === "photo" && <Badge tone="chalk">{T.photo[lang]}</Badge>}
-                      {r.source === "edited" && <Badge tone="ink">{(initialEdits?.[r.key] === edits[r.key] ? editedLabel : T.typed)[lang]}</Badge>}
-                      {r.source === "default" && <Badge tone="warn">{T.typical[lang]}</Badge>}
-                      {r.source === "missing" && <Badge tone="mark">{T.measureFirst[lang]}</Badge>}
-                      {r.conflict && <Badge tone="warn">{T.differs[lang]}</Badge>}
-                    </div>
-                    <p className="mt-0.5 truncate text-xs text-muted">
-                      {r.source === "photo" && r.measured && `${r.measured.bound === "max" ? `${T.max[lang]} · ` : r.measured.bound === "min" ? `${T.min[lang]} · ` : ""}± ${r.measured.plusMinusCm.toFixed(1)} cm`}
-                      {r.conflict && ` · ${r.conflict.values.map((x) => x.toFixed(1)).join(" / ")}`}
-                      {r.source === "edited" && r.measured && `${T.fromPhoto[lang]} ${r.measured.cm.toFixed(1)}`}
-                      {r.source === "default" && T.notMeasured[lang]}
-                      {r.source === "missing" &&
-                        (r.refused
-                          ? lang === "ko"
-                            ? `사진 값 ${r.refused.cm.toFixed(1)}${T.outOfRange.ko}`
-                            : `${T.fromPhoto[lang]} ${r.refused.cm.toFixed(1)} ${T.outOfRange[lang]}`
-                          : T.cantMeasure[lang])}
-                    </p>
-                  </div>
-                  <label className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 ${r.source === "missing" ? "border-mark bg-mark-soft" : "border-line bg-field"}`}>
-                    <input
-                      inputMode="decimal"
-                      value={edits[r.key] ?? (r.value !== undefined ? String(r.value) : "")}
-                      placeholder="—"
-                      onChange={(e) => setEdits({ ...edits, [r.key]: e.target.value })}
-                      className="num w-14 bg-transparent text-right text-base font-semibold outline-none"
-                    />
-                    <span className="text-xs text-muted">cm</span>
-                  </label>
-                </div>
-              ))}
-            </div>
+            {measureList}
           </div>
         )}
 
@@ -579,13 +618,27 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
               <Segmented size="sm" value={steps} onChange={setSteps} options={[-2, -1, 0, 1, 2].map((v) => ({ value: v, label: v === 0 ? T.original[lang] : gradedLabel(baseSize, v) }))} />
             </div>
             {missing.length > 0 && (
-              <p className="rounded-xl bg-mark-soft p-3 text-sm">
-                {T.measureFirstList[lang]} {missing.map((m) => MEASURE_NAME[m.key]?.[lang] ?? m.key).join(", ")}
-              </p>
+              <div className="space-y-3 rounded-xl bg-mark-soft p-3 text-sm">
+                <p>
+                  {T.measureFirstList[lang]} {missing.map((m) => MEASURE_NAME[m.key]?.[lang] ?? m.key).join(", ")}
+                </p>
+                {garmentPicker && fillButton}
+              </div>
             )}
             {sheet && pattern && (
               <>
                 <PatternPreview sheet={sheet} dims />
+                {base && pocketKinds(base).length > 0 && (
+                  <details className="rounded-xl border border-line p-4" open={pockets.length > 0 || undefined}>
+                    <summary className="cursor-pointer select-none text-[15px] font-medium">
+                      {T.pockets[lang]}
+                      {pockets.length > 0 && <span className="ml-2 text-sm text-muted">{pockets.length}</span>}
+                    </summary>
+                    <div className="mt-3">
+                      <PocketEditor base={base} pockets={pockets} setPockets={setPockets} />
+                    </div>
+                  </details>
+                )}
                 <SeamChecks sheet={sheet} />
                 <button onClick={downloadPdf} disabled={pdfBusy} className={`${buttonPrimary} w-full`}>
                   {(pdfBusy ? T.pdfBusy : T.pdf)[lang]}
@@ -604,19 +657,6 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
           </div>
         )}
 
-        {tab === "fit" && (
-          <div>
-            <p className="mb-6 text-[15px] text-muted">{T.fitIntro[lang]}</p>
-            {live && okRuns.length === 0 && <p className="mb-6 rounded-xl bg-chalk-soft p-4 text-[15px]">{T.fitNoPhoto[lang]}</p>}
-            <AlterPanel
-              garment={garment}
-              fabric={fabric}
-              measures={measures as Record<string, number>}
-              sampleText={sampleText?.garment === garment ? sampleText : undefined}
-            />
-          </div>
-        )}
-
         {tab === "cut" && (
           <div>
             <p className="mb-4 text-sm text-muted">{T.cutIntro[lang]}</p>
@@ -631,6 +671,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
           </div>
         )}
       </Card>
+      )}
     </div>
   );
 }

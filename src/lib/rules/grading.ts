@@ -23,12 +23,19 @@ const TOP: Increments<"shirt"> = {
 };
 
 export const GRADE_STEP: { [K in GarmentKind]: Increments<K> } = {
-  shirt: TOP,
   "t-shirt": TOP,
+  "long-sleeve": TOP,
+  sweatshirt: TOP,
+  dress: { ...TOP, length: 2 },
+  shirt: TOP,
   hoodie: { ...TOP, hoodHeight: 0.5, hoodDepth: 0.5 },
   pants: { waist: 2, hip: 2, frontRise: 0.5, backRiseExtra: 0.25, outseam: 1, thigh: 1, legOpening: 0.5 },
   skirt: { length: 1, hem: 2 },
+  "a-line-skirt": { waist: 2, length: 1, hem: 2 },
   "eco-bag": {},
+  apron: {},
+  cushion: {},
+  pouch: {},
 };
 
 export const SIZE_LADDER = ["XS", "S", "M", "L", "XL", "XXL"] as const;

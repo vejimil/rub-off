@@ -28,16 +28,19 @@ Everything in this repository was written during the hackathon. The commit histo
 | A4 scale: corner fitting, perspective correction, refusal when the sheet is cut off, covered or not A4 (ported, adapted) | Done (Oct 31) |
 | Measurements from a flat-lay photo for tops, pants, skirts and bags: outline on the floor plane, points of measure, ± per value, refusal outside physical ranges (pants outline ported from Seated Tailor, the rest new) | Done (Oct 31), not yet checked against a tape measure |
 | Pattern drafting from flat measurements for five garments, per-edge seam allowance, grainline, notches, fold, sleeve cap solved to the armhole | Done (Oct 31) |
+| Thirteen garments and items on the same piece model: long-sleeve T-shirt, sweatshirt (neck, hem and cuff ribs), T-shirt dress, A-line skirt (waistband, side zip), bib apron, envelope cushion cover and zip pouch added; their photo measurement reuses the top, skirt and rectangle measures | Done (Nov 2), not yet tried on real photos |
 | A4-tiled 1:1 PDF with a 10 cm test square, page map, overlaps and alignment lines | Done (Oct 31), not yet printed |
 | Grading by size steps (re-drafts from graded measurements) | Done (Oct 31), increments to be confirmed |
 | Size decision: Muse Spark copies a size table, code compares it with your garment | Done (Oct 31) |
 | Cutting layout on your own fabric (raster bottom-left fill along the grain) | Done (Oct 31) |
-| Web app with sample mode (no API calls) and live-run limits. Samples: my T-shirt and shorts from real photos, the other four garments from example measurements | Done (Oct 31; samples Nov 2), not deployed |
+| Web app with sample mode (no API calls) and live-run limits. Samples: my T-shirt and shorts from real photos, and an alteration order from a written example; any garment can be drafted without a photo from typical measurements on the pattern screen | Done (Oct 31; samples Nov 2), not deployed |
 | Real-photo robustness: Muse Spark layout check (folded or hidden sleeves, wrinkles, hem), sleeves folded over the body left out and the other side mirrored, hood removed from the outline, photos turned 90°, garments cut off by the frame refused | Done (Oct 31), on the owner's T-shirt and hoodie |
 | Zip hoodie (two-piece hood, rib bands); front and back photos combined | Done (Oct 31) |
 | Checked against the owner's tape measurements of one T-shirt (body within 3%); shoulder point from the fitted armhole seam, or tapped on the photo (sleeve length −1%) | Done (Nov 1) |
 | Pattern dimensions: every seam line's length on the piece, seams sewn together compared (sleeve cap ease, front/back side seams), the flat measurements a pattern was drafted from on its cover | Done (Nov 2) |
 | Fit and alterations: body measurements to target garment sizes with ease per fit [to confirm], wearer's complaints picked or written (Muse Spark sorts the words), alteration rules into a work order, marked on a technical flat drawn from the pattern's measurements (added fabric hatched, removed fabric cross-hatched, openings and new lines in red, numbered tags). Seated-fit rules and the flat drawing conventions carried over from Seated Tailor | Done (Nov 2), one Spark run on an example text |
+| Alteration screen of its own (`/alter`): photo, then the wearer's words first, the work order printable on its own; everyday complaints added (sleeves or length too short, body too big, shoulders too wide, legs too wide, waist too tight) | Done (Nov 2), rules only, no new Spark run |
+| Patch pockets dragged onto the pattern's panels (square, rounded, kangaroo on a front cut on the fold): each becomes a piece with its opening allowance, its outline is dotted on the panel in the preview and the PDF, and it follows the panel when graded | Done (Nov 2), not yet printed |
 | Muse Image fabric preview | Planned |
 
 ### Not built by me

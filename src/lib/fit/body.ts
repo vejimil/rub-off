@@ -5,7 +5,7 @@
 // [A] Ease values drafted by Claude from common ready-to-wear practice; the owner confirms.
 
 import { L, type Local } from "../i18n/lang.ts";
-import type { Fabric, GarmentKind } from "../pattern/types.ts";
+import { isTop, type Fabric, type GarmentKind } from "../pattern/types.ts";
 
 export type BodyKey = "chestGirth" | "shoulderWidth" | "armLength" | "bicepGirth" | "waistGirth" | "hipGirth" | "thighGirth" | "crotchDepth" | "waistToAnkle";
 export type BodyFit = "slim" | "regular" | "loose";
@@ -28,24 +28,34 @@ export const BODY_HOW: Record<BodyKey, Local> = {
   shoulderWidth: L("등 뒤에서 한쪽 어깨끝에서 다른 쪽 어깨끝까지", "Across the back, from one shoulder point to the other", "Por la espalda, de un extremo del hombro al otro"),
   armLength: L("어깨끝에서 팔을 편 채 손목뼈까지", "From the shoulder point to the wrist bone, arm straight", "Del extremo del hombro al hueso de la muñeca, con el brazo estirado"),
   bicepGirth: L("겨드랑이 바로 아래 위팔 한 바퀴", "Round the upper arm, just below the armpit", "Alrededor del brazo, justo bajo la axila"),
-  waistGirth: L("바지를 입는 높이에서 한 바퀴", "All round, at the height you wear your trousers", "Alrededor, a la altura a la que llevas el pantalón"),
+  waistGirth: L("바지나 치마를 입는 높이에서 한 바퀴", "All round, at the height you wear your trousers or skirt", "Alrededor, a la altura a la que llevas el pantalón o la falda"),
   hipGirth: L("엉덩이의 가장 나온 곳을 수평으로 한 바퀴", "Level round the fullest part of the hips", "En horizontal, por la parte más ancha de la cadera"),
   thighGirth: L("가랑이 바로 아래 허벅지 한 바퀴", "Round the thigh, just below the crotch", "Alrededor del muslo, justo bajo la entrepierna"),
   crotchDepth: L("의자에 앉아 옆에서, 허리에서 의자 면까지 수직으로", "Seated, from the side: straight down from the waist to the chair seat", "En posición sentada, de lado: en vertical de la cintura al asiento"),
   waistToAnkle: L("서서 옆에서, 허리에서 발목뼈까지", "Standing, from the side: from the waist to the ankle bone", "De pie, de lado: de la cintura al hueso del tobillo"),
 };
 
+const LONG_SLEEVED: BodyKey[] = ["chestGirth", "shoulderWidth", "armLength", "bicepGirth"];
+const SHORT_SLEEVED: BodyKey[] = ["chestGirth", "shoulderWidth", "bicepGirth"];
 export const BODY_KEYS: Record<GarmentKind, BodyKey[]> = {
-  shirt: ["chestGirth", "shoulderWidth", "armLength", "bicepGirth"],
-  "t-shirt": ["chestGirth", "shoulderWidth", "bicepGirth"],
-  hoodie: ["chestGirth", "shoulderWidth", "armLength", "bicepGirth"],
+  "t-shirt": SHORT_SLEEVED,
+  "long-sleeve": LONG_SLEEVED,
+  sweatshirt: LONG_SLEEVED,
+  dress: SHORT_SLEEVED,
+  shirt: LONG_SLEEVED,
+  hoodie: LONG_SLEEVED,
   pants: ["waistGirth", "hipGirth", "thighGirth", "crotchDepth", "waistToAnkle"],
   skirt: ["hipGirth"],
+  "a-line-skirt": ["waistGirth"],
   "eco-bag": [],
+  apron: [],
+  cushion: [],
+  pouch: [],
 };
 
 // Ease around the body, cm, per fit: [slim, regular, loose].
-const EASE: Record<"chest" | "hip" | "thigh" | "bicep", Record<Fabric, [number, number, number]>> = {
+const EASE: Record<"chest" | "hip" | "thigh" | "bicep" | "waist", Record<Fabric, [number, number, number]>> = {
+  waist: { woven: [1, 2, 4], knit: [0, 1, 3] }, // a waistband sits on the waist
   chest: { woven: [8, 14, 22], knit: [4, 10, 18] },
   hip: { woven: [4, 8, 14], knit: [2, 6, 12] },
   thigh: { woven: [4, 8, 14], knit: [2, 6, 12] },
@@ -94,10 +104,10 @@ export function targetsFromBody(garment: GarmentKind, body: Partial<Record<BodyK
     out.push({ key, cm: r1(body[b]! + add), how: L(`${n.ko} ${v}${tail}`, `${n.en} ${v}${tail}`, `${n.es} ${v}${tail}`) });
   };
 
-  if (garment === "shirt" || garment === "t-shirt" || garment === "hoodie") {
+  if (isTop(garment)) {
     girth("chest", "chestGirth", EASE.chest[fabric][i]);
     plus("shoulder", "shoulderWidth", SHOULDER_ADD[i]);
-    if (garment !== "t-shirt") plus("sleeve", "armLength", SLEEVE_ADD[i]); // a T-shirt sleeve's length is a style
+    plus("sleeve", "armLength", SLEEVE_ADD[i]); // only long sleeves ask for it: a short sleeve's length is a style
     girth("bicep", "bicepGirth", EASE.bicep[fabric][i]);
   } else if (garment === "pants") {
     // Elastic waist: relaxed, the elastic is cut shorter than the waist so it holds (pattern notes).
@@ -118,6 +128,8 @@ export function targetsFromBody(garment: GarmentKind, body: Partial<Record<BodyK
     girth("thigh", "thighGirth", EASE.thigh[fabric][i]);
     plus("frontRise", "crotchDepth", RISE_ADD[i]);
     if (has("waistToAnkle") && (garmentNow.outseam ?? Infinity) >= FULL_LENGTH_SHARE * body.waistToAnkle!) plus("outseam", "waistToAnkle", 0);
+  } else if (garment === "a-line-skirt") {
+    girth("waist", "waistGirth", EASE.waist[fabric][i]);
   } else if (garment === "skirt" && has("hipGirth")) {
     const around = body.hipGirth! + SKIRT_PASS_EASE;
     const n = BODY_NAME.hipGirth, v = r1(body.hipGirth!), ar = r1(around), fl = r1(around / 2);

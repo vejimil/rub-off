@@ -8,10 +8,10 @@
 import { add, dist, lerp, pointAlong, polylineLength, scale, sub, xAt, type Pt } from "../geom/point.ts";
 import { quad } from "../pattern/curves.ts";
 import { draft } from "../pattern/draft.ts";
-import { ELASTIC_CM } from "../pattern/garments/lower.ts";
+import { ELASTIC_CM, WAISTBAND_CM, ZIP_CM } from "../pattern/garments/lower.ts";
 import { CUFF_HEIGHT } from "../pattern/garments/top.ts";
 import { withDefaults, type MeasuresOf } from "../pattern/measures.ts";
-import type { Fabric, GarmentKind } from "../pattern/types.ts";
+import { isTop, NOT_WORN, type Fabric, type GarmentKind, type TopKind } from "../pattern/types.ts";
 import { L, type Local } from "../i18n/lang.ts";
 import type { Alteration } from "./alter.ts";
 
@@ -69,7 +69,7 @@ interface Base {
   back: Omit<FlatView, "view" | "add" | "remove" | "marks" | "markDots" | "tags">;
   side: Pt[]; // right side seam, top to bottom
   hems: [Pt, Pt][]; // hem segments, left to right
-  waist?: { half: number; band: number };
+  waist?: { half: number; band: number; elastic: boolean };
   sleeve?: { sp: Pt; top: Pt; cuff: Pt; pit: Pt; axis: Pt };
   pit?: Pt;
   cfTop: number; // y of the front neck or waist at the centre
@@ -77,25 +77,26 @@ interface Base {
   legs?: { outseam: Pt[] }; // right leg outseam, top to bottom
 }
 
-function topBase(garment: "shirt" | "t-shirt" | "hoodie", m: MeasuresOf["hoodie"], fabric: Fabric): Base {
+function topBase(garment: TopKind, m: MeasuresOf["hoodie"], fabric: Fabric): Base {
   const p = draft({ garment, measures: m as Partial<MeasuresOf["hoodie"]>, fabric });
   const f = p.pieces.find((x) => x.id === "front")!, b = p.pieces.find((x) => x.id === "back")!;
   const [neckF, , armhole, sideE, hemE] = f.edges.map((e) => e.pts);
   const neckB = b.edges[0].pts;
   const snp = neckF[neckF.length - 1], sp = armhole[0], pit = armhole[armhole.length - 1];
   const hemSide = sideE[sideE.length - 1], bodyHem = hemE[0][1];
-  const rib = garment === "hoodie" ? m.ribHeight : 0;
+  const rib = garment === "hoodie" || garment === "sweatshirt" ? m.ribHeight : 0;
+  const plainKnit = garment === "t-shirt" || garment === "long-sleeve" || garment === "dress";
   const hemY = bodyHem + rib;
 
   // Sleeve: from the shoulder point along the shoulder line turned down, the measured length,
   // ending in the measured opening.
-  const long = garment !== "t-shirt";
+  const long = m.sleeve >= 40;
   const axis = unit(rotate(unit(sub(sp, snp)), long ? 58 : 32));
   const top = add(sp, scale(axis, m.sleeve));
   const cuff = add(top, scale([-axis[1], axis[0]], m.sleeveOpening));
   const sleeveR = [sp, top, cuff, pit];
 
-  // The hoodie body gathers into a rib band as wide as the measured hem.
+  // A ribbed body gathers into a rib band as wide as the measured hem.
   const ribHalf = m.hem / 2;
   const bodyR: Pt[] = rib ? [...sideE, [ribHalf, bodyHem], [ribHalf, hemY]] : [...sideE];
   const right = (topEdge: Pt[]): Pt[] => [...topEdge, ...sleeveR.slice(0, 3), ...bodyR, [0, hemY]];
@@ -114,13 +115,13 @@ function topBase(garment: "shirt" | "t-shirt" | "hoodie", m: MeasuresOf["hoodie"
   const both = (pts: Pt[]) => [pts, mirror(pts)];
   const common = {
     seams: [...both(armhole), ...(rib ? [hemStitch(bodyHem, ribHalf), ...both(sleeveStitch(rib))] : []), ...(garment === "shirt" ? both(sleeveStitch(CUFF_HEIGHT)) : [])],
-    stitches: [hemStitch(hemY - 2, xAt(sideE, hemY - 2)), ...(garment === "t-shirt" ? both(sleeveStitch(2)) : [])],
+    stitches: [hemStitch(hemY - 2, xAt(sideE, hemY - 2)), ...(plainKnit ? both(sleeveStitch(2)) : [])],
   };
 
   const frontSeams: Pt[][] = [[...mirror(neckF).reverse(), ...neckF]];
   const frontStitches: Pt[][] = [];
   const dots: Pt[] = [];
-  if (garment === "t-shirt") frontStitches.push([...mirror(offset(neckF, 1.8)).reverse(), ...offset(neckF, 1.8)]);
+  if (plainKnit || garment === "sweatshirt") frontStitches.push([...mirror(offset(neckF, 1.8)).reverse(), ...offset(neckF, 1.8)]);
   if (garment === "shirt") {
     // Placket and buttons on the centre front; collar leaves over the neckline.
     frontSeams.push([[1.5, neckF[0][1]], [1.5, hemY]]);
@@ -166,7 +167,7 @@ function pantsBase(m: MeasuresOf["pants"]): Base {
     back: { outline, ...base },
     side: outseam,
     hems: [mirror([[c + lo / 2, O], [c - lo / 2, O]]) as [Pt, Pt], [[c - lo / 2, O], [c + lo / 2, O]]],
-    waist: { half: W, band },
+    waist: { half: W, band, elastic: true },
     cfTop: 0,
     hip: H,
     legs: { outseam },
@@ -182,16 +183,37 @@ function skirtBase(m: MeasuresOf["skirt"]): Base {
   const gathers: Pt[][] = [];
   for (let x = 0.8; x < W - 0.4; x += 1.6) gathers.push([[x, band], [x * (H / W), band + 4]], [[-x, band], [(-x * H) / W, band + 4]]);
   const base = { seams: [[[-W, band], [W, band]] as Pt[]], stitches: [...gathers, [[-H, m.length - 2.5], [H, m.length - 2.5]] as Pt[]], dots: [] };
-  return { kind: "skirt", front: { outline, ...base }, back: { outline, ...base }, side, hems: [[[-H, m.length], [H, m.length]]], waist: { half: W, band }, cfTop: 0 };
+  return { kind: "skirt", front: { outline, ...base }, back: { outline, ...base }, side, hems: [[[-H, m.length], [H, m.length]]], waist: { half: W, band, elastic: true }, cfTop: 0 };
+}
+
+// A waistband and a plain panel flaring to the hem; the zip in the wearer's left side seam.
+function aLineBase(m: MeasuresOf["a-line-skirt"]): Base {
+  const band = WAISTBAND_CM;
+  const W = m.waist / 2, H = m.hem / 2;
+  const side: Pt[] = [[W, band], [H, m.length]];
+  const right: Pt[] = [[0, 0], [W, 0], ...side];
+  const outline: Pt[] = [...mirror(right).reverse().slice(0, -1), ...right.slice(1), [0, m.length]];
+  const hem: Pt[] = [[-H, m.length - 2.5], [H, m.length - 2.5]];
+  const zip: Pt[] = [[W, band], lerp([W, band], [H, m.length], ZIP_CM / m.length)];
+  return {
+    kind: "skirt",
+    front: { outline, seams: [[[-W, band], [W, band]]], stitches: [hem], dots: [] },
+    back: { outline, seams: [[[-W, band], [W, band]], mirror(zip)], stitches: [hem], dots: [] },
+    side,
+    hems: [[[-H, m.length], [H, m.length]]],
+    waist: { half: W, band, elastic: false },
+    cfTop: 0,
+  };
 }
 
 export function baseFor(garment: GarmentKind, measures: Record<string, number>, fabric: Fabric): Base | null {
-  if (garment === "eco-bag") return null;
+  if (NOT_WORN.includes(garment)) return null;
   const m = withDefaults(garment, measures as Partial<MeasuresOf[typeof garment]>).measures as unknown as Record<string, number>;
   try {
     if (garment === "pants") return pantsBase(m as unknown as MeasuresOf["pants"]);
     if (garment === "skirt") return skirtBase(m as unknown as MeasuresOf["skirt"]);
-    return topBase(garment, m as unknown as MeasuresOf["hoodie"], fabric);
+    if (garment === "a-line-skirt") return aLineBase(m as unknown as MeasuresOf["a-line-skirt"]);
+    return isTop(garment) ? topBase(garment, m as unknown as MeasuresOf["hoodie"], fabric) : null;
   } catch {
     return null; // a required measurement is missing
   }
@@ -273,11 +295,19 @@ function mark(base: Base, views: Record<View, FlatView>, a: Alteration, n: numbe
     case "skirt-long":
       return hemStrip(-1);
     case "seat-hem-short":
+    case "body-short":
+    case "pants-short":
       return hemStrip(1);
     case "sleeve":
       return sleeveStrip(dir);
     case "sleeve-long":
       return sleeveStrip(-1);
+    case "sleeve-short":
+      return sleeveStrip(1);
+    case "body-loose":
+      return sideBand(-1);
+    case "leg-wide":
+      return sideBand(-1, base.legs ? base.legs.outseam[base.legs.outseam.length - 2][1] : 0);
     case "chest":
     case "hem":
     case "hip":
@@ -295,13 +325,16 @@ function mark(base: Base, views: Record<View, FlatView>, a: Alteration, n: numbe
       return tag("front", [lerp(s.pit, s.cuff, 0.5)], text(dir < 0 ? "−" : "+"));
     }
     case "shoulder":
+    case "shoulder-wide":
       if (base.sleeve) tag("front", [base.sleeve.sp, [-base.sleeve.sp[0], base.sleeve.sp[1]]], text(dir < 0 ? "−" : "+"));
       return;
     case "waist":
     case "waist-loose":
+    case "waist-tight":
+      if (base.waist && !base.waist.elastic) return sideBand(dir);
       if (base.waist) {
         views.front.marks.push([[-W, base.waist.band / 2], [W, base.waist.band / 2]]);
-        const n = `${id === "waist" && dir > 0 ? "+" : "−"}${id === "waist" ? 2 * a.amountCm! : a.amountCm} cm`;
+        const n = `${(id === "waist" && dir > 0) || id === "waist-tight" ? "+" : "−"}${id === "waist" ? 2 * a.amountCm! : a.amountCm} cm`;
         tag("front", [[W, base.waist.band / 2]], known ? L(`고무줄 ${n}`, `elastic ${n}`, `elástico ${n}`) : TO_MEASURE);
       }
       return;

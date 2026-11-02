@@ -73,11 +73,12 @@ export interface GarmentCard {
   text: string;
   picture: ReactNode;
   tone: string;
+  href: string; // the pattern screen, this garment picked
 }
 
-// The six garments in a row of their own: it scrolls sideways (trackpad, shift + wheel, a swipe, the
+// The garments in a row of their own: it scrolls sideways (trackpad, shift + wheel, a swipe, the
 // arrow buttons or the keyboard) and never takes over the page's vertical scroll.
-export function GarmentRow({ heading, sub, cards, rowLabel }: { heading: string; sub: string; cards: GarmentCard[]; rowLabel: string }) {
+export function GarmentRow({ heading, sub, cards, rowLabel, cta }: { heading: string; sub: string; cards: GarmentCard[]; rowLabel: string; cta: string }) {
   const lang = useLang();
   const row = useRef<HTMLDivElement>(null);
   const [edge, setEdge] = useState<"start" | "middle" | "end">("start");
@@ -86,7 +87,20 @@ export function GarmentRow({ heading, sub, cards, rowLabel }: { heading: string;
     if (!el) return;
     setEdge(el.scrollLeft < 8 ? "start" : el.scrollLeft > el.scrollWidth - el.clientWidth - 8 ? "end" : "middle");
   };
-  const page = (dir: 1 | -1) => row.current?.scrollBy({ left: dir * row.current.clientWidth * 0.8, behavior: "smooth" });
+  // A page is as many whole cards as are in view, and the row goes straight to the card it lands
+  // on. A distance that ends mid-card is snapped afterwards, and some browsers (Safari) glide there
+  // and then jump to the card's edge.
+  const page = (dir: 1 | -1) => {
+    const el = row.current;
+    if (!el) return;
+    const starts = [...el.children].map((c) => (c as HTMLElement).offsetLeft - (el.children[0] as HTMLElement).offsetLeft);
+    const step = starts[1] - starts[0] || el.clientWidth;
+    const per = Math.max(1, Math.floor((el.clientWidth + 1) / step));
+    const now = Math.round(el.scrollLeft / step);
+    const max = el.scrollWidth - el.clientWidth;
+    const target = Math.min(max, Math.max(0, starts[Math.min(starts.length - 1, Math.max(0, now + dir * per))] ?? 0));
+    el.scrollTo({ left: target, behavior: "smooth" });
+  };
   const arrow = "press flex h-11 w-11 items-center justify-center rounded-full border border-sand/40 hover:border-sand disabled:opacity-30";
   return (
     <section aria-labelledby="garments-title" className="bg-ink py-28 text-sand lg:py-40">
@@ -117,13 +131,16 @@ export function GarmentRow({ heading, sub, cards, rowLabel }: { heading: string;
         className="row-scroll mx-5 mt-14 flex snap-x snap-mandatory gap-6 overflow-x-auto overscroll-x-contain scroll-smooth pb-6 sm:mx-10 lg:mx-16 lg:gap-8"
       >
         {cards.map((c) => (
-          <article key={c.name} className="flex w-[78vw] shrink-0 snap-start flex-col overflow-hidden text-ink sm:w-[360px] lg:w-[400px]">
+          <Link key={c.name} href={c.href} className="group flex w-[78vw] shrink-0 snap-start flex-col overflow-hidden text-ink sm:w-[360px] lg:w-[400px]">
             <div className="relative aspect-[4/3] bg-sand">{c.picture}</div>
             <div className="flex flex-1 flex-col gap-3 p-6" style={{ background: c.tone }}>
               <h3 className="font-display text-[32px] leading-none">{c.name}</h3>
               <p className="text-lg leading-snug">{c.text}</p>
+              <span className="mt-auto pt-2 text-[15px] font-medium underline decoration-transparent underline-offset-4 transition-colors group-hover:decoration-current">
+                {cta} →
+              </span>
             </div>
-          </article>
+          </Link>
         ))}
       </div>
     </section>

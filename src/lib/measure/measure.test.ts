@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { Pt } from "../geom/point.ts";
 import { applyAffine, rotation } from "../geom/polygon.ts";
 import type { Shape } from "./shape.ts";
-import { measureBag, measureSkirt } from "./simple.ts";
+import { measureApron, measureBag, measureRect, measureSkirt } from "./simple.ts";
 import { measureTop } from "./top.ts";
 
 // Pure geometry: outlines drawn in cm with known measurements (SAM is only tested on real photos).
@@ -73,6 +73,24 @@ test("a skirt lying sideways is stood up: waist, hem, length", () => {
   close(m.values.waist?.cm, 34);
   close(m.values.hem?.cm, 54);
   close(m.values.length?.cm, 62, 0.5);
+});
+
+test("an apron measures like a skirt: bib on top, its width, the skirt's width and the length", () => {
+  const apron: Pt[] = [[-13, 0], [13, 0], [15, 20], [30, 26], [30, 85], [-30, 85], [-30, 26], [-15, 20]];
+  const m = measureApron(shapeOf(apron));
+  assert.ok(!("ok" in m), JSON.stringify(m));
+  close(m.values.bibWidth?.cm, 26);
+  close(m.values.width?.cm, 60);
+  close(m.values.length?.cm, 85, 0.5);
+});
+
+test("a cushion cover lying turned is a rectangle: width across, full height", () => {
+  const c: Pt[] = [[0, 0], [40, 0], [40, 45], [0, 45]];
+  const m = measureRect(shapeOf(c));
+  assert.ok(!("ok" in m), JSON.stringify(m));
+  const [w, h] = [m.values.width?.cm ?? 0, m.values.height?.cm ?? 0].sort((x, y) => x - y);
+  close(w, 40);
+  close(h, 45, 0.5);
 });
 
 test("a tote's body is the wide part under the handles", () => {

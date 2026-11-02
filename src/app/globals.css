@@ -135,3 +135,29 @@ p {
   scrollbar-color: color-mix(in srgb, currentColor 45%, transparent) transparent;
   -webkit-overflow-scrolling: touch;
 }
+
+/* Printing an alteration order prints only the order: the page around it stays blank. */
+@media print {
+  body:has(.print-order) {
+    background: none;
+  }
+  body:has(.print-order) * {
+    visibility: hidden;
+  }
+  /* Everything that neither holds the order nor sits in it leaves the layout, so no blank pages follow. */
+  body:has(.print-order) *:not(:has(.print-order)):not(.print-order):not(.print-order *) {
+    display: none;
+  }
+  body:has(.print-order) .print-order,
+  body:has(.print-order) .print-order * {
+    visibility: visible;
+  }
+  .print-order {
+    position: absolute;
+    inset: 0 0 auto 0;
+    print-color-adjust: exact;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

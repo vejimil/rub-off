@@ -77,7 +77,8 @@ function shelfPack(items: readonly Item[], limit: number): Sheet {
   return { width: sheetW, height: y + rowH, pieces: placed };
 }
 
-export function layOut(pattern: Pattern, t: Tiling = A4_TILING): Sheet {
+// `turn: false` keeps every piece upright (a drawing of the garment rather than a print layout).
+export function layOut(pattern: Pattern, t: Tiling = A4_TILING, { turn = true } = {}): Sheet {
   const upright = pattern.pieces.map((piece) => item(piece, cuttingLine(piece, pattern.fabric)));
   const turned = upright.map((it) => item(mapPiece(it.piece, turnPt), it.cut.map(turnPt)));
   const n = upright.length;
@@ -85,7 +86,7 @@ export function layOut(pattern: Pattern, t: Tiling = A4_TILING): Sheet {
 
   let best: { sheet: Sheet; pages: number; area: number } | null = null;
   // Every combination of turns (pieces per pattern are few), every sheet width in whole pages.
-  for (let mask = 0; mask < 1 << Math.min(n, 8); mask++) {
+  for (let mask = 0; mask < (turn ? 1 << Math.min(n, 8) : 1); mask++) {
     const items = upright.map((u, i) => (mask >> i) & 1 ? turned[i] : u);
     const widest = Math.max(...items.map((i) => i.w));
     for (let cols = 1; cols <= 8; cols++) {
@@ -96,4 +97,16 @@ export function layOut(pattern: Pattern, t: Tiling = A4_TILING): Sheet {
     }
   }
   return best!.sheet;
+}
+
+// The pieces upright and packed to come closest to a frame's shape (width / height): a drawing of
+// the garment for a card, not a print layout.
+export function drawingSheet(pattern: Pattern, aspect = 4 / 3): Sheet {
+  const off = (s: Sheet) => Math.abs(Math.log(s.width / s.height / aspect));
+  let best: Sheet | null = null;
+  for (let w = 20; w <= 240; w += 10) {
+    const s = layOut(pattern, { content: [w + 1, 2000], step: [w, 1999] }, { turn: false });
+    if (!best || off(s) < off(best) - 0.01) best = s;
+  }
+  return best!;
 }

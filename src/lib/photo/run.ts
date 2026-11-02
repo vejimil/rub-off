@@ -11,14 +11,14 @@ import { applyAffine, invertAffine, simplifyClosed } from "../geom/polygon.ts";
 import { cachedImageConcept, imageMasks, SAM_IMAGE_USD, segmentImageConcept } from "../meta/sam-image.ts";
 import { measurePants } from "../measure/pants.ts";
 import { partPolygon, shapeFromMasks, shapeWithPlainScale, type Measured, type Shape } from "../measure/shape.ts";
-import { measureBag, measureSkirt } from "../measure/simple.ts";
+import { measureApron, measureBag, measureRect, measureSkirt } from "../measure/simple.ts";
 import { measureTop, type TopOptions } from "../measure/top.ts";
 import { cachedLayoutCheck, layoutCheck, usableSleeves, WRINKLE_REL, type LayoutCheck } from "./layout-check.ts";
 import { draft } from "../pattern/draft.ts";
 import { L, type Local } from "../i18n/lang.ts";
 import { MEASURE_NAME, type MeasuresOf } from "../pattern/measures.ts";
 import { NO_GARMENT } from "../measure/shape.ts";
-import type { Fabric, GarmentKind, Pattern } from "../pattern/types.ts";
+import { isTop, type Fabric, type GarmentKind, type Pattern } from "../pattern/types.ts";
 import { a4Scale, type A4Scale } from "../scale/a4.ts";
 
 export const LONG_SIDE_PX = 2000;
@@ -26,13 +26,20 @@ export const LONG_SIDE_PX = 2000;
 // SAM words per garment. One short noun each; "pants" found trousers where "trousers" found
 // nothing (Seated Tailor, 10/31). [A] The rest to be compared on real photos.
 export const CONCEPTS: Record<GarmentKind, { garment: string; parts: string[] }> = {
-  shirt: { garment: "shirt", parts: ["sleeve", "hood"] },
   "t-shirt": { garment: "t-shirt", parts: ["sleeve", "hood"] },
+  "long-sleeve": { garment: "shirt", parts: ["sleeve"] },
+  sweatshirt: { garment: "sweatshirt", parts: ["sleeve"] },
+  dress: { garment: "dress", parts: ["sleeve"] },
+  shirt: { garment: "shirt", parts: ["sleeve", "hood"] },
   // "jacket" found nothing on the owner's zip hoodie; "hoodie" found it (0.92, 0.73).
   hoodie: { garment: "hoodie", parts: ["sleeve", "hood"] },
   pants: { garment: "pants", parts: [] },
   skirt: { garment: "skirt", parts: [] },
+  "a-line-skirt": { garment: "skirt", parts: [] },
   "eco-bag": { garment: "bag", parts: ["handle"] },
+  apron: { garment: "apron", parts: [] },
+  cushion: { garment: "cushion", parts: [] },
+  pouch: { garment: "pouch", parts: [] },
 };
 export const PAPER = "paper";
 const SPARK_CHECK_USD = 0.01; // one layout check, a 1024 px image and a short answer
@@ -234,14 +241,17 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
 }
 
 function measureOf(garment: GarmentKind, shape: Shape, parts: Pt[][], opts: TopOptions): Measured | { ok: false; detail: Local } {
-  const m =
-    garment === "shirt" || garment === "t-shirt" || garment === "hoodie"
-      ? measureTop(shape, parts, opts)
-      : garment === "pants"
-        ? measurePants(shape)
-        : garment === "skirt"
-          ? measureSkirt(shape)
-          : measureBag(shape, parts);
+  const m = isTop(garment)
+    ? measureTop(shape, parts, opts)
+    : garment === "pants"
+      ? measurePants(shape)
+      : garment === "skirt" || garment === "a-line-skirt"
+        ? measureSkirt(shape)
+        : garment === "apron"
+          ? measureApron(shape)
+          : garment === "cushion" || garment === "pouch"
+            ? measureRect(shape)
+            : measureBag(shape, parts);
   return m as Measured | { ok: false; detail: Local };
 }
 

@@ -9,7 +9,8 @@
 
 import { L, LANGS, type Local } from "../i18n/lang.ts";
 import { MEASURE_NAME } from "../pattern/measures.ts";
-import type { Fabric, GarmentKind } from "../pattern/types.ts";
+import { GARMENT_NAME } from "../i18n/names.ts";
+import { NOT_WORN, TOP_KINDS, type Fabric, type GarmentKind } from "../pattern/types.ts";
 import { tolerance, SIZE_KEYS, type SizeKey } from "../rules/fit-tolerance.ts";
 import { guardNumbers } from "../rules/numbers.ts";
 import type { Target } from "./body.ts";
@@ -53,7 +54,7 @@ export function jo(word: string, p: "을" | "이"): string {
   return word + (p === "을" ? (batchim ? "을" : "를") : batchim ? "이" : "가");
 }
 const f = (x: number) => (Math.round(x * 10) / 10).toString();
-const TOP_GARMENTS: readonly GarmentKind[] = ["shirt", "t-shirt", "hoodie"];
+const TOP_GARMENTS: readonly GarmentKind[] = TOP_KINDS;
 
 // Measurements as a sentence names them (Spanish with its article): "Take in the chest",
 // "Mete el pecho". Korean uses the measurement's own name.
@@ -276,9 +277,11 @@ export interface ComplaintDef {
 const PANTS: readonly GarmentKind[] = ["pants"];
 const TOPS = TOP_GARMENTS;
 const WAISTED: readonly GarmentKind[] = ["pants", "skirt"];
-export const WORN: readonly GarmentKind[] = ["shirt", "t-shirt", "hoodie", "pants", "skirt"];
+export const WORN: readonly GarmentKind[] = (Object.keys(GARMENT_NAME) as GarmentKind[]).filter((g) => !NOT_WORN.includes(g));
+const LONG_SLEEVED: readonly GarmentKind[] = ["shirt", "hoodie", "sweatshirt", "long-sleeve"];
 
 const SHORTER = L("줄이고 싶은 길이", "How much shorter", "Cuánto quieres acortarlo");
+const LONGER = L("늘리고 싶은 길이", "How much longer", "Cuánto quieres alargarlo");
 
 export const COMPLAINTS: readonly ComplaintDef[] = [
   {
@@ -318,13 +321,13 @@ export const COMPLAINTS: readonly ComplaintDef[] = [
     seated: true,
     ask: L("앉았을 때 앞자락이 남는 길이", "How much front hem is left over when seated", "Cuánto sobra del delantero al sentarte"),
   },
-  { id: "elbows-wear", label: L("휠체어 바퀴를 밀다 보니 팔꿈치가 닳아요", "The elbows wear through from pushing my wheels", "Los codos se gastan de empujar las ruedas"), garments: ["shirt", "hoodie"], seated: true },
+  { id: "elbows-wear", label: L("휠체어 바퀴를 밀다 보니 팔꿈치가 닳아요", "The elbows wear through from pushing my wheels", "Los codos se gastan de empujar las ruedas"), garments: LONG_SLEEVED, seated: true },
   { id: "crutch-underarm", label: L("목발 때문에 겨드랑이가 쓸려요", "My crutches rub the underarms", "Las muletas me rozan las axilas"), garments: TOPS, seated: true },
   { id: "hard-fasten", label: L("단추나 지퍼를 여닫기 어려워요", "Buttons or zips are hard to do up", "Me cuesta abrochar botones o cremalleras"), garments: ["shirt", "hoodie", "pants"], seated: true },
-  { id: "sleeve-long", label: L("소매가 길어요", "The sleeves are too long", "Las mangas son demasiado largas"), garments: ["shirt", "hoodie", "t-shirt"], ask: SHORTER },
+  { id: "sleeve-long", label: L("소매가 길어요", "The sleeves are too long", "Las mangas son demasiado largas"), garments: TOPS, ask: SHORTER },
   { id: "body-long", label: L("옷 길이가 길어요", "The top is too long", "La prenda es demasiado larga"), garments: TOPS, ask: SHORTER },
   { id: "pants-long", label: L("바지 길이가 길어요", "The trousers are too long", "El pantalón es demasiado largo"), garments: PANTS, ask: SHORTER },
-  { id: "skirt-long", label: L("치마 길이가 길어요", "The skirt is too long", "La falda es demasiado larga"), garments: ["skirt"], ask: SHORTER },
+  { id: "skirt-long", label: L("치마 길이가 길어요", "The skirt is too long", "La falda es demasiado larga"), garments: ["skirt", "a-line-skirt"], ask: SHORTER },
   {
     id: "waist-loose",
     label: L("허리가 헐렁해요", "The waist is too loose", "La cintura me queda floja"),
@@ -332,6 +335,33 @@ export const COMPLAINTS: readonly ComplaintDef[] = [
     ask: L("허리 둘레로 줄이고 싶은 길이", "How much to take off the waist, all round", "Cuánto reducir el contorno de cintura"),
   },
   { id: "body-tight", label: L("가슴이나 몸판이 끼어요", "It's tight across the chest or body", "Me queda justo de pecho o de cuerpo"), garments: TOPS },
+  { id: "sleeve-short", label: L("소매가 짧아요", "The sleeves are too short", "Las mangas son demasiado cortas"), garments: TOPS, ask: LONGER },
+  { id: "body-short", label: L("옷 길이가 짧아요", "The top is too short", "La prenda es demasiado corta"), garments: TOPS, ask: LONGER },
+  { id: "pants-short", label: L("바지 길이가 짧아요", "The trousers are too short", "El pantalón es demasiado corto"), garments: PANTS, ask: LONGER },
+  {
+    id: "body-loose",
+    label: L("몸판이 너무 커요", "The body is too big", "El cuerpo me queda demasiado grande"),
+    garments: TOPS,
+    ask: L("가슴 단면으로 줄이고 싶은 폭", "How much to take off the chest, flat", "Cuánto quitar del pecho, en plano"),
+  },
+  {
+    id: "shoulder-wide",
+    label: L("어깨가 넓어서 처져요", "The shoulders are too wide and droop", "Los hombros son demasiado anchos y caen"),
+    garments: TOPS,
+    ask: L("줄이고 싶은 어깨너비", "How much narrower across the shoulders", "Cuánto estrechar los hombros"),
+  },
+  {
+    id: "leg-wide",
+    label: L("바지통이 너무 넓어요", "The legs are too wide", "Las perneras son demasiado anchas"),
+    garments: PANTS,
+    ask: L("밑단 단면으로 줄이고 싶은 폭", "How much to take off the leg opening, flat", "Cuánto quitar del bajo de la pierna, en plano"),
+  },
+  {
+    id: "waist-tight",
+    label: L("허리가 조여요", "The waist is too tight", "La cintura me aprieta"),
+    garments: WAISTED,
+    ask: L("허리 둘레로 늘리고 싶은 길이", "How much to add to the waist, all round", "Cuánto añadir al contorno de cintura"),
+  },
 ];
 
 export const COMPLAINT_IDS = COMPLAINTS.map((c) => c.id);
@@ -372,6 +402,34 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
     delta: a ? { [key]: -a } : undefined,
   });
   const HEM = L("밑단", "hem", "el bajo");
+  // Let a hem down from its allowance; past what a ready-made hem has spare, add a band.
+  const lengthen = (part: Local, hemOf: Local, key: string, spare: number, sleeve = false): Alteration => {
+    const ok = a !== undefined && a <= spare;
+    return {
+      id,
+      from,
+      part,
+      action: a && !ok
+        ? sleeve ? L("소매에 커프스 덧달기", "Add a cuff band to the sleeves", "Añadir un puño a las mangas") : L("밑단에 덧단 달기", "Add a hem band", "Alargar el bajo con una tira")
+        : sleeve ? L("소매 단 내리기", "Let the sleeve hems down", "Sacar el bajo de las mangas") : L("밑단 내리기", "Let the hem down", "Sacar el bajo"),
+      amountCm: a,
+      instruction: a
+        ? ok
+          ? L(
+              `${jo(hemOf.ko, "을")} ${f(a)} cm 내려 다시 박습니다. 시접이 ${f(a)} cm 이상 남아 있는지 먼저 확인하십시오.`,
+              `Let ${hemOf.en} down ${f(a)} cm and restitch. First check that at least ${f(a)} cm of hem allowance is left.`,
+              `Saca ${hemOf.es} ${f(a)} cm y vuelve a coserlo. Comprueba antes que queden al menos ${f(a)} cm de dobladillo.`,
+            )
+          : L(
+              `${f(a)} cm 길어져야 합니다. 기성복 시접으로는 보통 ${f(spare)} cm까지라, 같은 천이나 어울리는 천으로 ${sleeve ? "소매 끝에 커프스를" : "밑단에 덧단을"} 덧답니다.`,
+              `It needs to be ${f(a)} cm longer. A ready-made hem usually has only ${f(spare)} cm to spare, so add ${sleeve ? "a cuff band to the sleeve ends" : "a band to the hem"}, in the same or a matching fabric.`,
+              `Debe quedar ${f(a)} cm más largo. Un bajo de confección suele dar solo ${f(spare)} cm, así que añade ${sleeve ? "un puño al final de las mangas" : "una tira al bajo"}, de la misma tela o una que combine.`,
+            )
+        : measureFirst(L("늘리고 싶은 길이", "how much longer you want it", "cuánto quieres alargarlo")),
+      difficulty: a && !ok ? "hard" : "easy",
+      delta: a ? { [key]: a } : undefined,
+    };
+  };
 
   switch (c.id) {
     case "seat-back-drops": {
@@ -594,6 +652,96 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
           `Saca ambas costuras laterales. El margen de costura da hasta ${f(LET_OUT_FLAT)} cm en plano; si queda más justo, añade piezas en los costados o haz un patrón una talla más grande. Introduce las medidas del cuerpo para calcular cuánto.`,
         ),
         difficulty: "medium",
+      };
+    case "sleeve-short":
+      return lengthen(L("소매", "Sleeves", "Mangas"), L("소매 단", "the sleeve hems", "el bajo de las mangas"), "sleeve", HEM_SPARE.top, true);
+    case "body-short":
+      return lengthen(L("밑단", "Hem", "Bajo"), L("밑단", "the hem", "el bajo"), "length", HEM_SPARE.top);
+    case "pants-short":
+      return lengthen(L("밑단", "Hem", "Bajo"), L("밑단", "the hem", "el bajo"), "outseam", HEM_SPARE.pants);
+    case "body-loose": {
+      const big = a !== undefined && a > BIG_TAKE_IN;
+      return {
+        id,
+        from,
+        part: L("옆선", "Side seams", "Costuras laterales"),
+        action: L("옆선 줄이기", "Take in the side seams", "Meter las costuras laterales"),
+        amountCm: a,
+        instruction: a
+          ? big
+            ? L(
+                `양 옆선을 ${f(a / 2)} cm씩, 단면 ${f(a)} cm 줄입니다. ${f(BIG_TAKE_IN)} cm가 넘으면 진동둘레가 작아지므로 소매 밑선도 같이 줄여 진동을 다시 맞춥니다.`,
+                `Take in each side seam ${f(a / 2)} cm, ${f(a)} cm flat. Past ${f(BIG_TAKE_IN)} cm the armhole gets smaller, so take in the sleeve seam too and match the armhole again.`,
+                `Mete cada costura lateral ${f(a / 2)} cm, ${f(a)} cm en plano. A partir de ${f(BIG_TAKE_IN)} cm la sisa se reduce, así que mete también la costura de la manga y vuelve a casar la sisa.`,
+              )
+            : L(
+                `양 옆선을 ${f(a / 2)} cm씩, 단면 ${f(a)} cm 줄입니다. 겨드랑이에서 밑단까지 고르게 줄입니다.`,
+                `Take in each side seam ${f(a / 2)} cm, ${f(a)} cm flat, evenly from the underarm to the hem.`,
+                `Mete cada costura lateral ${f(a / 2)} cm, ${f(a)} cm en plano, por igual de la axila al bajo.`,
+              )
+          : join(
+              L("양 옆선을 같은 폭으로 줄입니다.", "Take in both side seams by the same amount.", "Mete las dos costuras laterales lo mismo."),
+              measureFirst(L("줄이고 싶은 가슴 단면 폭", "how much to take off the chest, flat", "cuánto quitar del pecho, en plano")),
+            ),
+        difficulty: big ? "hard" : "medium",
+        delta: a ? { chest: -a } : undefined,
+      };
+    }
+    case "shoulder-wide":
+      return {
+        id,
+        from,
+        part: L("어깨", "Shoulders", "Hombros"),
+        action: L("어깨너비 줄이기", "Narrow the shoulders", "Estrechar los hombros"),
+        amountCm: a,
+        instruction: a
+          ? L(
+              `소매를 떼고 진동선을 어깨 끝에서 ${f(a / 2)} cm씩 안으로 옮겨 그린 뒤, 소매를 다시 답니다. 어깨너비가 ${f(a)} cm 줄어듭니다.`,
+              `Take the sleeves off, redraw the armhole seam ${f(a / 2)} cm in from each shoulder point and set the sleeves back in. The shoulders come in ${f(a)} cm.`,
+              `Descose las mangas, traza de nuevo la sisa ${f(a / 2)} cm hacia dentro desde cada punta de hombro y vuelve a montar las mangas. Los hombros se estrechan ${f(a)} cm.`,
+            )
+          : join(
+              L("소매를 떼고 진동선을 어깨 끝에서 안으로 옮겨 그린 뒤, 소매를 다시 답니다.", "Take the sleeves off, redraw the armhole seam in from the shoulder points and set the sleeves back in.", "Descose las mangas, traza la sisa más hacia dentro desde las puntas de hombro y vuelve a montar las mangas."),
+              measureFirst(L("줄이고 싶은 어깨너비", "how much narrower you want the shoulders", "cuánto quieres estrechar los hombros")),
+            ),
+        difficulty: "hard",
+        delta: a ? { shoulder: -a } : undefined,
+      };
+    case "leg-wide":
+      return {
+        id,
+        from,
+        part: L("바지 안솔기", "Inseam", "Entrepierna"),
+        action: L("바지통 줄이기", "Taper the legs", "Estrechar las perneras"),
+        amountCm: a,
+        instruction: a
+          ? L(
+              `안솔기를 밑단에서 ${f(a)} cm 줄이고, 무릎 위에서 원래 선으로 자연스럽게 이어 박습니다. 밑단 단면이 ${f(a)} cm 좁아집니다.`,
+              `Take in the inseam ${f(a)} cm at the hem and blend it back into the original line above the knee. The leg opening comes in ${f(a)} cm flat.`,
+              `Mete la entrepierna ${f(a)} cm en el bajo y únela suavemente con la línea original por encima de la rodilla. El bajo se estrecha ${f(a)} cm en plano.`,
+            )
+          : join(
+              L("안솔기를 밑단 쪽에서 줄이고, 무릎 위에서 원래 선으로 이어 박습니다.", "Take in the inseam at the hem and blend it into the original line above the knee.", "Mete la entrepierna en el bajo y únela con la línea original por encima de la rodilla."),
+              measureFirst(L("줄이고 싶은 밑단 단면 폭", "how much to take off the leg opening, flat", "cuánto quitar del bajo, en plano")),
+            ),
+        difficulty: "medium",
+        delta: a ? { legOpening: -a } : undefined,
+      };
+    case "waist-tight":
+      return {
+        id,
+        from,
+        part: L("허리", "Waist", "Cintura"),
+        action: L("고무줄 늘리기", "Lengthen the elastic", "Alargar el elástico"),
+        amountCm: a,
+        instruction: a
+          ? L(`허리 고무줄을 ${f(a)} cm 길게 다시 끼웁니다.`, `Rethread the waist elastic ${f(a)} cm longer.`, `Vuelve a pasar el elástico de la cintura ${f(a)} cm más largo.`)
+          : join(
+              L("허리 고무줄을 허리에 맞춰 길게 다시 끼웁니다.", "Rethread the waist elastic longer, to fit.", "Vuelve a pasar el elástico de la cintura más largo, a tu medida."),
+              measureFirst(L("늘리고 싶은 허리 둘레", "how much to add to the waist", "cuánto quieres añadir a la cintura")),
+            ),
+        difficulty: "easy",
+        reversible: true,
       };
     default:
       return {

@@ -1,4 +1,4 @@
-// Shirts, T-shirts and hoodies lying flat, neck toward the top of the photo. Points of measure
+// Tops lying flat (T-shirts, sweatshirts, dresses, shirts, hoodies), neck toward the top of the photo. Points of measure
 // from the outline, side by side:
 //   hem        the lowest corners of the widest run near the bottom; the hem levels the garment
 //              and its middle is the centre line
@@ -25,7 +25,7 @@ const NO_HEM = Loc("밑단을 찾지 못했습니다.", "Couldn't find the hem."
 export type TopKey = Exclude<keyof TopMeasures, "frontNeckDrop" | "backNeckDrop">;
 
 const RANGES: Record<TopKey, [number, number]> = {
-  length: [35, 110],
+  length: [35, 130], // a dress runs long
   chest: [28, 85],
   shoulder: [25, 70],
   hem: [25, 95],
