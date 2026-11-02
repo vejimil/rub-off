@@ -13,7 +13,9 @@ import type { GarmentKind } from "@/lib/pattern/types";
 import shorts from "@/lib/sample/shorts-run.json";
 import tablesBottoms from "@/lib/sample/size-table-bottoms-read.json";
 import tablesTops from "@/lib/sample/size-table-read.json";
+import complaintPants from "@/lib/sample/complaint-pants.json";
 import tee from "@/lib/sample/tee-run.json";
+import type { ReadComplaints } from "@/lib/fit/read-complaint";
 import type { ReadTable } from "@/lib/size/table";
 
 // The sample page: two garments the owner photographed (replayed runs, no API call) and the
@@ -25,6 +27,7 @@ interface Sample {
   garment: GarmentKind;
   run?: SampleRun;
   sub: string;
+  tab?: "measure" | "pattern" | "fit";
 }
 
 const TOPS_TABLE = { read: tablesTops as ReadTable, src: "/samples/size-table.png" };
@@ -33,6 +36,7 @@ const BOTTOMS_TABLE = { read: tablesBottoms as ReadTable, src: "/samples/size-ta
 const SAMPLES: Sample[] = [
   { id: "tee", label: "티셔츠", garment: "t-shirt", run: tee as unknown as SampleRun, sub: "실제 사진, 어깨점은 사진에서 직접 찍음" },
   { id: "shorts", label: "반바지", garment: "pants", run: shorts as unknown as SampleRun, sub: "실제 사진" },
+  { id: "pants", label: "휠체어 바지", garment: "pants", sub: "예시 치수의 고무줄 바지와, 앉아서 입는 사람이 적은 불편함 (예시 글, Muse Spark가 분석해 둔 결과)", tab: "fit" },
   ...(["shirt", "hoodie", "skirt", "eco-bag"] as const).map((g) => ({ id: g, label: GARMENT_KO[g], garment: g, sub: "예시 치수로 그린 패턴" })),
 ];
 
@@ -81,7 +85,8 @@ export function SampleGallery() {
         initial={{ photo: s.run?.photo, run: s.run?.run, garment: s.garment, fabric: s.run ? (s.id === "tee" ? "knit" : "woven") : ex.fabric }}
         initialEdits={s.id === "tee" ? TEE_TAPE : s.run ? undefined : Object.fromEntries(Object.entries(ex.m).map(([k, v]) => [k, String(v)]))}
         editedLabel={s.run ? "줄자" : "예시 값"}
-        initialTab={s.run ? "measure" : "pattern"}
+        initialTab={s.tab ?? (s.run ? "measure" : "pattern")}
+        sampleText={{ ...complaintPants, garment: "pants", read: complaintPants.read as ReadComplaints }}
         sampleTable={isTop ? TOPS_TABLE : s.garment === "pants" ? BOTTOMS_TABLE : undefined}
         placeholder={
           <div className="flex aspect-[4/5] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-muted bg-well p-6 text-center">

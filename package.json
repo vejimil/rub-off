@@ -13,6 +13,7 @@
     "pattern": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/pattern.ts",
     "size": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/size.ts",
     "photo": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/photo.ts",
+    "alter": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/alter.ts",
     "explore": "node --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file-if-exists=.env.local scripts/explore.ts"
   },
   "dependencies": {

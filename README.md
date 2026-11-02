@@ -14,12 +14,13 @@ Built for the [Meta Global AI Developer Hackathon](https://cerebralvalley.ai/e/m
 4. **Pattern.** The measurements draft the garment's pieces (front, back, sleeve with its cap solved to the armhole, collar, cuffs, legs, panels, bag body and handles) with per-edge seam allowance, grainline, notches and fold lines, tiled onto A4 pages as a 1:1 PDF with a 10 cm test square. Grading moves the measurements by a size step and drafts again.
 5. **Size decision.** Muse Spark reads a shop's measurement table from a screenshot into structured data; the app compares it point by point with your garment and recommends a size, showing which measurement is the problem.
 6. **Cutting layout.** SAM 3.1 segments your fabric scraps (or you type their sizes); a nesting step places the pattern pieces on them along the grain and says whether they fit, and by how much they don't.
+7. **Fit and alterations.** Type your body measurements (taken with a tape) and pick or write what bothers you when you wear the garment ("in my wheelchair the back of my trousers drops"). Body sizes plus the ease for the fit you want become target garment sizes; Muse Spark sorts your words into a fixed list of known fit problems, copying only lengths you wrote. Alteration rules (including seated-fit rules from research) turn both into a work order for a tailor, and the changes can be drafted into the pattern.
 
 No number in the output comes from a language model. Every pattern says "confirm before cutting".
 
 ## Built during the hackathon (Oct 26 – Nov 4, 2026)
 
-Everything in this repository was written during the hackathon. The commit history shows when each part was built. Some library code (Meta API client, SAM mask parsing, A4 scale with corner fitting and perspective correction, mask and polygon geometry, number guard) was first written for my other hackathon-period repository, Seated Tailor, between Oct 26 and Oct 31, and ported here on Oct 31.
+Everything in this repository was written during the hackathon. The commit history shows when each part was built. Some library code (Meta API client, SAM mask parsing, A4 scale with corner fitting and perspective correction, mask and polygon geometry, number guard) was first written for my other hackathon-period repository, Seated Tailor, between Oct 26 and Oct 31, and ported here on Oct 31. The seated-fit alteration rules (Nov 2) follow the research I wrote for Seated Tailor in the same period.
 
 | Part | Status |
 | --- | --- |
@@ -35,6 +36,8 @@ Everything in this repository was written during the hackathon. The commit histo
 | Real-photo robustness: Muse Spark layout check (folded or hidden sleeves, wrinkles, hem), sleeves folded over the body left out and the other side mirrored, hood removed from the outline, photos turned 90°, garments cut off by the frame refused | Done (Oct 31), on the owner's T-shirt and hoodie |
 | Zip hoodie (two-piece hood, rib bands); front and back photos combined | Done (Oct 31) |
 | Checked against the owner's tape measurements of one T-shirt (body within 3%); shoulder point from the fitted armhole seam, or tapped on the photo (sleeve length −1%) | Done (Nov 1) |
+| Pattern dimensions: every seam line's length on the piece, seams sewn together compared (sleeve cap ease, front/back side seams), the flat measurements a pattern was drafted from on its cover | Done (Nov 2) |
+| Fit and alterations: body measurements to target garment sizes with ease per fit [to confirm], wearer's complaints picked or written (Muse Spark sorts the words), alteration rules into a work order, alterations drafted into the pattern with a before/after drawing. Seated-fit rules carried over from Seated Tailor's research | Done (Nov 2), one Spark run on an example text |
 | Muse Image fabric preview | Planned |
 
 ### Not built by me
@@ -60,6 +63,7 @@ Command-line tools (no API call unless `--yes`):
 npm run pattern                                   # example PDFs for every garment in .cache/patterns/
 npm run photo -- shirt.jpg --garment=shirt        # measurements, overlay and pattern from a photo
 npm run size -- table.png --mine=chest:52.5,length:71   # read a size table and decide
+npm run alter -- "앉으면 바지 뒤가 내려가요" --garment=pants   # sort a wearer's words, print the alterations
 ```
 
 ## Privacy

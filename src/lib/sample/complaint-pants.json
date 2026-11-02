@@ -1,0 +1,32 @@
+{
+  "garment": "pants",
+  "text": "휠체어를 타서 앉으면 바지 뒤 허리가 내려가서 등이 보여요. 앞에는 천이 뭉치고, 밑단도 앉으면 3 cm 정도 짧아져요. 그리고 왼쪽 다리에 깁스를 해서 24 cm 높이까지 바짓단이 안 들어가요.",
+  "read": {
+    "items": [
+      {
+        "amount": null,
+        "complaint": "seat-back-drops",
+        "quote": "바지 뒤 허리가 내려가서 등이 보여요",
+        "side": "none"
+      },
+      {
+        "amount": null,
+        "complaint": "seat-front-bunches",
+        "quote": "앞에는 천이 뭉치고",
+        "side": "none"
+      },
+      {
+        "amount": "3",
+        "complaint": "seat-hem-short",
+        "quote": "밑단도 앉으면 3 cm 정도 짧아져요",
+        "side": "none"
+      },
+      {
+        "amount": "24",
+        "complaint": "cast-leg",
+        "quote": "깁스를 해서 24 cm 높이까지 바짓단이 안 들어가요",
+        "side": "left"
+      }
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { AlterPanel } from "@/components/alter-panel";
 import { CuttingPanel } from "@/components/cutting-panel";
 import { PatternPreview, SeamChecks } from "@/components/pattern-preview";
 import { PhotoOverlay } from "@/components/photo-overlay";
@@ -19,6 +20,7 @@ import { SIZE_KEYS, type SizeKey } from "@/lib/rules/fit-tolerance";
 import { grade, gradedLabel } from "@/lib/rules/grading";
 import type { Mine } from "@/lib/size/decide";
 import type { ReadTable } from "@/lib/size/table";
+import type { ReadComplaints } from "@/lib/fit/read-complaint";
 
 export const GARMENT_KO: Record<GarmentKind, string> = {
   shirt: "셔츠",
@@ -80,8 +82,11 @@ export interface WorkbenchProps {
   editedLabel?: string; // badge for initialEdits values, e.g. "줄자" or "예시 값"
   sampleTable?: { read: ReadTable; src: string };
   initialEdits?: Record<string, string>; // e.g. tape-measured values for a sample
-  initialTab?: "measure" | "pattern" | "cut" | "size";
+  initialTab?: Tab;
+  sampleText?: { garment: GarmentKind; text: string; read: ReadComplaints }; // a wearer's words already sorted by Spark
 }
+
+type Tab = "measure" | "pattern" | "fit" | "cut" | "size";
 
 interface Shot {
   photo: PhotoView;
@@ -99,7 +104,7 @@ const SIDE_KO = { front: "앞면", back: "뒷면", unclear: "앞뒤 불분명" }
 const WRINKLE_KO = { flat: "평평함", "some wrinkles": "주름 조금", "heavily wrinkled or bunched": "많이 구겨짐" } as const;
 const SLEEVE_KO = { "spread flat": "펴짐", "folded over the body": "몸판 위로 접힘", "folded under or hidden": "아래로 접혀 안 보임", "bent or twisted": "굽음", "not a sleeve": "소매 아님" } as const;
 
-export function Workbench({ live, initial, sampleTable, initialEdits, initialTab, garmentPicker = true, placeholder, editedLabel = "직접" }: WorkbenchProps) {
+export function Workbench({ live, initial, sampleTable, sampleText, initialEdits, initialTab, garmentPicker = true, placeholder, editedLabel = "직접" }: WorkbenchProps) {
   const [garment, setGarment] = useState<GarmentKind>(initial?.garment ?? "t-shirt");
   const [fabric, setFabric] = useState<Fabric>(initial?.fabric ?? "woven");
   const [shots, setShots] = useState<Shot[]>(initial?.photo ? [{ photo: initial.photo, run: initial.run }] : []);
@@ -109,7 +114,10 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
   const [baseSize, setBaseSize] = useState("M");
   const [steps, setSteps] = useState(0);
   const [active, setActive] = useState(0);
-  const [tab, setTab] = useState<"measure" | "pattern" | "cut" | "size">(initialTab ?? "measure");
+  const [tab, setTab] = useState<Tab>(initialTab ?? "measure");
+  // Alterations applied to the pattern (flat cm per measurement), for the garment they were made for.
+  const [applied, setApplied] = useState<{ garment: GarmentKind; delta: Record<string, number> } | null>(null);
+  const delta = applied?.garment === garment ? applied.delta : null;
 
   const update = (i: number, s: Partial<Shot>) => setShots((all) => all.map((x, j) => (j === i ? { ...x, ...s } : x)));
 
@@ -168,14 +176,18 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
 
   // measures is rebuilt every render; its JSON is what changes.
   const measuresKey = JSON.stringify(measures);
+  const deltaKey = JSON.stringify(delta);
   const pattern = useMemo(() => {
-    const m = JSON.parse(measuresKey) as Partial<MeasuresOf[GarmentKind]>;
+    const m = JSON.parse(measuresKey) as Record<string, number>;
+    const d = JSON.parse(deltaKey) as Record<string, number> | null;
+    for (const [k, v] of Object.entries(d ?? {})) m[k] = (m[k] ?? 0) + v;
+    const label = (steps ? gradedLabel(baseSize, steps) : "Original") + (d ? " altered" : "");
     try {
-      return draft({ garment, measures: grade(garment, m, steps), fabric, sizeLabel: steps ? gradedLabel(baseSize, steps) : "Original" });
+      return draft({ garment, measures: grade(garment, m as Partial<MeasuresOf[GarmentKind]>, steps), fabric, sizeLabel: label });
     } catch {
       return null; // a required measurement is missing; the page says which
     }
-  }, [garment, fabric, steps, baseSize, measuresKey]);
+  }, [garment, fabric, steps, baseSize, measuresKey, deltaKey]);
   const sheet = useMemo(() => (pattern ? layOut(pattern) : null), [pattern]);
 
   async function downloadPdf() {
@@ -202,6 +214,7 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
   const tabs = [
     { value: "measure" as const, label: <>치수{missing.length > 0 && <span className="ml-1.5 rounded-full bg-mark px-1.5 text-xs text-white">재기 {missing.length}</span>}</> },
     { value: "pattern" as const, label: "패턴" },
+    { value: "fit" as const, label: "맞춤·수선" },
     { value: "cut" as const, label: "원단 배치" },
     { value: "size" as const, label: "사이즈" },
   ];
@@ -439,6 +452,17 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
               </label>
               <Segmented size="sm" value={steps} onChange={setSteps} options={[-2, -1, 0, 1, 2].map((v) => ({ value: v, label: v === 0 ? "원본" : gradedLabel(baseSize, v) }))} />
             </div>
+            {delta && (
+              <p className="flex flex-wrap items-center gap-2 rounded-xl bg-chalk-soft p-3 text-sm">
+                맞춤·수선 탭의 수선이 반영된 패턴입니다:{" "}
+                {Object.entries(delta)
+                  .map(([k, v]) => `${MEASURE_KO[k] ?? k} ${v > 0 ? "+" : "−"}${Math.abs(v)} cm`)
+                  .join(", ")}
+                <button type="button" className="underline" onClick={() => setApplied(null)}>
+                  빼기
+                </button>
+              </p>
+            )}
             {missing.length > 0 && <p className="rounded-xl bg-mark-soft p-3 text-sm">패턴을 만들려면 먼저 재 주십시오: {missing.map((m) => MEASURE_KO[m.key]).join(", ")}</p>}
             {sheet && pattern && (
               <>
@@ -458,6 +482,24 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
                 </details>
               </>
             )}
+          </div>
+        )}
+
+        {tab === "fit" && (
+          <div>
+            <p className="mb-4 text-sm text-muted">이 옷을 입을 사람에게 맞춥니다. 몸 치수와 불편한 점에서 수선 지시서를, 원하면 고친 패턴을 만듭니다.</p>
+            <AlterPanel
+              garment={garment}
+              fabric={fabric}
+              measures={measures as Record<string, number>}
+              live={live}
+              sampleText={sampleText?.garment === garment ? sampleText : undefined}
+              applied={delta}
+              onApply={(d) => {
+                setApplied(d ? { garment, delta: d } : null);
+                if (d) setTab("pattern");
+              }}
+            />
           </div>
         )}
 
