@@ -24,6 +24,7 @@ export interface Alteration {
   amountCm?: number;
   difficulty: Difficulty;
   reversible?: boolean;
+  side?: "left" | "right" | "both"; // the wearer's side, for marks on one side only
   // How the measurements change if the pattern is drafted with this alteration (flat cm).
   delta?: Record<string, number>;
   fromKo: string; // why: "몸 치수: 가슴둘레", "선택: …", "글: '…'"
@@ -287,6 +288,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         id,
         fromKo,
         partKo: `${side}바지 옆선`,
+        side: c.side ?? "both",
         actionKo: "옆선 트임 + 스냅",
         amountCm: open,
         instructionKo: open

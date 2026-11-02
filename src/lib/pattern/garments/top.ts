@@ -15,7 +15,7 @@ const CAP_EASE: Record<Fabric, number> = { woven: 1.5, knit: 0 };
 const BUTTON_STAND = 1.5; // past the centre front
 const FACING = 3; // folded back inside the stand
 const COLLAR_HEIGHT = 4; // finished
-const CUFF_HEIGHT = 6; // finished
+export const CUFF_HEIGHT = 6; // finished
 const CUFF_OVERLAP = 2;
 const ZIP_ALLOWANCE = 1;
 // [A] Hoodie rules, owner to confirm: the body above the hem rib is this share of the chest, and

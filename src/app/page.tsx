@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BeforeAfter } from "@/components/alter-panel";
+import { GarmentFlat } from "@/components/garment-flat";
 import { GarmentRow, GradeDemo, HeroReel, type GarmentCard } from "@/components/landing";
 import { PatternPreview, PiecesOutline } from "@/components/pattern-preview";
 import { PageScript } from "@/components/page-script";
@@ -13,9 +13,9 @@ import { EXAMPLES } from "@/lib/pattern/examples";
 import { layOut, pagesFor, type Sheet } from "@/lib/pattern/layout";
 import { MEASURE_KO } from "@/lib/pattern/measures";
 import type { GarmentKind } from "@/lib/pattern/types";
-import { DIFFICULTY_KO, fromComplaint, guarded, patternDelta } from "@/lib/fit/alter";
+import { DIFFICULTY_KO, fromComplaint, guarded } from "@/lib/fit/alter";
+import { flatFor } from "@/lib/fit/flat";
 import { parse, type ReadComplaints } from "@/lib/fit/read-complaint";
-import { withDefaults } from "@/lib/pattern/measures";
 import complaintPants from "@/lib/sample/complaint-pants.json";
 import shorts from "@/lib/sample/shorts-run.json";
 import tee from "@/lib/sample/tee-run.json";
@@ -181,8 +181,7 @@ export default function Home() {
   // saved), and the work order the alteration rules make from it.
   const words = complaintPants.text;
   const order = parse(complaintPants.read as ReadComplaints, words, "pants").map((c) => guarded(fromComplaint("pants", c)));
-  const orderDelta = patternDelta(order);
-  const pantsMeasures = withDefaults("pants", EXAMPLES.pants.m).measures as unknown as Record<string, number>;
+  const orderFlat = flatFor("pants", EXAMPLES.pants.m as unknown as Record<string, number>, EXAMPLES.pants.fabric, order);
 
   const steps = [
     {
@@ -223,23 +222,23 @@ export default function Home() {
         <div className="grid gap-10 px-5 py-32 sm:px-10 lg:px-16 lg:grid-cols-12 lg:gap-x-12 lg:gap-y-8 lg:py-48">
           <div className="lg:col-span-5" data-reveal>
             <h2 id="tape-title" className="font-display text-[9vw] leading-[1.05] tracking-[-0.02em] sm:text-[8vw] lg:text-[clamp(32px,3.2vw,50px)]">
-              줄자와 거의 같습니다
+              자로 쟀을 때와 거의 같습니다
             </h2>
             <p className="mt-6 max-w-md text-lg leading-relaxed">
-              티셔츠를 사진 한 장으로 잰 값과, 같은 옷을 줄자로 잰 값입니다. 가슴단면 {pct("chest")}, 밑단단면 {pct("hem")}, 소매단면 {pct("sleeveOpening")}.{" "}
+              티셔츠를 사진 한 장으로 잰 값을, 같은 옷을 자로 쟀을 때와 비교했습니다. 가슴단면 {pct("chest")}, 밑단단면 {pct("hem")}, 소매단면 {pct("sleeveOpening")}.{" "}
               {inside === compare.length ? `${compare.length}곳 모두` : `${compare.length}곳 중 ${inside}곳이`} 사진이 함께 적은 오차(±) 안에 들었고, 가장 크게 다른 곳은 {MEASURE_KO[widest.key]}{" "}
               {Math.abs(widest.photo - widest.tape).toFixed(1)} cm입니다.
             </p>
-            <p className="mt-4 max-w-md text-lg">어깨점은 솔기가 잘 안 보여 사진 위에서 직접 눌러 정했습니다. 앞목깊이처럼 사진에 안 보이는 곳은 줄자 값을 씁니다.</p>
+            <p className="mt-4 max-w-md text-lg">어깨점은 솔기가 잘 안 보여 사진 위에서 직접 눌러 정했습니다. 앞목깊이처럼 사진에 안 보이는 곳은 자로 잰 값을 씁니다.</p>
           </div>
           <div className="lg:col-span-7" data-reveal style={{ ["--d" as string]: 1 }}>
             <table className="w-full text-lg">
-              <caption className="sr-only">티셔츠 단면: 줄자로 잰 값과 사진으로 잰 값</caption>
+              <caption className="sr-only">티셔츠 단면: 자로 잰 값과 사진으로 잰 값</caption>
               <thead>
                 <tr className="text-left text-[15px] text-muted">
                   <th className="pb-4 font-normal">단면</th>
-                  <th className="pb-4 text-right font-normal">줄자</th>
-                  <th className="pb-4 text-right font-normal">사진</th>
+                  <th className="pb-4 text-right font-normal">자로 잼</th>
+                  <th className="pb-4 text-right font-normal">사진으로 잼</th>
                   <th className="pb-4 text-right font-normal">차이</th>
                 </tr>
               </thead>
@@ -289,6 +288,61 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Fit it to the wearer: their words become a work order on a technical flat. */}
+      <section id="alter" aria-labelledby="alter-title" className="bg-ink px-5 py-32 text-sand sm:px-10 lg:px-16 lg:py-48">
+        <div className="grid gap-16 lg:grid-cols-12 lg:gap-x-12">
+          <div className="lg:col-span-4">
+            <h2 id="alter-title" className="font-display text-[9vw] leading-[1.05] tracking-[-0.02em] sm:text-[8vw] lg:text-[clamp(32px,3.2vw,50px)]" data-reveal>
+              불편한 점을 수선 의뢰서로
+            </h2>
+            <p className="mt-6 max-w-md text-lg leading-relaxed" data-reveal style={{ ["--d" as string]: 1 }}>
+              입을 사람이 불편한 점을 고르거나 말하듯 적으면, 어디를 몇 cm 고칠지 도식화에 표시해 드립니다. 수선집에 그대로 보여 주면 됩니다.
+            </p>
+            <p className="mt-4 max-w-md text-lg leading-relaxed" data-reveal style={{ ["--d" as string]: 1 }}>
+              AI는 글을 불편함 목록에 나눠 넣기만 하고, 길이는 적힌 숫자와 의류학 수선 규칙으로 계산합니다. 줄자로 잰 몸 치수를 넣으면 옷과 비교해 줄이거나 늘릴 곳도 찾습니다.
+            </p>
+            <blockquote className="mt-12 rounded-[4px] bg-sand px-6 py-5 text-lg leading-relaxed text-ink" data-reveal style={{ ["--d" as string]: 2 }}>
+              <p>&ldquo;{words}&rdquo;</p>
+              <footer className="mt-3 text-[15px] text-muted">휠체어를 타는 사람이 고무줄 바지에 대해 적은 글 (예시)</footer>
+            </blockquote>
+          </div>
+          <div className="lg:col-span-8" data-reveal style={{ ["--d" as string]: 1 }}>
+            <div className="rounded-[4px] bg-sand p-2 text-ink">
+              <h3 className="px-4 pb-5 pt-4 font-display text-[32px] leading-none lg:px-6 lg:pt-6">수선 의뢰서</h3>
+              {orderFlat && (
+                <div className="rounded-[2px] bg-field px-4 py-6 lg:px-8">
+                  <GarmentFlat views={orderFlat} />
+                </div>
+              )}
+              <ol className="mt-1 grid gap-1 lg:grid-cols-2">
+                {order.map((a, i) => (
+                  <li key={a.id} className="rounded-[2px] bg-sand-2 px-4 py-5 lg:px-6">
+                    <div className="flex items-start justify-between gap-6">
+                      <p className="flex flex-wrap items-baseline gap-x-2">
+                        <span className="num inline-flex h-7 w-7 shrink-0 items-center justify-center self-center rounded-full bg-mark text-[15px] font-semibold text-white" aria-label={`${i + 1}번`}>
+                          {i + 1}
+                        </span>
+                        <span className="text-lg font-semibold">{a.actionKo}</span>
+                        <span className="text-[15px] text-muted">
+                          {DIFFICULTY_KO[a.difficulty]}
+                          {a.reversible ? " · 되돌릴 수 있음" : ""}
+                        </span>
+                      </p>
+                      <p className="num shrink-0 font-display text-[32px] leading-none">{a.amountCm !== undefined ? `${a.amountCm} cm` : <span className="font-sans text-[15px] text-muted">재서 정함</span>}</p>
+                    </div>
+                    <p className="mt-2 text-[15px] leading-relaxed">{a.instructionKo}</p>
+                  </li>
+                ))}
+              </ol>
+              <p className="px-4 pb-3 pt-4 text-[15px] lg:px-6">고무줄 바지, 고칠 곳 {order.length}군데. 빗금은 덧대는 천, 겹빗금은 덜어 내는 천, 붉은 점선은 새로 박거나 트는 곳입니다. 고치기 전에 입어 보고 확인하십시오.</p>
+            </div>
+            <Link href="/sample?s=pants" className="press mt-8 inline-flex rounded-[4px] bg-sand px-6 py-3 font-medium text-ink hover:bg-sand-3">
+              이 예시에서 직접 고르고 적어 보기
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* The live thing. */}
       <section aria-labelledby="grade-title" className="px-5 py-32 sm:px-10 lg:px-16 lg:py-48">
         <div className="mb-16 grid gap-6 lg:grid-cols-12 lg:gap-x-12 lg:gap-y-8">
@@ -301,54 +355,6 @@ export default function Home() {
         </div>
         <div data-reveal style={{ ["--d" as string]: 2 }}>
           <GradeDemo measures={measures} />
-        </div>
-      </section>
-
-      {/* Fit it to the wearer: their words become a work order. */}
-      <section aria-labelledby="alter-title" className="bg-ink px-5 py-32 text-sand sm:px-10 lg:px-16 lg:py-48">
-        <div className="grid gap-16 lg:grid-cols-12 lg:gap-x-12">
-          <div className="lg:col-span-5">
-            <h2 id="alter-title" className="font-display text-[9vw] leading-[1.05] tracking-[-0.02em] sm:text-[8vw] lg:text-[clamp(32px,3.2vw,50px)]" data-reveal>
-              불편한 점을 수선 의뢰서로
-            </h2>
-            <p className="mt-6 max-w-md text-lg leading-relaxed" data-reveal style={{ ["--d" as string]: 1 }}>
-              입을 사람이 불편한 점을 고르거나 말하듯 적으면, 어디를 몇 cm 고칠지 정리해 드립니다. AI는 글을 불편함 목록에 나눠 넣기만 하고, 길이는 적힌 숫자와 의류학 수선 규칙으로 계산합니다. 줄자로 잰 몸 치수를 넣으면 옷과 비교해 줄이거나 늘릴 곳도 찾습니다.
-            </p>
-            <blockquote className="mt-12 rounded-[4px] bg-sand px-6 py-5 text-lg leading-relaxed text-ink" data-reveal style={{ ["--d" as string]: 2 }}>
-              <p>&ldquo;{words}&rdquo;</p>
-              <footer className="mt-3 text-[15px] text-muted">휠체어를 타는 사람이 고무줄 바지에 대해 적은 글 (예시)</footer>
-            </blockquote>
-            <figure className="mt-6 rounded-[4px] bg-sand p-5 text-ink" data-reveal style={{ ["--d" as string]: 3 }}>
-              <BeforeAfter garment="pants" fabric={EXAMPLES.pants.fabric} measures={pantsMeasures} delta={orderDelta} className="grid grid-cols-2 gap-3" />
-              <figcaption className="mt-3 text-[15px]">새로 만든다면: 점선이 지금 바지, 실선이 뒤 밑위를 높이고 밑단을 내린 패턴입니다.</figcaption>
-            </figure>
-          </div>
-          <div className="lg:col-span-7" data-reveal style={{ ["--d" as string]: 1 }}>
-            <div className="rounded-[4px] bg-sand p-2 text-ink">
-              <h3 className="px-4 pb-5 pt-4 font-display text-[32px] leading-none lg:px-6 lg:pt-6">수선 의뢰서</h3>
-              <ol className="space-y-1">
-                {order.map((a) => (
-                  <li key={a.id} className="rounded-[2px] bg-sand-2 px-4 py-5 lg:px-6">
-                    <div className="flex items-start justify-between gap-6">
-                      <p className="flex flex-wrap items-baseline gap-x-2">
-                        <span className="text-lg font-semibold">{a.actionKo}</span>
-                        <span className="text-[15px] text-muted">
-                          {DIFFICULTY_KO[a.difficulty]}
-                          {a.reversible ? " · 되돌릴 수 있음" : ""}
-                        </span>
-                      </p>
-                      <p className="num shrink-0 font-display text-[32px] leading-none">{a.amountCm !== undefined ? `${a.amountCm} cm` : <span className="font-sans text-[15px] text-muted">재서 정함</span>}</p>
-                    </div>
-                    <p className="mt-2 max-w-2xl text-lg leading-relaxed">{a.instructionKo}</p>
-                  </li>
-                ))}
-              </ol>
-              <p className="px-4 pb-3 pt-4 text-[15px] lg:px-6">고무줄 바지, 고칠 곳 {order.length}군데. 고치기 전에 입어 보고 확인하십시오.</p>
-            </div>
-            <Link href="/sample?s=pants" className="press mt-8 inline-flex rounded-[4px] bg-sand px-6 py-3 font-medium text-ink hover:bg-sand-3">
-              이 예시에서 직접 고르고 적어 보기
-            </Link>
-          </div>
         </div>
       </section>
 

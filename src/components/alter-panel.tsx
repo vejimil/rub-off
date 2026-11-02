@@ -1,15 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { GarmentFlat } from "@/components/garment-flat";
 import { Badge, buttonGhost, buttonPrimary, Segmented } from "@/components/ui";
-import { svgPath } from "@/lib/geom/point";
-import { bounds } from "@/lib/geom/polygon";
-import { compare, complaintsFor, DIFFICULTY_KO, fromBody, fromComplaint, guarded, patternDelta, type Alteration, type Complaint } from "@/lib/fit/alter";
+import { compare, complaintsFor, DIFFICULTY_KO, fromBody, fromComplaint, guarded, type Alteration, type Complaint } from "@/lib/fit/alter";
+import { flatFor } from "@/lib/fit/flat";
 import { BODY_HOW, BODY_KEYS, BODY_KO, targetsFromBody, type BodyFit, type BodyKey } from "@/lib/fit/body";
 import { MAX_TEXT, parse, type ReadComplaints } from "@/lib/fit/read-complaint";
-import { draft } from "@/lib/pattern/draft";
-import { MEASURE_KO, type MeasuresOf } from "@/lib/pattern/measures";
-import { seamLine, type Fabric, type GarmentKind } from "@/lib/pattern/types";
+import { MEASURE_KO } from "@/lib/pattern/measures";
+import type { Fabric, GarmentKind } from "@/lib/pattern/types";
 
 const ERRORS: Record<string, string> = {
   live_disabled: "지금은 글 읽기를 쉬고 있습니다. 위 목록에서 골라 주십시오.",
@@ -27,15 +26,13 @@ export interface AlterPanelProps {
   garment: GarmentKind;
   fabric: Fabric;
   measures: Record<string, number>; // the garment as measured (and corrected)
-  applied: Record<string, number> | null;
-  onApply: (delta: Record<string, number> | null) => void;
   sampleText?: { text: string; read: ReadComplaints };
 }
 
 // Mode 4: fit this garment to its wearer. Tape-measured body sizes become target garment sizes;
 // what the wearer says is wrong (picked, or written and sorted by Muse Spark) goes through the
-// alteration rules; the result is a work order, and optionally a pattern with the changes in it.
-export function AlterPanel({ garment, fabric, measures, applied, onApply, sampleText }: AlterPanelProps) {
+// alteration rules; the result is a work order with a technical flat of the garment, marked.
+export function AlterPanel({ garment, fabric, measures, sampleText }: AlterPanelProps) {
   const [body, setBody] = useState<Partial<Record<BodyKey, string>>>({});
   const [fit, setFit] = useState<BodyFit>("regular");
   const [picked, setPicked] = useState<Record<string, string>>({}); // complaint id → typed cm ("" if none)
@@ -55,8 +52,7 @@ export function AlterPanel({ garment, fabric, measures, applied, onApply, sample
     ...Object.entries(picked).map(([id, cm]) => fromComplaint(garment, { id, amountCm: cm ? Number(cm) : undefined })),
     ...fromText.filter((c) => !(c.id in picked)).map((c) => fromComplaint(garment, c)),
   ].map((a) => guarded(a));
-  const delta = patternDelta(alterations);
-  const hasDelta = Object.keys(delta).length > 0;
+  const views = flatFor(garment, measures, fabric, alterations);
 
   async function analyse() {
     const t = text.trim();
@@ -274,10 +270,18 @@ export function AlterPanel({ garment, fabric, measures, applied, onApply, sample
           <p className="px-5 py-8 text-[15px] text-muted">몸 치수를 넣거나 불편한 점을 고르면, 수선집에 그대로 보여 줄 수 있는 의뢰서가 여기에 만들어집니다.</p>
         ) : (
           <ol className="space-y-1 p-1">
-            {alterations.map((a) => (
+            {views && (
+              <li className="rounded-lg bg-paper p-4" aria-label="도식화">
+                <GarmentFlat views={views} />
+              </li>
+            )}
+            {alterations.map((a, i) => (
               <li key={a.id} className="rounded-lg bg-paper px-4 py-4">
                 <div className="flex items-start justify-between gap-4">
                   <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <span className="num inline-flex h-6 w-6 shrink-0 translate-y-[-1px] items-center justify-center self-center rounded-full bg-mark text-[13px] font-semibold text-white" aria-label={`${i + 1}번`}>
+                      {i + 1}
+                    </span>
                     <span className="text-lg font-semibold">{a.actionKo}</span>
                     <span className="text-[15px] text-muted">{a.partKo}</span>
                   </p>
@@ -304,71 +308,6 @@ export function AlterPanel({ garment, fabric, measures, applied, onApply, sample
         )}
         {alterations.length > 0 && <p className="px-5 pb-4 pt-2 text-[13px] text-muted">고치기 전에 옷을 입고 한 번 더 확인하십시오.</p>}
       </section>
-
-      {/* The same changes, drafted into a new pattern. */}
-      {hasDelta && (
-        <section aria-labelledby="redraft-title" className="space-y-4">
-          <div>
-            <h3 id="redraft-title" className="text-lg font-semibold">
-              새로 만든다면
-            </h3>
-            <p className="mt-1 text-[15px] text-muted">
-              같은 수선을 패턴에 넣으면{" "}
-              {Object.entries(delta)
-                .map(([k, v]) => `${MEASURE_KO[k] ?? k} ${v > 0 ? "+" : "−"}${Math.abs(v)} cm`)
-                .join(", ")}
-              . 점선이 지금 옷, 실선이 고친 모양입니다.
-            </p>
-          </div>
-          <BeforeAfter garment={garment} fabric={fabric} measures={measures} delta={delta} />
-          {applied ? (
-            <button type="button" className={buttonGhost} onClick={() => onApply(null)}>
-              패턴에서 수선 빼기
-            </button>
-          ) : (
-            <button type="button" className={buttonPrimary} onClick={() => onApply(delta)}>
-              고친 패턴 보기
-            </button>
-          )}
-        </section>
-      )}
-    </div>
-  );
-}
-
-// Each piece's seam line before (dashed) and after (solid), drawn on the same origin.
-export function BeforeAfter({ garment, fabric, measures, delta, className = "grid grid-cols-2 gap-3 sm:grid-cols-3" }: { garment: GarmentKind; fabric: Fabric; measures: Record<string, number>; delta: Record<string, number>; className?: string }) {
-  const pair = useMemo(() => {
-    const after = Object.fromEntries(Object.entries(measures).map(([k, v]) => [k, v + (delta[k] ?? 0)]));
-    for (const [k, v] of Object.entries(delta)) if (!(k in after)) after[k] = v;
-    try {
-      const a = draft({ garment, measures: measures as Partial<MeasuresOf[GarmentKind]>, fabric });
-      const b = draft({ garment, measures: after as Partial<MeasuresOf[GarmentKind]>, fabric });
-      return a.pieces.flatMap((p) => {
-        const q = b.pieces.find((x) => x.id === p.id);
-        return q ? [{ id: p.id, name: p.nameKo, before: seamLine(p), after: seamLine(q) }] : [];
-      });
-    } catch {
-      return [];
-    }
-  }, [garment, fabric, measures, delta]);
-  const changed = pair.filter((p) => JSON.stringify(p.before) !== JSON.stringify(p.after));
-  if (!changed.length) return null;
-  return (
-    <div className={className}>
-      {changed.map((p) => {
-        const b = bounds([...p.before, ...p.after]);
-        const pad = 2;
-        return (
-          <figure key={p.id}>
-            <svg viewBox={`${b.minX - pad} ${b.minY - pad} ${b.maxX - b.minX + 2 * pad} ${b.maxY - b.minY + 2 * pad}`} className="h-auto max-h-80 w-full rounded-xl bg-field p-2" role="img" aria-label={`${p.name} 수선 전후`}>
-              <path d={svgPath(p.before, true)} fill="none" stroke="var(--muted)" strokeWidth={0.35} strokeDasharray="1 0.8" />
-              <path d={svgPath(p.after, true)} fill="rgba(6,43,138,0.06)" stroke="var(--ink)" strokeWidth={0.45} />
-            </svg>
-            <figcaption className="mt-1.5 text-[13px] text-muted">{p.name}</figcaption>
-          </figure>
-        );
-      })}
     </div>
   );
 }

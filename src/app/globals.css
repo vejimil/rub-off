@@ -70,6 +70,7 @@ h1,
 h2,
 h3 {
   text-wrap: balance;
+  word-break: keep-all; /* Korean: break between words, never inside one */
 }
 p {
   text-wrap: pretty;

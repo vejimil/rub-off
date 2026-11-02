@@ -27,7 +27,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/#how" className="link hidden px-3 py-1.5 sm:block">
                 방법
               </Link>
-              <Link href="/sample" className="link px-3 py-1.5">
+              <Link href="/#alter" className="link px-3 py-1.5">
+                옷 고치기
+              </Link>
+              <Link href="/sample" className="link hidden px-3 py-1.5 sm:block">
                 예시
               </Link>
               <Link href="/make" className="press ml-2 rounded-full bg-ink px-4 py-1.5 font-medium text-sand hover:bg-ink-strong">

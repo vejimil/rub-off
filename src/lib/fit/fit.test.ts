@@ -86,3 +86,24 @@ test("particles follow the last syllable", () => {
   assert.equal(jo("밑단", "을"), "밑단을");
   assert.equal(jo("소매길이", "이"), "소매길이가");
 });
+
+test("the flat marks each alteration once, on the side the wearer named, in its own view", async () => {
+  const { flatFor } = await import("./flat.ts");
+  const order = [
+    fromComplaint("pants", { id: "seat-back-drops" }),
+    fromComplaint("pants", { id: "cast-leg", side: "left", amountCm: 24 }),
+    fromComplaint("pants", { id: "seat-hem-short", amountCm: 3 }),
+  ];
+  const views = flatFor("pants", { waist: 34, hip: 52, frontRise: 28, outseam: 98, thigh: 31, legOpening: 20 }, "woven", order)!;
+  const [front, back] = views;
+  assert.deepEqual(back.tags.map((t) => t.n), [1]);
+  assert.deepEqual(front.tags.map((t) => t.n).sort(), [2, 3]);
+  // The wearer's left leg is on the viewer's right from the front.
+  const cast = front.tags.find((t) => t.n === 2)!;
+  assert.ok(cast.anchors.every(([x]) => x > 0));
+  assert.equal(cast.text, "트임 29 cm");
+  // Added fabric above the back waist is as tall as the amount.
+  const top = Math.min(...back.add.flat().map(([, y]) => y));
+  assert.ok(Math.abs(top + 5) < 1e-9, String(top));
+  assert.ok(flatFor("eco-bag", { width: 40, height: 40, handleLength: 60 }, "woven", []) === null);
+});

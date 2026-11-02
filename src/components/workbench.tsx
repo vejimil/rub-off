@@ -115,9 +115,7 @@ export function Workbench({ live, initial, sampleTable, sampleText, initialEdits
   const [steps, setSteps] = useState(0);
   const [active, setActive] = useState(0);
   const [tab, setTab] = useState<Tab>(initialTab ?? "measure");
-  // Alterations applied to the pattern (flat cm per measurement), for the garment they were made for.
-  const [applied, setApplied] = useState<{ garment: GarmentKind; delta: Record<string, number> } | null>(null);
-  const delta = applied?.garment === garment ? applied.delta : null;
+
 
   const update = (i: number, s: Partial<Shot>) => setShots((all) => all.map((x, j) => (j === i ? { ...x, ...s } : x)));
 
@@ -176,18 +174,14 @@ export function Workbench({ live, initial, sampleTable, sampleText, initialEdits
 
   // measures is rebuilt every render; its JSON is what changes.
   const measuresKey = JSON.stringify(measures);
-  const deltaKey = JSON.stringify(delta);
   const pattern = useMemo(() => {
-    const m = JSON.parse(measuresKey) as Record<string, number>;
-    const d = JSON.parse(deltaKey) as Record<string, number> | null;
-    for (const [k, v] of Object.entries(d ?? {})) m[k] = (m[k] ?? 0) + v;
-    const label = (steps ? gradedLabel(baseSize, steps) : "Original") + (d ? " altered" : "");
+    const m = JSON.parse(measuresKey) as Partial<MeasuresOf[GarmentKind]>;
     try {
-      return draft({ garment, measures: grade(garment, m as Partial<MeasuresOf[GarmentKind]>, steps), fabric, sizeLabel: label });
+      return draft({ garment, measures: grade(garment, m, steps), fabric, sizeLabel: steps ? gradedLabel(baseSize, steps) : "Original" });
     } catch {
       return null; // a required measurement is missing; the page says which
     }
-  }, [garment, fabric, steps, baseSize, measuresKey, deltaKey]);
+  }, [garment, fabric, steps, baseSize, measuresKey]);
   const sheet = useMemo(() => (pattern ? layOut(pattern) : null), [pattern]);
 
   async function downloadPdf() {
@@ -452,17 +446,6 @@ export function Workbench({ live, initial, sampleTable, sampleText, initialEdits
               </label>
               <Segmented size="sm" value={steps} onChange={setSteps} options={[-2, -1, 0, 1, 2].map((v) => ({ value: v, label: v === 0 ? "원본" : gradedLabel(baseSize, v) }))} />
             </div>
-            {delta && (
-              <p className="flex flex-wrap items-center gap-2 rounded-xl bg-chalk-soft p-3 text-sm">
-                맞춤·수선에서 고친 내용이 들어간 패턴입니다:{" "}
-                {Object.entries(delta)
-                  .map(([k, v]) => `${MEASURE_KO[k] ?? k} ${v > 0 ? "+" : "−"}${Math.abs(v)} cm`)
-                  .join(", ")}
-                <button type="button" className="underline" onClick={() => setApplied(null)}>
-                  빼기
-                </button>
-              </p>
-            )}
             {missing.length > 0 && <p className="rounded-xl bg-mark-soft p-3 text-sm">패턴을 만들려면 먼저 재 주십시오: {missing.map((m) => MEASURE_KO[m.key]).join(", ")}</p>}
             {sheet && pattern && (
               <>
@@ -487,17 +470,12 @@ export function Workbench({ live, initial, sampleTable, sampleText, initialEdits
 
         {tab === "fit" && (
           <div>
-            <p className="mb-6 text-[15px] text-muted">이 옷을 입을 사람에게 맞춥니다. 몸 치수와 불편한 점에서 수선 의뢰서를 만들고, 원하면 고친 패턴도 그립니다.</p>
+            <p className="mb-6 text-[15px] text-muted">이 옷을 입을 사람에게 맞춥니다. 몸 치수와 불편한 점에서, 도식화에 고칠 곳을 표시한 수선 의뢰서를 만듭니다.</p>
             <AlterPanel
               garment={garment}
               fabric={fabric}
               measures={measures as Record<string, number>}
               sampleText={sampleText?.garment === garment ? sampleText : undefined}
-              applied={delta}
-              onApply={(d) => {
-                setApplied(d ? { garment, delta: d } : null);
-                if (d) setTab("pattern");
-              }}
             />
           </div>
         )}
