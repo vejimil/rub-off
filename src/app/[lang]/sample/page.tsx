@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "예시 · Rub-Off" };
 // by SAM 3.1 once and saved, plus the other garment types from typical measurements. No API call
 // happens on this page. `?s=pants` opens one example directly; the page itself stays prerendered
 // and only the gallery waits for the URL.
-export default function SamplePage({ searchParams }: PageProps<"/sample">) {
+export default function SamplePage({ searchParams }: PageProps<"/[lang]/sample">) {
   return (
     <main className="mx-2 mb-2 flex-1 rounded-2xl border border-line bg-paper px-5 py-8 sm:px-8 lg:px-12 lg:py-10">
       <h1 className="text-2xl font-semibold">예시</h1>
@@ -20,7 +20,7 @@ export default function SamplePage({ searchParams }: PageProps<"/sample">) {
   );
 }
 
-async function Chosen({ searchParams }: { searchParams: PageProps<"/sample">["searchParams"] }) {
+async function Chosen({ searchParams }: { searchParams: PageProps<"/[lang]/sample">["searchParams"] }) {
   const { s } = await searchParams;
   return <SampleGallery initial={typeof s === "string" ? s : undefined} />;
 }
