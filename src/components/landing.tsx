@@ -126,7 +126,7 @@ export function GradeDemo({ measures }: { measures: Record<string, number> }) {
   return (
     <div className="grid gap-10 lg:grid-cols-12 lg:gap-8">
       <div className="lg:col-span-8">
-        <PatternPreview sheet={sheet} />
+        <PatternPreview sheet={sheet} dims />
       </div>
       <div className="lg:col-span-4">
         <div role="radiogroup" aria-label="사이즈" className="grid grid-cols-5 gap-1 rounded-[4px] bg-sand-2 p-1">

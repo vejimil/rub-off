@@ -100,7 +100,7 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
   };
   const toGrid = (ms: ReturnType<typeof masksOfWord>): Grid =>
     ms.length ? unionAll(ms.map((m) => rasterize(m, photo.width, photo.height)), photo.width, photo.height) : emptyGrid(photo.width, photo.height);
-  if (masksOfWord(words.garment).length === 0) return { ok: false, stage: "segment", detail: `SAM 3.1이 사진에서 "${words.garment}"를 찾지 못했습니다.` };
+  if (masksOfWord(words.garment).length === 0) return { ok: false, stage: "segment", detail: "사진에서 옷을 찾지 못했습니다. 옷 전체가 보이게, 무늬 없는 바닥에서 다시 찍어 주십시오." };
   const notes: string[] = [];
 
   // A hood comes off the body outline (it would hide the neck points); a "sleeve" lying mostly
@@ -247,7 +247,7 @@ function tapeScaled(
   const m = measure(first);
   if ("ok" in m) return m;
   const v = (m.values as Record<string, { cm: number }>)[ref.key];
-  if (!v) return { ok: false, detail: `기준으로 입력한 치수(${ref.key})를 사진에서 재지 못했습니다. 다른 치수를 기준으로 넣어 주십시오.` };
+  if (!v) return { ok: false, detail: "기준으로 넣은 치수를 사진에서 재지 못했습니다. 다른 치수를 넣어 주십시오." };
   const k = (v.cm * k0) / ref.cm;
   const rel = Math.hypot(TAPE_PERSPECTIVE_REL, TAPE_CM / ref.cm);
   const shape = shapeWithPlainScale(garment, k, rel, [`A4가 없어 줄자로 잰 ${ref.key} ${ref.cm} cm를 기준으로 비례해 쟀습니다. 원근 보정이 없어 ±가 큽니다.`]);

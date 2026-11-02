@@ -36,15 +36,15 @@ const BOTTOMS_TABLE = { read: tablesBottoms as ReadTable, src: "/samples/size-ta
 const SAMPLES: Sample[] = [
   { id: "tee", label: "티셔츠", garment: "t-shirt", run: tee as unknown as SampleRun, sub: "실제 사진, 어깨점은 사진에서 직접 찍음" },
   { id: "shorts", label: "반바지", garment: "pants", run: shorts as unknown as SampleRun, sub: "실제 사진" },
-  { id: "pants", label: "휠체어 바지", garment: "pants", sub: "예시 치수의 고무줄 바지와, 앉아서 입는 사람이 적은 불편함 (예시 글, Muse Spark가 분석해 둔 결과)", tab: "fit" },
+  { id: "pants", label: "휠체어 바지", garment: "pants", sub: "휠체어를 타는 사람이 고무줄 바지에 대해 적은 불편함과, 거기서 나온 수선 의뢰서", tab: "fit" },
   ...(["shirt", "hoodie", "skirt", "eco-bag"] as const).map((g) => ({ id: g, label: GARMENT_KO[g], garment: g, sub: "예시 치수로 그린 패턴" })),
 ];
 
 // Tee: the owner's tape values for what a photo can't see (the neck drops are below the rib).
 const TEE_TAPE = { frontNeckDrop: "12", backNeckDrop: "2.5" };
 
-export function SampleGallery() {
-  const [id, setId] = useState(SAMPLES[0].id);
+export function SampleGallery({ initial }: { initial?: string }) {
+  const [id, setId] = useState(SAMPLES.some((x) => x.id === initial) ? initial! : SAMPLES[0].id);
   const s = SAMPLES.find((x) => x.id === id)!;
   const ex = EXAMPLES[s.garment];
   const isTop = s.garment === "t-shirt" || s.garment === "shirt" || s.garment === "hoodie";
@@ -94,7 +94,7 @@ export function SampleGallery() {
               <PieceThumb garment={s.garment} />
             </div>
             <p className="max-w-72 text-sm text-muted">
-              이 옷은 아직 사진 샘플이 없습니다. 기성복 {ex.size} 사이즈의 보통 치수를 넣어 그린 패턴입니다. 치수 탭에서 값을 고치면 패턴이 바로 바뀝니다.
+              기성복 {ex.size} 사이즈의 보통 치수로 그린 패턴입니다. 치수 탭에서 값을 고치면 패턴이 바로 바뀝니다.
             </p>
             <Link href="/make" className="text-sm font-medium underline">
               내 옷 사진으로 해 보기

@@ -8,7 +8,7 @@ import { decideSize, type Mine } from "@/lib/size/decide";
 import { toSizeTable, type ReadTable } from "@/lib/size/table";
 
 const ERRORS: Record<string, string> = {
-  live_disabled: "공개 데모에서는 샘플 표만 읽을 수 있습니다.",
+  live_disabled: "지금은 새 실측표 읽기를 쉬고 있습니다. 예시 표로 해 보십시오.",
   visitor_limit: "오늘 읽을 수 있는 횟수를 모두 썼습니다.",
   daily_limit: "오늘 전체 사용량을 모두 썼습니다.",
 };
@@ -53,7 +53,7 @@ export function SizePanel({ mine, fabric, sample }: { mine: Partial<Record<SizeK
           {read ? "다른 실측표 올리기" : "실측표 스크린샷 올리기"}
           <input type="file" accept="image/*" className="hidden" disabled={busy} onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
         </label>
-        {busy && <span className="text-sm text-muted">Muse Spark가 표를 읽는 중…</span>}
+        {busy && <span className="text-sm text-muted">표를 읽는 중…</span>}
         {error && <span className="text-sm text-mark">{error}</span>}
       </div>
 
@@ -67,7 +67,7 @@ export function SizePanel({ mine, fabric, sample }: { mine: Partial<Record<SizeK
 
       {read && parsed && (
         <>
-          <p className="text-sm text-muted">Muse Spark가 옮겨 적은 표입니다. 원본과 다른 칸은 고쳐 주십시오. 숫자는 표에 적힌 그대로이며 계산은 코드가 합니다.</p>
+          <p className="text-sm text-muted">표를 옮겨 적었습니다. 원본과 다른 칸이 있으면 고쳐 주십시오.</p>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead>

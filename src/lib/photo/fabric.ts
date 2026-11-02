@@ -27,7 +27,7 @@ export async function runFabric(photo: Prepared, cacheRoot: string, allowApi: bo
   const image = { bytes: photo.bytes, mime: "image/jpeg" as const };
   const [fab, pap] = await Promise.all([segmentImageConcept(image, FABRIC, cacheDir), segmentImageConcept(image, PAPER, cacheDir)]);
   const good = (r: typeof fab) => imageMasks(r).filter((m) => (m.confidence ?? 1) >= 0.5);
-  if (good(fab).length === 0) return { ok: false, stage: "segment", detail: "SAM 3.1이 사진에서 원단을 찾지 못했습니다." };
+  if (good(fab).length === 0) return { ok: false, stage: "segment", detail: "사진에서 원단을 찾지 못했습니다. 원단을 바닥에 펴고 전체가 보이게 다시 찍어 주십시오." };
 
   let scale: A4Scale | null = null, paperGrid: Grid | null = null, why = "A4 용지를 찾지 못했습니다.";
   for (const p of good(pap).sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))) {

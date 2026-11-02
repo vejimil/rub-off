@@ -12,9 +12,9 @@ import { MEASURE_KO, type MeasuresOf } from "@/lib/pattern/measures";
 import { seamLine, type Fabric, type GarmentKind } from "@/lib/pattern/types";
 
 const ERRORS: Record<string, string> = {
-  live_disabled: "공개 데모에서는 예시 글만 분석해 둔 결과를 보여 드립니다.",
-  visitor_limit: "오늘 분석할 수 있는 횟수를 모두 썼습니다.",
-  daily_limit: "오늘 전체 사용량을 모두 썼습니다.",
+  live_disabled: "지금은 글 읽기를 쉬고 있습니다. 위 목록에서 골라 주십시오.",
+  visitor_limit: "오늘 읽을 수 있는 글을 모두 썼습니다. 위 목록에서 골라 주십시오.",
+  daily_limit: "오늘 읽을 수 있는 양을 모두 썼습니다. 위 목록에서 골라 주십시오.",
 };
 
 // Typical adult values, for trying the panel without a tape measure. Shown as "예시".
@@ -27,7 +27,6 @@ export interface AlterPanelProps {
   garment: GarmentKind;
   fabric: Fabric;
   measures: Record<string, number>; // the garment as measured (and corrected)
-  live: boolean;
   applied: Record<string, number> | null;
   onApply: (delta: Record<string, number> | null) => void;
   sampleText?: { text: string; read: ReadComplaints };
@@ -36,7 +35,7 @@ export interface AlterPanelProps {
 // Mode 4: fit this garment to its wearer. Tape-measured body sizes become target garment sizes;
 // what the wearer says is wrong (picked, or written and sorted by Muse Spark) goes through the
 // alteration rules; the result is a work order, and optionally a pattern with the changes in it.
-export function AlterPanel({ garment, fabric, measures, live, applied, onApply, sampleText }: AlterPanelProps) {
+export function AlterPanel({ garment, fabric, measures, applied, onApply, sampleText }: AlterPanelProps) {
   const [body, setBody] = useState<Partial<Record<BodyKey, string>>>({});
   const [fit, setFit] = useState<BodyFit>("regular");
   const [picked, setPicked] = useState<Record<string, string>>({}); // complaint id → typed cm ("" if none)
@@ -68,7 +67,7 @@ export function AlterPanel({ garment, fabric, measures, live, applied, onApply, 
     try {
       const res = await fetch("/api/complaints", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: t, garment }) });
       const b = await res.json();
-      if (!res.ok) setError(ERRORS[b.error] ?? "글을 분석하지 못했습니다. 다시 시도해 주십시오.");
+      if (!res.ok) setError(ERRORS[b.error] ?? "글을 읽지 못했습니다. 잠시 후 다시 해 주십시오.");
       else setRead({ text: t, read: b.read });
     } catch {
       setError("서버에 연결하지 못했습니다.");
@@ -77,34 +76,77 @@ export function AlterPanel({ garment, fabric, measures, live, applied, onApply, 
     }
   }
 
-  if (garment === "eco-bag") return <p className="text-sm text-muted">가방은 입는 옷이 아니라 맞춤·수선이 없습니다.</p>;
+  if (garment === "eco-bag") return <p className="text-[15px] text-muted">가방은 입는 옷이 아니어서 고칠 치수가 없습니다.</p>;
+
+  const seated = options.filter((o) => o.seated);
+  const general = options.filter((o) => !o.seated);
+  const found = fromText.map((c) => ({ c, label: options.find((o) => o.id === c.id)?.ko ?? "목록에 없는 불편함" }));
+  const toggle = (id: string) => {
+    const next = { ...picked };
+    if (id in next) delete next[id];
+    else next[id] = "";
+    setPicked(next);
+  };
+  const chip = (o: (typeof options)[number]) => {
+    const on = o.id in picked;
+    return (
+      <button
+        key={o.id}
+        type="button"
+        aria-pressed={on}
+        onClick={() => toggle(o.id)}
+        className={`press inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-left text-[15px] leading-snug ${on ? "bg-ink text-sand" : "bg-well text-ink hover:bg-chalk-soft"}`}
+      >
+        {on && (
+          <svg width="12" height="12" viewBox="0 0 10 10" aria-hidden>
+            <path d="M1.5 5.5 L4 8 L8.5 2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+        )}
+        {o.ko}
+      </button>
+    );
+  };
 
   return (
-    <section className="space-y-8">
-      {/* 1. Body */}
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="font-semibold">내 몸 치수 (줄자로)</h3>
-          <button type="button" className="text-sm text-muted underline" onClick={() => setBody(Object.fromEntries(BODY_KEYS[garment].map((k) => [k, String(EXAMPLE_BODY[k])])))}>
+    <div className="space-y-12">
+      {/* The body, against this garment. */}
+      <section aria-labelledby="body-title" className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h3 id="body-title" className="text-lg font-semibold">
+              입을 사람의 몸 치수
+            </h3>
+            <p className="mt-1 text-[15px] text-muted">줄자로 잰 값을 넣으면 이 옷과 비교해 줄이거나 늘릴 곳을 찾습니다.</p>
+          </div>
+          <button type="button" className={buttonGhost} onClick={() => setBody(Object.fromEntries(BODY_KEYS[garment].map((k) => [k, String(EXAMPLE_BODY[k])])))}>
             예시 값 넣기
           </button>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           {BODY_KEYS[garment].map((k) => (
-            <label key={k} className="rounded-lg bg-field px-3 py-2 text-sm">
+            <label key={k} className="rounded-xl bg-field px-4 py-3">
               <span className="flex items-center gap-2">
-                <span className="w-24 shrink-0 font-medium">{BODY_KO[k]}</span>
-                <input inputMode="decimal" value={body[k] ?? ""} onChange={(e) => setBody({ ...body, [k]: e.target.value })} className="w-16 rounded-md border border-line bg-paper px-2 py-1 text-right tabular-nums" />
+                <span className="flex-1 font-medium">{BODY_KO[k]}</span>
+                <input
+                  inputMode="decimal"
+                  value={body[k] ?? ""}
+                  onChange={(e) => setBody({ ...body, [k]: e.target.value })}
+                  aria-describedby={`how-${k}`}
+                  className="num w-20 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-right text-lg"
+                />
                 <span className="text-muted">cm</span>
               </span>
-              <span className="mt-1 block text-xs leading-snug text-muted">{BODY_HOW[k]}</span>
+              <span id={`how-${k}`} className="mt-1.5 block text-[13px] leading-snug text-muted">
+                {BODY_HOW[k]}
+              </span>
             </label>
           ))}
         </div>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="text-muted">원하는 핏</span>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-[15px] text-muted">원하는 핏</span>
           <Segmented
             size="sm"
+            label="원하는 핏"
             value={fit}
             onChange={setFit}
             options={[
@@ -115,149 +157,187 @@ export function AlterPanel({ garment, fabric, measures, live, applied, onApply, 
           />
         </div>
         {comparisons.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm tabular-nums">
-              <thead>
-                <tr className="text-left text-muted">
-                  <th className="border-b border-line py-1.5 font-normal">항목</th>
-                  <th className="border-b border-line py-1.5 text-right font-normal">이 옷</th>
-                  <th className="border-b border-line py-1.5 text-right font-normal">몸에 맞는 값</th>
-                  <th className="border-b border-line py-1.5 pl-3 font-normal">판정</th>
+          <table className="w-full text-[15px]">
+            <caption className="sr-only">이 옷과 몸에 맞는 값 비교</caption>
+            <thead>
+              <tr className="text-left text-[13px] text-muted">
+                <th className="pb-2 font-normal">단면</th>
+                <th className="pb-2 text-right font-normal">이 옷</th>
+                <th className="pb-2 text-right font-normal">몸에 맞는 값</th>
+                <th className="pb-2 pl-4 font-normal">
+                  <span className="sr-only">판정</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {comparisons.map((c) => (
+                <tr key={c.key} /* taste-skill-ignore: rule between table rows */ className="border-t border-line align-top">
+                  <td className="py-2.5 pr-3">
+                    <span className="font-medium">{MEASURE_KO[c.key]}</span>
+                    <span className="mt-0.5 block text-[13px] text-muted">{c.target.howKo}</span>
+                  </td>
+                  <td className="num py-2.5 text-right">{c.mine.toFixed(1)}</td>
+                  <td className="num py-2.5 text-right">
+                    {c.target.cm.toFixed(1)}
+                    {c.target.min ? " 이상" : ""}
+                  </td>
+                  <td className="py-2.5 pl-4 text-right">
+                    <Badge tone={c.verdict === "fits" ? "ok" : "mark"}>
+                      {c.verdict === "fits" ? VERDICT_KO.fits : `${LONG.includes(c.key) ? (c.verdict === "big" ? "김" : "짧음") : VERDICT_KO[c.verdict]} ${Math.abs(c.diff)}`}
+                    </Badge>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {comparisons.map((c) => (
-                  <tr key={c.key}>
-                    <td className="border-b border-line py-1.5">
-                      {MEASURE_KO[c.key]}
-                      <div className="text-xs text-muted">{c.target.howKo}</div>
-                    </td>
-                    <td className="border-b border-line py-1.5 text-right">{c.mine.toFixed(1)}</td>
-                    <td className="border-b border-line py-1.5 text-right">
-                      {c.target.cm.toFixed(1)}
-                      {c.target.min ? " 이상" : ""}
-                    </td>
-                    <td className="border-b border-line py-1.5 pl-3">
-                      <Badge tone={c.verdict === "fits" ? "ok" : "mark"}>
-                        {c.verdict === "fits" ? VERDICT_KO.fits : LONG.includes(c.key) ? (c.verdict === "big" ? "김" : "짧음") : VERDICT_KO[c.verdict]}
-                        {c.verdict !== "fits" && ` ${Math.abs(c.diff)}`}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      {/* What the wearer says. */}
+      <section aria-labelledby="say-title" className="space-y-5">
+        <div>
+          <h3 id="say-title" className="text-lg font-semibold">
+            입었을 때 불편한 점
+          </h3>
+          <p className="mt-1 text-[15px] text-muted">해당하는 것을 고르거나, 아래에 말하듯 적어 주십시오.</p>
+        </div>
+        {seated.length > 0 && (
+          <div>
+            <p className="mb-2 text-[13px] text-muted">앉아서 입을 때</p>
+            <div className="flex flex-wrap gap-2">{seated.map(chip)}</div>
           </div>
         )}
-      </div>
-
-      {/* 2. What is wrong */}
-      <div className="space-y-3">
-        <h3 className="font-semibold">입었을 때 불편한 점</h3>
-        <div className="flex flex-wrap gap-1.5">
-          {options.map((o) => {
-            const on = o.id in picked;
-            return (
-              <button
-                key={o.id}
-                type="button"
-                aria-pressed={on}
-                onClick={() => {
-                  const next = { ...picked };
-                  if (on) delete next[o.id];
-                  else next[o.id] = "";
-                  setPicked(next);
-                }}
-                className={`press rounded-full px-3 py-1.5 text-left text-sm ${on ? "bg-ink text-sand" : "bg-well text-muted hover:text-ink"}`}
-              >
-                {o.ko}
-              </button>
-            );
-          })}
-        </div>
-        {options
-          .filter((o) => o.id in picked && o.askKo)
-          .map((o) => (
-            <label key={o.id} className="flex items-center gap-2 text-sm">
-              <span className="text-muted">{o.askKo}</span>
-              <input inputMode="decimal" value={picked[o.id]} onChange={(e) => setPicked({ ...picked, [o.id]: e.target.value })} className="w-16 rounded-md border border-line bg-field px-2 py-1 text-right tabular-nums" />
-              <span className="text-muted">cm (모르면 비워 두십시오)</span>
-            </label>
-          ))}
-        <div className="space-y-2">
+        {general.length > 0 && (
+          <div>
+            <p className="mb-2 text-[13px] text-muted">길이와 품</p>
+            <div className="flex flex-wrap gap-2">{general.map(chip)}</div>
+          </div>
+        )}
+        {options.some((o) => o.id in picked && o.askKo) && (
+          <div className="space-y-2 rounded-xl bg-field p-4">
+            <p className="text-[13px] text-muted">재 본 길이가 있으면 넣어 주십시오. 모르면 비워 두면 수선집에서 잽니다.</p>
+            {options
+              .filter((o) => o.id in picked && o.askKo)
+              .map((o) => (
+                <label key={o.id} className="flex items-center gap-2 text-[15px]">
+                  <span className="flex-1">{o.askKo}</span>
+                  <input inputMode="decimal" value={picked[o.id]} onChange={(e) => setPicked({ ...picked, [o.id]: e.target.value })} className="num w-20 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-right" />
+                  <span className="text-muted">cm</span>
+                </label>
+              ))}
+          </div>
+        )}
+        <div>
+          <label htmlFor="say-text" className="mb-2 block text-[13px] text-muted">
+            직접 적기
+          </label>
           <textarea
+            id="say-text"
             value={text}
             maxLength={MAX_TEXT}
             onChange={(e) => setText(e.target.value)}
-            rows={3}
-            placeholder="또는 직접 적어 주십시오. 예: 휠체어에 앉으면 바지 뒤가 내려가고, 밑단이 3 cm쯤 짧아져요."
-            className="w-full rounded-lg border border-line bg-field p-3 text-sm"
+            rows={4}
+            placeholder="예: 휠체어에 앉으면 바지 뒤가 내려가고, 밑단이 3 cm쯤 짧아져요."
+            className="w-full rounded-xl border border-line bg-field p-4 text-[15px] leading-relaxed"
           />
-          <div className="flex flex-wrap items-center gap-3">
-            <button type="button" className={buttonGhost} disabled={busy || !text.trim() || (!live && text.trim() !== sampleText?.text)} onClick={analyse}>
-              Muse Spark로 분석
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button type="button" className={buttonPrimary} disabled={busy || !text.trim()} onClick={analyse}>
+              {busy ? "읽는 중…" : "이 글에서 고칠 곳 찾기"}
             </button>
-            {busy && <span className="text-sm text-muted">읽는 중…</span>}
-            {error && <span className="text-sm text-mark">{error}</span>}
-            {!live && <span className="text-xs text-muted">공개 데모는 예시 글만 분석해 둔 결과를 씁니다.</span>}
+            {error && <span className="text-[15px] text-mark">{error}</span>}
           </div>
-          {read && fromText.length > 0 && (
-            <p className="text-xs text-muted">Muse Spark는 글을 위 선택지 중 하나로 나누기만 합니다. 길이는 글에 적힌 숫자만 쓰고, 수선 방법과 양은 규칙표가 정합니다.</p>
+          {found.length > 0 && (
+            <div className="mt-4">
+              <p className="mb-2 text-[13px] text-muted">글에서 찾은 것</p>
+              <ul className="flex flex-wrap gap-2">
+                {found.map(({ c, label }, i) => (
+                  <li key={i} className="rounded-full bg-chalk-soft px-3.5 py-2 text-[15px]">
+                    {label}
+                    {c.amountCm !== undefined && <span className="num ml-1.5 font-medium">{c.amountCm} cm</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
-      </div>
+      </section>
 
-      {/* 3. Work order */}
-      <div className="space-y-3">
-        <h3 className="font-semibold">수선 지시서</h3>
+      {/* The work order. */}
+      <section aria-labelledby="order-title" className="overflow-hidden rounded-xl bg-field">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 bg-ink px-5 py-4 text-sand">
+          <h3 id="order-title" className="font-display text-2xl">
+            수선 의뢰서
+          </h3>
+          <span className="text-[15px]">{alterations.length > 0 ? `고칠 곳 ${alterations.length}군데` : "아직 비어 있습니다"}</span>
+        </div>
         {alterations.length === 0 ? (
-          <p className="text-sm text-muted">몸 치수를 넣거나 불편한 점을 고르면 여기에 수선 방법이 나옵니다.</p>
+          <p className="px-5 py-8 text-[15px] text-muted">몸 치수를 넣거나 불편한 점을 고르면, 수선집에 그대로 보여 줄 수 있는 의뢰서가 여기에 만들어집니다.</p>
         ) : (
-          <ol className="space-y-2">
-            {alterations.map((a, i) => (
-              <li key={a.id} className="rounded-xl border border-line bg-field p-3 text-sm">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="num text-muted">{i + 1}</span>
-                  <span className="font-semibold">{a.actionKo}</span>
-                  <span className="text-muted">{a.partKo}</span>
+          <ol className="space-y-1 p-1">
+            {alterations.map((a) => (
+              <li key={a.id} className="rounded-lg bg-paper px-4 py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <span className="text-lg font-semibold">{a.actionKo}</span>
+                    <span className="text-[15px] text-muted">{a.partKo}</span>
+                  </p>
+                  <p className="num shrink-0 text-right font-display text-3xl leading-none" aria-label={a.amountCm !== undefined ? `${a.amountCm} cm` : "수선집에서 재서 정함"}>
+                    {a.amountCm !== undefined ? (
+                      <>
+                        {a.amountCm}
+                        <span className="ml-1 font-sans text-base">cm</span>
+                      </>
+                    ) : (
+                      <span className="font-sans text-[15px] text-muted">재서 정함</span>
+                    )}
+                  </p>
+                </div>
+                <p className="mt-1.5 text-[15px] leading-relaxed">{a.instructionKo}</p>
+                <p className="mt-2 flex flex-wrap items-center gap-1.5">
                   <Badge tone={a.difficulty === "hard" ? "mark" : a.difficulty === "medium" ? "warn" : "ok"}>{DIFFICULTY_KO[a.difficulty]}</Badge>
                   {a.reversible && <Badge tone="chalk">되돌릴 수 있음</Badge>}
-                </div>
-                <p className="mt-1.5">{a.instructionKo}</p>
-                <p className="mt-1 text-xs text-muted">{a.fromKo}</p>
+                  <span className="text-[13px] text-muted">{a.fromKo}</span>
+                </p>
               </li>
             ))}
           </ol>
         )}
-        {alterations.length > 0 && <p className="text-xs text-muted">재단 전, 수선 전에 옷을 입고 한 번 더 확인하십시오. 숫자는 몸 치수, 옷 치수, 입력한 길이와 규칙표에서만 나옵니다.</p>}
-        {hasDelta && (
-          <div className="space-y-3 rounded-xl bg-chalk-soft p-3">
-            <p className="text-sm">
-              새로 만든다면 패턴에서 바뀌는 치수:{" "}
+        {alterations.length > 0 && <p className="px-5 pb-4 pt-2 text-[13px] text-muted">고치기 전에 옷을 입고 한 번 더 확인하십시오.</p>}
+      </section>
+
+      {/* The same changes, drafted into a new pattern. */}
+      {hasDelta && (
+        <section aria-labelledby="redraft-title" className="space-y-4">
+          <div>
+            <h3 id="redraft-title" className="text-lg font-semibold">
+              새로 만든다면
+            </h3>
+            <p className="mt-1 text-[15px] text-muted">
+              같은 수선을 패턴에 넣으면{" "}
               {Object.entries(delta)
-                .map(([k, v]) => `${MEASURE_KO[k] ?? k} ${v > 0 ? "+" : "−"}${Math.abs(v)}`)
-                .join(", ")}{" "}
-              cm
+                .map(([k, v]) => `${MEASURE_KO[k] ?? k} ${v > 0 ? "+" : "−"}${Math.abs(v)} cm`)
+                .join(", ")}
+              . 점선이 지금 옷, 실선이 고친 모양입니다.
             </p>
-            <BeforeAfter garment={garment} fabric={fabric} measures={measures} delta={delta} />
-            {applied ? (
-              <button type="button" className={buttonGhost} onClick={() => onApply(null)}>
-                패턴에서 수선 빼기
-              </button>
-            ) : (
-              <button type="button" className={buttonPrimary} onClick={() => onApply(delta)}>
-                이 수선을 패턴에 반영
-              </button>
-            )}
           </div>
-        )}
-      </div>
-    </section>
+          <BeforeAfter garment={garment} fabric={fabric} measures={measures} delta={delta} />
+          {applied ? (
+            <button type="button" className={buttonGhost} onClick={() => onApply(null)}>
+              패턴에서 수선 빼기
+            </button>
+          ) : (
+            <button type="button" className={buttonPrimary} onClick={() => onApply(delta)}>
+              고친 패턴 보기
+            </button>
+          )}
+        </section>
+      )}
+    </div>
   );
 }
 
 // Each piece's seam line before (dashed) and after (solid), drawn on the same origin.
-function BeforeAfter({ garment, fabric, measures, delta }: { garment: GarmentKind; fabric: Fabric; measures: Record<string, number>; delta: Record<string, number> }) {
+export function BeforeAfter({ garment, fabric, measures, delta, className = "grid grid-cols-2 gap-3 sm:grid-cols-3" }: { garment: GarmentKind; fabric: Fabric; measures: Record<string, number>; delta: Record<string, number>; className?: string }) {
   const pair = useMemo(() => {
     const after = Object.fromEntries(Object.entries(measures).map(([k, v]) => [k, v + (delta[k] ?? 0)]));
     for (const [k, v] of Object.entries(delta)) if (!(k in after)) after[k] = v;
@@ -275,17 +355,17 @@ function BeforeAfter({ garment, fabric, measures, delta }: { garment: GarmentKin
   const changed = pair.filter((p) => JSON.stringify(p.before) !== JSON.stringify(p.after));
   if (!changed.length) return null;
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className={className}>
       {changed.map((p) => {
         const b = bounds([...p.before, ...p.after]);
         const pad = 2;
         return (
-          <figure key={p.id} className="w-36">
-            <svg viewBox={`${b.minX - pad} ${b.minY - pad} ${b.maxX - b.minX + 2 * pad} ${b.maxY - b.minY + 2 * pad}`} className="h-auto w-full rounded-lg bg-field" role="img" aria-label={`${p.name} 수선 전후`}>
+          <figure key={p.id}>
+            <svg viewBox={`${b.minX - pad} ${b.minY - pad} ${b.maxX - b.minX + 2 * pad} ${b.maxY - b.minY + 2 * pad}`} className="h-auto max-h-80 w-full rounded-xl bg-field p-2" role="img" aria-label={`${p.name} 수선 전후`}>
               <path d={svgPath(p.before, true)} fill="none" stroke="var(--muted)" strokeWidth={0.35} strokeDasharray="1 0.8" />
               <path d={svgPath(p.after, true)} fill="rgba(6,43,138,0.06)" stroke="var(--ink)" strokeWidth={0.45} />
             </svg>
-            <figcaption className="mt-1 text-xs text-muted">{p.name}: 점선 지금, 실선 수선 후</figcaption>
+            <figcaption className="mt-1.5 text-[13px] text-muted">{p.name}</figcaption>
           </figure>
         );
       })}

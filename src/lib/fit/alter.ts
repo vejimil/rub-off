@@ -84,7 +84,7 @@ export function fromBody(garment: GarmentKind, comparisons: Comparison[]): Alter
     if (c.verdict === "fits") continue;
     const amt = Math.abs(c.diff);
     const name = MEASURE_KO[c.key] ?? c.key;
-    const fromKo = `몸 치수: ${c.target.howKo}`;
+    const fromKo = `몸 치수 ${c.target.howKo}`;
     const base = { id: `body-${c.key}`, amountCm: amt, delta: { [c.key]: c.diff }, fromKo };
     if (WIDTHS.includes(c.key)) {
       if (c.key === "waist" && garment === "pants") {
@@ -219,9 +219,9 @@ const SIDE_KO = { left: "왼쪽", right: "오른쪽", both: "양쪽" } as const;
 export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
   const def = COMPLAINTS.find((d) => d.id === c.id);
   const a = c.amountCm !== undefined && c.amountCm > 0 ? c.amountCm : undefined;
-  const fromKo = c.quote ? `글: "${c.quote}"` : `선택: ${def?.ko ?? "기타"}`;
+  const fromKo = c.quote ? `적은 글 "${c.quote}"` : `고른 것 "${def?.ko ?? "기타"}"`;
   const id = `say-${c.id}`;
-  const measureFirst = (what: string) => `${jo(what, "을")} 재서 적어 주시면 길이가 들어갑니다. 지금은 재단사가 재야 합니다.`;
+  const measureFirst = (what: string) => `${jo(what, "을")} 재서 적어 주시면 길이가 들어갑니다. 아니면 수선집에서 잽니다.`;
   const side = c.side && c.side !== "both" ? `${SIDE_KO[c.side]} ` : "";
   const shorten = (part: string, key: string, cuff = false): Alteration => ({
     id,
@@ -351,7 +351,7 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
         difficulty: "medium",
       };
     default:
-      return { id, fromKo, partKo: "기타", actionKo: "재단사와 상담", instructionKo: "정해진 수선 규칙이 없는 내용입니다. 옷을 입은 채 재단사에게 보여 주십시오.", difficulty: "medium" };
+      return { id, fromKo, partKo: "기타", actionKo: "수선집과 상의", instructionKo: "옷을 입은 채 수선집에 보여 주고 어디를 어떻게 고칠지 상의하십시오.", difficulty: "medium" };
   }
 }
 
@@ -362,7 +362,7 @@ export function guarded(a: Alteration, extra: readonly number[] = []): Alteratio
   const base = [a.amountCm ?? 0, LET_OUT_FLAT, HEM_SPARE.top, HEM_SPARE.pants, BIG_TAKE_IN, BACK_RISE_DEFAULT, CAST_MARGIN, 90, ...extra];
   const allowed = base.flatMap((x) => [x, x / 2, 2 * x, x - CAST_MARGIN]).map((x) => Math.round(x * 10) / 10);
   if (guardNumbers(a.instructionKo, allowed)) return a;
-  return { ...a, instructionKo: "길이는 재단사가 재서 정합니다.", amountCm: undefined, delta: undefined };
+  return { ...a, instructionKo: "길이는 수선집에서 재서 정합니다.", amountCm: undefined, delta: undefined };
 }
 
 // Alterations that touch the same measurement: the later one wins in the pattern delta.

@@ -19,7 +19,7 @@ interface FabricPhoto {
 }
 
 const ERRORS: Record<string, string> = {
-  live_disabled: "공개 데모에서는 원단 사진 분석을 끄고, 원단 크기 입력으로만 배치합니다.",
+  live_disabled: "지금은 원단 사진 분석을 쉬고 있습니다. 원단 크기를 입력해 주십시오.",
   visitor_limit: "오늘 분석할 수 있는 사진 수를 모두 썼습니다.",
   daily_limit: "오늘 전체 사용량을 모두 썼습니다.",
 };
@@ -74,7 +74,7 @@ export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolea
         </label>
         {live && (
           <label className={`${buttonGhost} cursor-pointer`}>
-            {busy ? "SAM 3.1이 원단을 찾는 중…" : "원단 사진으로"}
+            {busy ? "원단을 찾는 중…" : "원단 사진으로"}
             <input type="file" accept="image/*" className="hidden" disabled={busy} onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
           </label>
         )}

@@ -28,7 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 방법
               </Link>
               <Link href="/sample" className="link px-3 py-1.5">
-                샘플
+                예시
               </Link>
               <Link href="/make" className="press ml-2 rounded-full bg-ink px-4 py-1.5 font-medium text-sand hover:bg-ink-strong">
                 패턴 만들기

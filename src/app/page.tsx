@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BeforeAfter } from "@/components/alter-panel";
 import { GarmentRow, GradeDemo, HeroReel, type GarmentCard } from "@/components/landing";
 import { PatternPreview, PiecesOutline } from "@/components/pattern-preview";
 import { PageScript } from "@/components/page-script";
@@ -12,6 +13,10 @@ import { EXAMPLES } from "@/lib/pattern/examples";
 import { layOut, pagesFor, type Sheet } from "@/lib/pattern/layout";
 import { MEASURE_KO } from "@/lib/pattern/measures";
 import type { GarmentKind } from "@/lib/pattern/types";
+import { DIFFICULTY_KO, fromComplaint, guarded, patternDelta } from "@/lib/fit/alter";
+import { parse, type ReadComplaints } from "@/lib/fit/read-complaint";
+import { withDefaults } from "@/lib/pattern/measures";
+import complaintPants from "@/lib/sample/complaint-pants.json";
 import shorts from "@/lib/sample/shorts-run.json";
 import tee from "@/lib/sample/tee-run.json";
 
@@ -87,10 +92,10 @@ export default function Home() {
     {
       node: (
         <div className="absolute inset-0 flex items-center bg-paper p-4">
-          <PatternPreview sheet={sheet} className="h-auto w-full" />
+          <PatternPreview sheet={sheet} dims className="h-auto w-full" />
         </div>
       ),
-      caption: `1:1 패턴, A4 ${cols * rows}장에 나눠 인쇄`,
+      caption: `1:1 패턴, 솔기마다 길이, A4 ${cols * rows}장`,
     },
   ];
 
@@ -146,7 +151,7 @@ export default function Home() {
   const outputs = [
     {
       name: "패턴 PDF",
-      text: "A4로 나눠 인쇄하고, 10 cm 사각형으로 배율을 확인합니다.",
+      text: "솔기마다 길이를 적어 A4로 나눠 인쇄합니다. 10 cm 사각형으로 배율을 확인합니다.",
       bg: "bg-paper text-ink",
       pic: <PatternPreview sheet={sheet} className="h-auto w-full" />,
     },
@@ -158,7 +163,7 @@ export default function Home() {
     },
     {
       name: "사이즈",
-      text: "쇼핑몰 실측표를 Muse Spark가 읽고, 내 옷과 같은 핏인 사이즈를 고릅니다.",
+      text: "쇼핑몰 실측표 사진을 옮겨 적고, 내 옷과 같은 핏인 사이즈를 고릅니다.",
       bg: "bg-ink text-sand",
       // eslint-disable-next-line @next/next/no-img-element -- self-made sample size table
       pic: <img src="/samples/size-table.png" alt="직접 만든 예시 실측표" loading="lazy" className="h-auto w-full rounded-[2px]" />,
@@ -170,6 +175,13 @@ export default function Home() {
       pic: <CutLayout fabric={fabric} placed={cut.placed} light />,
     },
   ];
+
+  // A wheelchair user's words about elastic-waist trousers (an example text, read once by Spark and
+  // saved), and the work order the alteration rules make from it.
+  const words = complaintPants.text;
+  const order = parse(complaintPants.read as ReadComplaints, words, "pants").map((c) => guarded(fromComplaint("pants", c)));
+  const orderDelta = patternDelta(order);
+  const pantsMeasures = withDefaults("pants", EXAMPLES.pants.m).measures as unknown as Record<string, number>;
 
   const steps = [
     {
@@ -201,7 +213,7 @@ export default function Home() {
       <HeroReel
         left="펴 놓은 옷을"
         right="1:1 패턴으로"
-        sentence="옷을 A4 용지와 함께 바닥에 펴고 위에서 한 장 찍으면, 인쇄해 바로 자를 수 있는 패턴과 맞는 사이즈, 원단 배치가 나옵니다."
+        sentence="옷을 A4 용지와 함께 바닥에 펴고 위에서 한 장 찍으면, 인쇄해 바로 자를 수 있는 패턴이 나옵니다. 맞는 사이즈를 고르고, 입을 사람에게 맞게 고칠 곳도 알려 드립니다."
         frames={frames}
       />
 
@@ -290,6 +302,54 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Fit it to the wearer: their words become a work order. */}
+      <section aria-labelledby="alter-title" className="bg-ink px-5 py-32 text-sand sm:px-10 lg:px-16 lg:py-48">
+        <div className="grid gap-16 lg:grid-cols-12 lg:gap-x-12">
+          <div className="lg:col-span-5">
+            <h2 id="alter-title" className="font-display text-[9vw] leading-[1.05] tracking-[-0.02em] sm:text-[8vw] lg:text-[clamp(32px,3.2vw,50px)]" data-reveal>
+              불편한 점을 수선 의뢰서로
+            </h2>
+            <p className="mt-6 max-w-md text-lg leading-relaxed" data-reveal style={{ ["--d" as string]: 1 }}>
+              입을 사람이 불편한 점을 고르거나 말하듯 적으면, 어디를 몇 cm 고칠지 정리해 드립니다. AI는 글을 불편함 목록에 나눠 넣기만 하고, 길이는 적힌 숫자와 의류학 수선 규칙으로 계산합니다. 줄자로 잰 몸 치수를 넣으면 옷과 비교해 줄이거나 늘릴 곳도 찾습니다.
+            </p>
+            <blockquote className="mt-12 rounded-[4px] bg-sand px-6 py-5 text-lg leading-relaxed text-ink" data-reveal style={{ ["--d" as string]: 2 }}>
+              <p>&ldquo;{words}&rdquo;</p>
+              <footer className="mt-3 text-[15px] text-muted">휠체어를 타는 사람이 고무줄 바지에 대해 적은 글 (예시)</footer>
+            </blockquote>
+            <figure className="mt-6 rounded-[4px] bg-sand p-5 text-ink" data-reveal style={{ ["--d" as string]: 3 }}>
+              <BeforeAfter garment="pants" fabric={EXAMPLES.pants.fabric} measures={pantsMeasures} delta={orderDelta} className="grid grid-cols-2 gap-3" />
+              <figcaption className="mt-3 text-[15px]">새로 만든다면: 점선이 지금 바지, 실선이 뒤 밑위를 높이고 밑단을 내린 패턴입니다.</figcaption>
+            </figure>
+          </div>
+          <div className="lg:col-span-7" data-reveal style={{ ["--d" as string]: 1 }}>
+            <div className="rounded-[4px] bg-sand p-2 text-ink">
+              <h3 className="px-4 pb-5 pt-4 font-display text-[32px] leading-none lg:px-6 lg:pt-6">수선 의뢰서</h3>
+              <ol className="space-y-1">
+                {order.map((a) => (
+                  <li key={a.id} className="rounded-[2px] bg-sand-2 px-4 py-5 lg:px-6">
+                    <div className="flex items-start justify-between gap-6">
+                      <p className="flex flex-wrap items-baseline gap-x-2">
+                        <span className="text-lg font-semibold">{a.actionKo}</span>
+                        <span className="text-[15px] text-muted">
+                          {DIFFICULTY_KO[a.difficulty]}
+                          {a.reversible ? " · 되돌릴 수 있음" : ""}
+                        </span>
+                      </p>
+                      <p className="num shrink-0 font-display text-[32px] leading-none">{a.amountCm !== undefined ? `${a.amountCm} cm` : <span className="font-sans text-[15px] text-muted">재서 정함</span>}</p>
+                    </div>
+                    <p className="mt-2 max-w-2xl text-lg leading-relaxed">{a.instructionKo}</p>
+                  </li>
+                ))}
+              </ol>
+              <p className="px-4 pb-3 pt-4 text-[15px] lg:px-6">고무줄 바지, 고칠 곳 {order.length}군데. 고치기 전에 입어 보고 확인하십시오.</p>
+            </div>
+            <Link href="/sample?s=pants" className="press mt-8 inline-flex rounded-[4px] bg-sand px-6 py-3 font-medium text-ink hover:bg-sand-3">
+              이 예시에서 직접 고르고 적어 보기
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* How to shoot: one verb at a time. */}
       <section id="how" aria-labelledby="how-title" className="bg-paper px-5 py-32 sm:px-10 lg:px-16 lg:py-48">
         <h2 id="how-title" className="font-display text-[9vw] leading-[1.05] tracking-[-0.02em] sm:text-[8vw] lg:text-[clamp(32px,3.2vw,50px)]" data-reveal>
@@ -339,7 +399,12 @@ export default function Home() {
             </li>
             <li>
               <Link href="/sample" className="link">
-                샘플 보기
+                예시 보기
+              </Link>
+            </li>
+            <li>
+              <Link href="/sample?s=pants" className="link">
+                옷 고치기
               </Link>
             </li>
             <li>
@@ -351,7 +416,7 @@ export default function Home() {
           <div className="grid gap-8 text-[15px] sm:grid-cols-2 lg:col-span-7">
             <div>
               <p className="font-medium">만든 방법</p>
-              <p className="mt-2">Meta SAM 3.1이 옷과 A4를 나누고, Muse Spark가 접힌 소매와 실측표를 읽습니다. 숫자는 사진의 기하와 규칙표에서 나옵니다.</p>
+              <p className="mt-2">Meta의 SAM 3.1이 사진에서 옷과 A4 용지를 찾고, Muse Spark가 소매가 접혔는지, 실측표와 불편함을 적은 글을 읽습니다. 치수와 고칠 길이는 사진에서 잰 값과 의류학 규칙으로만 계산합니다.</p>
             </div>
             <div>
               <p className="font-medium">재단 전에</p>

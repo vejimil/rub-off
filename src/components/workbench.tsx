@@ -57,11 +57,11 @@ const KEYS: Record<GarmentKind, string[]> = {
 };
 
 const RUN_ERRORS: Record<string, string> = {
-  live_disabled: "공개 데모에서는 사진 분석을 끄고 샘플만 보여 드립니다.",
+  live_disabled: "지금은 사진 분석을 쉬고 있습니다. 예시에서 결과를 먼저 보십시오.",
   visitor_limit: "오늘 분석할 수 있는 사진 수를 모두 썼습니다.",
-  daily_limit: "오늘 전체 사용량을 모두 썼습니다. 샘플을 보아 주십시오.",
+  daily_limit: "오늘 분석할 수 있는 양을 모두 썼습니다. 내일 다시 해 주십시오.",
   too_large: "사진이 너무 큽니다.",
-  api_failed: "분석 서버가 응답하지 않았습니다. 잠시 후 다시 시도해 주십시오.",
+  api_failed: "분석이 끝나지 않았습니다. 잠시 후 다시 해 주십시오.",
 };
 
 const STAGE_KO: Record<FailedRun["stage"], string> = {
@@ -147,7 +147,7 @@ export function Workbench({ live, initial, sampleTable, sampleText, initialEdits
       if (!res.ok) update(i, { failure: RUN_ERRORS[body.error] ?? "사진을 분석하지 못했습니다." });
       else if (!body.run.ok) {
         const f = body.run as FailedRun;
-        update(i, { failure: `${STAGE_KO[f.stage]} 단계에서 멈췄습니다: ${f.detail}`, missingA4: f.missingA4, run: undefined });
+        update(i, { failure: `${STAGE_KO[f.stage]}: ${f.detail}`, missingA4: f.missingA4, run: undefined });
       } else update(i, { run: body.run, failure: undefined, missingA4: false, tapping: false });
     } catch {
       update(i, { failure: "서버에 연결하지 못했습니다." });
@@ -272,7 +272,7 @@ export function Workbench({ live, initial, sampleTable, sampleText, initialEdits
               <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && choose(e.target.files[0])} />
             </label>
           ) : (
-            (placeholder ?? <p className="rounded-xl bg-well p-6 text-sm text-muted">공개 데모에서는 샘플만 보여 드립니다.</p>)
+            (placeholder ?? <p className="rounded-xl bg-well p-6 text-sm text-muted">지금은 사진 올리기를 쉬고 있습니다. 예시에서 결과를 보십시오.</p>)
           )}
 
           {(shots.length > 1 || (live && shots.length > 0)) && (
@@ -327,7 +327,7 @@ export function Workbench({ live, initial, sampleTable, sampleText, initialEdits
           {shot?.tapping && (
             <div className="space-y-2 rounded-xl bg-chalk-soft p-3 text-sm">
               <p>
-                사진에서 양쪽 <b>어깨점</b>(소매 솔기가 어깨선과 만나는 점)을 하나씩 누르십시오. 단색 옷은 솔기가 잘 안 보여 SAM이 0.5–3 cm 벗어날 수 있습니다.
+                사진에서 양쪽 <b>어깨점</b>(소매 솔기가 어깨선과 만나는 점)을 하나씩 누르십시오. 단색 옷은 솔기가 잘 안 보여 자동으로 찾은 점이 0.5–3 cm 벗어날 수 있습니다.
               </p>
               <div className="flex gap-2">
                 <button onClick={() => analyse(activeIndex)} disabled={(shot.taps?.length ?? 0) === 0 || busy !== null} className={buttonPrimary}>
@@ -363,7 +363,7 @@ export function Workbench({ live, initial, sampleTable, sampleText, initialEdits
             <div className="space-y-2">
               {shot.run.layout && (
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                  <span className="text-muted">Muse Spark 확인</span>
+                  <span className="text-muted">놓인 모양</span>
                   <Badge>{SIDE_KO[shot.run.layout.side]}</Badge>
                   <Badge tone={shot.run.layout.wrinkles === "flat" ? "ok" : "warn"}>{WRINKLE_KO[shot.run.layout.wrinkles]}</Badge>
                   {shot.run.layout.sleeves.map((sl) => (
@@ -405,7 +405,7 @@ export function Workbench({ live, initial, sampleTable, sampleText, initialEdits
 
         {tab === "measure" && (
           <div>
-            <p className="mb-4 text-sm text-muted">사진의 기하에서 잰 단면 값(cm). 줄자로 잰 값이 있으면 고쳐 쓰십시오.</p>
+            <p className="mb-4 text-sm text-muted">사진에서 잰 단면입니다(cm). 줄자로 잰 값이 있으면 고쳐 쓰십시오.</p>
             <div className="divide-y divide-line">
               {rows.map((r) => (
                 <div key={r.key} className="flex items-center gap-3 py-3.5">
@@ -454,7 +454,7 @@ export function Workbench({ live, initial, sampleTable, sampleText, initialEdits
             </div>
             {delta && (
               <p className="flex flex-wrap items-center gap-2 rounded-xl bg-chalk-soft p-3 text-sm">
-                맞춤·수선 탭의 수선이 반영된 패턴입니다:{" "}
+                맞춤·수선에서 고친 내용이 들어간 패턴입니다:{" "}
                 {Object.entries(delta)
                   .map(([k, v]) => `${MEASURE_KO[k] ?? k} ${v > 0 ? "+" : "−"}${Math.abs(v)} cm`)
                   .join(", ")}
@@ -487,12 +487,11 @@ export function Workbench({ live, initial, sampleTable, sampleText, initialEdits
 
         {tab === "fit" && (
           <div>
-            <p className="mb-4 text-sm text-muted">이 옷을 입을 사람에게 맞춥니다. 몸 치수와 불편한 점에서 수선 지시서를, 원하면 고친 패턴을 만듭니다.</p>
+            <p className="mb-6 text-[15px] text-muted">이 옷을 입을 사람에게 맞춥니다. 몸 치수와 불편한 점에서 수선 의뢰서를 만들고, 원하면 고친 패턴도 그립니다.</p>
             <AlterPanel
               garment={garment}
               fabric={fabric}
               measures={measures as Record<string, number>}
-              live={live}
               sampleText={sampleText?.garment === garment ? sampleText : undefined}
               applied={delta}
               onApply={(d) => {
@@ -524,7 +523,7 @@ export function Workbench({ live, initial, sampleTable, sampleText, initialEdits
 // While SAM 3.1 and Muse Spark work: what is being done, in order. One request does all of it,
 // so no step is shown as finished before the answer comes back.
 function Analyzing() {
-  const steps = ["SAM 3.1 · 옷, 소매, 모자, A4 분리", "A4 네 모서리로 cm 평면 맞추기", "Muse Spark · 소매 접힘과 주름 확인", "측정점과 ± 계산"];
+  const steps = ["옷과 A4 용지 찾기", "A4 네 모서리로 cm 맞추기", "소매가 펴졌는지, 주름이 많은지 보기", "치수와 오차 재기"];
   return (
     <div className="rounded-xl bg-well p-4">
       <p className="mb-2 text-sm font-medium">사진을 읽는 중 · 보통 10–30초</p>
