@@ -261,7 +261,7 @@ export default function Home() {
             사진 한 장에서 네 가지
           </h2>
           <p className="max-w-lg text-lg leading-relaxed lg:col-span-5 lg:col-start-8 lg:self-end" data-reveal style={{ ["--d" as string]: 1 }}>
-            모두 사진에서 잰 cm로 계산합니다. 숫자는 모델이 쓰지 않고, 잴 수 없는 값은 &ldquo;재단 전에 재 주세요&rdquo;로 남깁니다.
+            AI는 사진에서 옷과 A4 용지를 찾는 데만 쓰고, 치수는 그 윤곽을 직접 재서 냅니다. 사진으로 잴 수 없는 곳은 숫자를 지어내지 않고 줄자로 재 달라고 알려 드립니다.
           </p>
         </div>
         <div className="mt-24 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
