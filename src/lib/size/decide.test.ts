@@ -21,8 +21,8 @@ test("the size whose points fit best wins, and the one that doesn't is named", (
   const length = d.best.checks.find((c) => c.key === "length")!;
   assert.equal(length.verdict, "small");
   assert.equal(length.diff, -3);
-  assert.match(d.sentences[0], /^M: /);
-  assert.ok(d.sentences.some((s) => s.startsWith("총장")), d.sentences.join("\n"));
+  assert.match(d.sentences[0].ko, /^M: /);
+  assert.ok(d.sentences.some((s) => s.ko.startsWith("총장") && s.en.startsWith("Length") && s.es.startsWith("Largo total")), d.sentences.map((s) => s.ko).join("\n"));
 });
 
 test("wanting it looser moves the choice up", () => {

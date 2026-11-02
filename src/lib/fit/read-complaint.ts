@@ -44,12 +44,12 @@ export const SCHEMA = {
 };
 
 export function prompt(garment: GarmentKind, text: string): string {
-  const list = COMPLAINTS.map((c) => `${c.id}: ${c.ko}`).join("\n");
+  const list = COMPLAINTS.map((c) => `${c.id}: ${c.label.en}`).join("\n");
   return `Someone describes what is wrong with their ${garment} when they wear it. Sort what they say into this list of known problems (id: what a wearer would say):
 ${list}
 other: anything that matches none of these
 
-Choose the closest id for each problem they describe. Copy their own words for it as the quote. If they wrote a length for it, copy that number as written; otherwise amount is null. Do not estimate or convert any number.
+They may write in any language. Choose the closest id for each problem they describe. Copy their own words for it as the quote. If they wrote a length for it, copy that number as written; otherwise amount is null. Do not estimate or convert any number.
 
 Their words:
 """${text}"""`;
@@ -62,7 +62,7 @@ export function parse(read: ReadComplaints, text: string, garment: GarmentKind):
     const def = COMPLAINTS.find((c) => c.id === it.complaint);
     const id = def && def.garments.includes(garment) ? def.id : "other";
     const n = it.amount === null ? NaN : Number(it.amount.replace(",", ".").replace(/[^\d.]/g, ""));
-    const amountCm = Number.isFinite(n) && n > 0 && n < 100 && written.includes(n) && def?.askKo ? n : undefined;
+    const amountCm = Number.isFinite(n) && n > 0 && n < 100 && written.includes(n) && def?.ask ? n : undefined;
     const quote = it.quote && text.includes(it.quote) ? it.quote : undefined;
     return { id, side: it.side === "none" ? undefined : it.side, amountCm, quote };
   });

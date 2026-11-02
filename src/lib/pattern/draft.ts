@@ -3,7 +3,8 @@
 
 import { draftBag, draftPants, draftSkirt } from "./garments/lower.ts";
 import { draftTop } from "./garments/top.ts";
-import { MEASURE_EN, withDefaults, type MeasuresOf } from "./measures.ts";
+import { L } from "../i18n/lang.ts";
+import { MEASURE_NAME, withDefaults, type MeasuresOf } from "./measures.ts";
 import type { Fabric, GarmentKind, Pattern } from "./types.ts";
 
 export interface DraftInput<K extends GarmentKind = GarmentKind> {
@@ -29,7 +30,16 @@ export function draft<K extends GarmentKind>(input: DraftInput<K>): Pattern {
           ? draftSkirt(measures as MeasuresOf["skirt"], input.elasticCm)
           : draftBag(measures as MeasuresOf["eco-bag"]);
   const notes = [...out.notes];
-  if (unmeasured.length) notes.push(`Not measured, set from typical values: ${unmeasured.map((k) => MEASURE_EN[k] ?? k).join(", ")}. Measure before cutting.`);
+  if (unmeasured.length) {
+    const list = (lang: "ko" | "en" | "es") => unmeasured.map((k) => MEASURE_NAME[k]?.[lang] ?? k).join(", ");
+    notes.push(
+      L(
+        `재지 않고 보통 값으로 둔 치수: ${list("ko")}. 재단 전에 재 주십시오.`,
+        `Not measured, set from typical values: ${list("en")}. Measure before cutting.`,
+        `Sin medir, con valores habituales: ${list("es")}. Mídelo antes de cortar.`,
+      ),
+    );
+  }
   return { garment: g, sizeLabel: input.sizeLabel ?? "Original", fabric: input.fabric, pieces: out.pieces, notes, measures: { ...values }, unmeasured };
 }
 

@@ -6,7 +6,9 @@ import { bounds, polygonArea, segDist } from "../geom/polygon.ts";
 import { grade, gradedLabel } from "../rules/grading.ts";
 import { draft } from "./draft.ts";
 import { layOut, pagesFor } from "./layout.ts";
+import { numbersIn } from "../rules/numbers.ts";
 import { patternPdf } from "./pdf.ts";
+import { readPdfFont } from "./pdf-font-node.ts";
 import { edgeDims, matchText, seamMatches } from "./dims.ts";
 import { cuttingLine, normalized } from "./seam.ts";
 import { seamLine, type Piece } from "./types.ts";
@@ -20,6 +22,7 @@ test("a rectangle gets each edge's own allowance, mitred at the corners", () => 
     id: "r",
     name: "R",
     nameKo: "R",
+    names: { ko: "R", en: "R", es: "R" },
     cut: { count: 1, onFold: false, mirror: false },
     edges: [
       { kind: "seam", pts: [[0, 0], [20, 0]] }, // top 1
@@ -72,7 +75,7 @@ test("drafted widths and lengths are the measured ones", () => {
   assert.ok(Math.abs(side[1][0] * 2 - TEE.hem) < 1e-6);
   const shoulder = front.edges.find((e) => e.kind === "shoulder")!.pts;
   assert.ok(Math.abs(shoulder[1][0] * 2 - TEE.shoulder) < 1e-6);
-  assert.ok(p.notes.some((n) => n.includes("Front neck drop")), "defaults are named");
+  assert.ok(p.notes.some((n) => n.en.includes("Front neck drop") && n.ko.includes("앞목깊이") && n.es.includes("escote delantero")), "defaults are named");
 });
 
 test("grading moves the measurements and the pieces follow", () => {
@@ -126,10 +129,12 @@ test("edge lengths on the pattern are the seam lines' own; seams sewn together a
   for (const d of edgeDims(front)) assert.ok(insidePolygon([d.at[0] + 0.7 * d.inward[0], d.at[1] + 0.7 * d.inward[1]], line), d.kind);
 
   const m = seamMatches(p);
-  const side = m.find((x) => x.en === "Side seam")!, cap = m.find((x) => x.en === "Sleeve into armhole")!;
+  const side = m.find((x) => x.name.en === "Side seam")!, cap = m.find((x) => x.name.en === "Sleeve into armhole")!;
   assert.ok(Math.abs(side.diff) < 0.05);
   assert.ok(Math.abs(cap.diff - 1.5) < 0.1, String(cap.diff)); // woven cap ease
   assert.match(matchText(cap, "en"), /ease 1\.5 cm/);
+  assert.match(matchText(cap, "ko"), /오그림 1\.5 cm/);
+  assert.match(matchText(cap, "es"), /embebido 1\.5 cm/);
   assert.equal(seamMatches(draft({ garment: "skirt", measures: { length: 60, hem: 50 }, fabric: "woven" })).length, 0);
 });
 
@@ -142,3 +147,31 @@ function insidePolygon([x, y]: Pt, poly: readonly Pt[]): boolean {
   }
   return inside;
 }
+
+test("every note says the same numbers in Korean, English and Spanish", () => {
+  const all = [
+    draft({ garment: "shirt", measures: TEE, fabric: "knit" }),
+    draft({ garment: "hoodie", measures: { ...TEE, sleeve: 62, sleeveOpening: 9 }, fabric: "knit" }),
+    draft({ garment: "pants", measures: { waist: 34, hip: 52, frontRise: 28, outseam: 98, thigh: 40, legOpening: 20 }, fabric: "woven" }),
+    draft({ garment: "skirt", measures: { length: 60, hem: 50 }, fabric: "woven" }),
+    draft({ garment: "eco-bag", measures: { width: 36, height: 40, handleLength: 55, gusset: 8 }, fabric: "woven" }),
+  ];
+  const nums = (t: string) => numbersIn(t).sort((a, b) => a - b);
+  for (const p of all) {
+    for (const n of p.notes) {
+      assert.deepEqual(nums(n.ko), nums(n.en), `${n.ko} / ${n.en}`);
+      assert.deepEqual(nums(n.es), nums(n.en), `${n.es} / ${n.en}`);
+    }
+    for (const piece of p.pieces) assert.ok(piece.names.ko && piece.names.en && piece.names.es, piece.id);
+  }
+});
+
+test("the PDF is written in Korean with the Korean font, and in Spanish with the standard one", async () => {
+  const p = draft({ garment: "t-shirt", measures: TEE, fabric: "knit" });
+  await assert.rejects(patternPdf(p, { lang: "ko" }), /Korean font/);
+  const ko = await patternPdf(p, { lang: "ko", font: await readPdfFont("ko") });
+  const es = await patternPdf(p, { lang: "es" });
+  for (const r of [ko, es]) assert.equal((await PDFDocument.load(r.bytes)).getPageCount(), r.pages[0] * r.pages[1] + 1);
+  // The subset keeps the Korean PDF small: the font adds well under the whole font file.
+  assert.ok(ko.bytes.length < es.bytes.length + 400_000, String(ko.bytes.length - es.bytes.length));
+});

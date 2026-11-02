@@ -14,7 +14,7 @@ test("body measurements become flat garment sizes with the fit's ease", () => {
   assert.equal(t.find((x) => x.key === "shoulder")!.cm, 45);
   assert.ok(!t.some((x) => x.key === "sleeve"), "a T-shirt's sleeve length is a style, not the arm");
   // Every number in the working is one it computed.
-  assert.deepEqual(numbersIn(chest.howKo), [92, 10, 102, 51]);
+  assert.deepEqual(numbersIn(chest.how.ko), [92, 10, 102, 51]);
 });
 
 test("a garment bigger than the body wants is taken in at the side seams, by the difference", () => {
@@ -26,16 +26,16 @@ test("a garment bigger than the body wants is taken in at the side seams, by the
   assert.equal(c.find((x) => x.key === "shoulder")!.verdict, "fits"); // 47 vs 47
   const alts = fromBody("t-shirt", c);
   const a = alts.find((x) => x.id === "body-chest")!;
-  assert.match(a.instructionKo, /단면 3 cm \(둘레 6 cm\).*각각 1\.5 cm/);
+  assert.match(a.instruction.ko, /단면 3 cm \(둘레 6 cm\).*각각 1\.5 cm/);
   assert.deepEqual(a.delta, { chest: -3 });
-  assert.equal(guarded(a).instructionKo, a.instructionKo);
+  assert.deepEqual(guarded(a).instruction, a.instruction);
 });
 
 test("letting out is limited to what a seam allowance can give", () => {
   const t = targetsFromBody("t-shirt", { chestGirth: 104 }, "regular", "knit"); // wants 57
   const a = fromBody("t-shirt", compare(t, TEE, "knit")).find((x) => x.id === "body-chest")!;
   assert.equal(a.difficulty, "hard");
-  assert.match(a.actionKo, /덧천/);
+  assert.match(a.action.ko, /덧천/);
 });
 
 test("a gathered skirt only has to pass over the hips", () => {
@@ -49,14 +49,15 @@ test("seated complaints follow the research: back rise default, cast opening wit
   assert.equal(back.amountCm, 5);
   assert.deepEqual(back.delta, { backRiseExtra: 5 });
   const measured = fromComplaint("pants", { id: "seat-back-drops", amountCm: 7 });
-  assert.match(measured.instructionKo, /7 cm 늘립니다/);
+  assert.match(measured.instruction.ko, /7 cm 늘립니다/);
   const cast = fromComplaint("pants", { id: "cast-leg", amountCm: 24, side: "left" });
-  assert.match(cast.instructionKo, /왼쪽 바지 옆선을 밑단에서 위로 29 cm/);
+  assert.match(cast.instruction.ko, /왼쪽 바지 옆선을 밑단에서 위로 29 cm/);
+  assert.match(cast.instruction.en, /left outseam 29 cm up from the hem/);
   assert.equal(cast.reversible, true);
   for (const c of COMPLAINTS) {
     for (const g of c.garments) {
-      const a = fromComplaint(g, { id: c.id, amountCm: c.askKo ? 3 : undefined });
-      assert.equal(guarded(a).instructionKo, a.instructionKo, `${c.id} on ${g}: ${a.instructionKo}`);
+      const a = fromComplaint(g, { id: c.id, amountCm: c.ask ? 3 : undefined });
+      assert.deepEqual(guarded(a).instruction, a.instruction, `${c.id} on ${g}: ${a.instruction.ko}`);
     }
   }
 });
@@ -101,9 +102,23 @@ test("the flat marks each alteration once, on the side the wearer named, in its 
   // The wearer's left leg is on the viewer's right from the front.
   const cast = front.tags.find((t) => t.n === 2)!;
   assert.ok(cast.anchors.every(([x]) => x > 0));
-  assert.equal(cast.text, "트임 29 cm");
+  assert.equal(cast.text.ko, "트임 29 cm");
   // Added fabric above the back waist is as tall as the amount.
   const top = Math.min(...back.add.flat().map(([, y]) => y));
   assert.ok(Math.abs(top + 5) < 1e-9, String(top));
   assert.ok(flatFor("eco-bag", { width: 40, height: 40, handleLength: 60 }, "woven", []) === null);
+});
+
+test("every alteration says the same numbers in Korean, English and Spanish", () => {
+  const sorted = (t: string) => numbersIn(t).sort((x, y) => x - y);
+  const t = targetsFromBody("pants", { waistGirth: 70, hipGirth: 110, thighGirth: 50, crotchDepth: 30, waistToAnkle: 100 }, "regular", "woven");
+  const fromB = fromBody("pants", compare(t, { waist: 40, hip: 50, frontRise: 28, outseam: 90, thigh: 35, legOpening: 20 }, "woven"));
+  const fromC = COMPLAINTS.flatMap((c) => c.garments.map((g) => fromComplaint(g, { id: c.id, side: "left", amountCm: c.ask ? 4 : undefined })));
+  assert.ok(fromB.length >= 4);
+  for (const a of [...fromB, ...fromC, fromComplaint("pants", { id: "other" })]) {
+    assert.deepEqual(sorted(a.instruction.en), sorted(a.instruction.ko), `${a.id} en: ${a.instruction.en}`);
+    assert.deepEqual(sorted(a.instruction.es), sorted(a.instruction.ko), `${a.id} es: ${a.instruction.es}`);
+    for (const l of ["ko", "en", "es"] as const) assert.ok(a.action[l] && a.part[l] && a.from[l], `${a.id} ${l}`);
+  }
+  for (const c of COMPLAINTS) assert.ok(c.label.en && c.label.es && (!c.ask || (c.ask.en && c.ask.es)), c.id);
 });

@@ -3,7 +3,8 @@
 // code, and each passes the number guard.
 
 import type { Fabric } from "../pattern/types.ts";
-import { PRIORITY, SIZE_KEY_KO, tolerance, type Fit, type SizeKey } from "../rules/fit-tolerance.ts";
+import { L, LANGS, type Local } from "../i18n/lang.ts";
+import { PRIORITY, SIZE_KEY_NAME, tolerance, type Fit, type SizeKey } from "../rules/fit-tolerance.ts";
 import { guardNumbers, numbersIn } from "../rules/numbers.ts";
 
 export interface SizeTable {
@@ -36,8 +37,8 @@ export interface SizeResult {
 }
 
 export type Decision =
-  | { ok: true; best: SizeResult; all: SizeResult[]; sentences: string[] }
-  | { ok: false; reason: "ask-basis" | "nothing-to-compare"; detail: string };
+  | { ok: true; best: SizeResult; all: SizeResult[]; sentences: Local[] }
+  | { ok: false; reason: "ask-basis" | "nothing-to-compare"; detail: Local };
 
 const WIDTH_KEYS: readonly SizeKey[] = ["chest", "hem", "waist", "hip", "thigh", "legOpening"];
 const half = (x: number) => Math.round(x * 2) / 2;
@@ -59,7 +60,15 @@ export function toFlatCm(table: SizeTable): SizeTable {
 
 export function decideSize(mine: Partial<Record<SizeKey, Mine>>, table: SizeTable, fabric: Fabric, fit: Fit): Decision {
   if (table.basis === "unknown" && table.sizes.some((s) => WIDTH_KEYS.some((k) => s.values[k] !== undefined))) {
-    return { ok: false, reason: "ask-basis", detail: "The table does not say whether widths are flat (단면) or around the body (둘레)." };
+    return {
+      ok: false,
+      reason: "ask-basis",
+      detail: L(
+        "표의 폭이 단면인지 둘레인지 표에 적혀 있지 않습니다.",
+        "The table doesn't say whether widths are measured flat or around the body.",
+        "La tabla no dice si los anchos se miden en plano o en contorno.",
+      ),
+    };
   }
   const flat = toFlatCm(table);
   // On a trouser table 총장 is the outseam; Spark may file it under either.
@@ -77,7 +86,7 @@ export function decideSize(mine: Partial<Record<SizeKey, Mine>>, table: SizeTabl
     }
     return { label: s.label, checks, fits: checks.filter((c) => c.verdict === "fits").length };
   });
-  if (all.every((r) => r.checks.length === 0)) return { ok: false, reason: "nothing-to-compare", detail: "No point of measure appears both in the table and on your garment." };
+  if (all.every((r) => r.checks.length === 0)) return { ok: false, reason: "nothing-to-compare", detail: L("표와 내 옷에 같은 측정 항목이 없습니다.", "The table and your garment have no measurement in common.", "La tabla y tu prenda no tienen ninguna medida en común.") };
 
   // Most points that fit; then the one whose most important point is closest to its window.
   const miss = (c: Check) => (c.verdict === "fits" ? 0 : c.verdict === "small" ? c.window[0] - c.diff : c.diff - c.window[1]);
@@ -92,22 +101,39 @@ export function decideSize(mine: Partial<Record<SizeKey, Mine>>, table: SizeTabl
   return { ok: true, best, all, sentences: sentences(best) };
 }
 
-// "M: 가슴단면 +1 맞음, 총장 −3 짧음". Built from the checks, then guarded.
-export function sentences(r: SizeResult): string[] {
-  const out: string[] = [];
+// "M: 가슴단면 +1 cm 맞음, 총장 −3 cm 짧음", in every language. Built from the checks, then
+// guarded: a sentence whose numbers fail in any language is dropped in all of them.
+const VERDICT: Record<"fits" | "small" | "big" | "short" | "long", Local> = {
+  fits: L("맞음", "fits", "queda bien"),
+  small: L("작음", "too small", "pequeño"),
+  big: L("큼", "too big", "grande"),
+  short: L("짧음", "too short", "corto"),
+  long: L("김", "too long", "largo"),
+};
+
+export function sentences(r: SizeResult): Local[] {
+  const out: Local[] = [];
   const sign = (d: number) => (d > 0 ? `+${d}` : d < 0 ? `−${Math.abs(d)}` : "0");
-  const word = (c: Check) => {
+  const word = (c: Check): Local => {
     const long = ["length", "sleeve", "outseam", "frontRise"].includes(c.key);
-    if (c.verdict === "fits") return "맞음";
-    if (c.verdict === "small") return long ? "짧음" : "작음";
-    return long ? "김" : "큼";
+    if (c.verdict === "fits") return VERDICT.fits;
+    if (c.verdict === "small") return long ? VERDICT.short : VERDICT.small;
+    return long ? VERDICT.long : VERDICT.big;
   };
-  out.push(`${r.label}: ` + r.checks.map((c) => `${SIZE_KEY_KO[c.key]} ${sign(c.diff)} cm ${word(c)}`).join(", "));
+  const each = (f: (lang: (typeof LANGS)[number]) => string): Local => L(f("ko"), f("en"), f("es"));
+  out.push(each((l) => `${r.label}: ` + r.checks.map((c) => `${SIZE_KEY_NAME[c.key][l]} ${sign(c.diff)} cm ${word(c)[l]}`).join(", ")));
   for (const c of r.checks.filter((x) => x.verdict !== "fits")) {
-    out.push(`${SIZE_KEY_KO[c.key]}: 표 ${c.table.toFixed(1)} cm, 내 옷 ${c.mine.toFixed(1)} cm (${sign(c.diff)} cm, 허용 ${sign(c.window[0])} ~ ${sign(c.window[1])} cm).`);
+    const [t, m, d, lo, hi] = [c.table.toFixed(1), c.mine.toFixed(1), sign(c.diff), sign(c.window[0]), sign(c.window[1])];
+    out.push(
+      L(
+        `${SIZE_KEY_NAME[c.key].ko}: 표 ${t} cm, 내 옷 ${m} cm (${d} cm, 허용 ${lo} ~ ${hi} cm).`,
+        `${SIZE_KEY_NAME[c.key].en}: table ${t} cm, your garment ${m} cm (${d} cm, allowed ${lo} to ${hi} cm).`,
+        `${SIZE_KEY_NAME[c.key].es}: tabla ${t} cm, tu prenda ${m} cm (${d} cm, margen de ${lo} a ${hi} cm).`,
+      ),
+    );
   }
   const allowed = r.checks.flatMap((c) => [Math.abs(c.diff), Number(c.table.toFixed(1)), Number(c.mine.toFixed(1)), Math.abs(c.window[0]), Math.abs(c.window[1]), 0]);
   // Size labels can carry numbers (95, 100, 28): they are the table's, so they are allowed too.
   allowed.push(...numbersIn(r.label));
-  return out.filter((s) => guardNumbers(s, allowed));
+  return out.filter((s) => LANGS.every((l) => guardNumbers(s[l], allowed)));
 }

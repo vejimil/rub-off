@@ -8,28 +8,29 @@ import { simplifyClosed } from "../geom/polygon.ts";
 import type { Pt } from "../geom/point.ts";
 import { cachedImageConcept, imageMasks, SAM_IMAGE_USD, segmentImageConcept } from "../meta/sam-image.ts";
 import { a4Scale, garmentPlane, type A4Scale } from "../scale/a4.ts";
-import { PAPER, type Prepared } from "./run.ts";
+import { L, type Local } from "../i18n/lang.ts";
+import { NEEDS_ANALYSIS, PAPER, type Prepared } from "./run.ts";
 
 // [A] "fabric" against "cloth" to be compared on a real photo.
 export const FABRIC = "fabric";
 const MIN_SCRAP_CM2 = 50;
 
 export type FabricRun =
-  | { ok: false; stage: "cost" | "segment" | "scale"; detail: string; pendingConcepts?: string[]; usd?: number }
+  | { ok: false; stage: "cost" | "segment" | "scale"; detail: Local; pendingConcepts?: string[]; usd?: number }
   | { ok: true; scrapsCm: Pt[][]; cmToPx: Mat3; paperPx: Pt[]; rel: number };
 
 export async function runFabric(photo: Prepared, cacheRoot: string, allowApi: boolean): Promise<FabricRun> {
   const cacheDir = path.join(cacheRoot, photo.sha256.slice(0, 16));
   const pending: string[] = [];
   for (const c of [FABRIC, PAPER]) if (!(await cachedImageConcept(cacheDir, c))) pending.push(c);
-  if (pending.length && !allowApi) return { ok: false, stage: "cost", detail: `SAM would run ${pending.length} concept(s)`, pendingConcepts: pending, usd: pending.length * SAM_IMAGE_USD };
+  if (pending.length && !allowApi) return { ok: false, stage: "cost", detail: NEEDS_ANALYSIS, pendingConcepts: pending, usd: pending.length * SAM_IMAGE_USD };
 
   const image = { bytes: photo.bytes, mime: "image/jpeg" as const };
   const [fab, pap] = await Promise.all([segmentImageConcept(image, FABRIC, cacheDir), segmentImageConcept(image, PAPER, cacheDir)]);
   const good = (r: typeof fab) => imageMasks(r).filter((m) => (m.confidence ?? 1) >= 0.5);
-  if (good(fab).length === 0) return { ok: false, stage: "segment", detail: "사진에서 원단을 찾지 못했습니다. 원단을 바닥에 펴고 전체가 보이게 다시 찍어 주십시오." };
+  if (good(fab).length === 0) return { ok: false, stage: "segment", detail: L("사진에서 원단을 찾지 못했습니다. 원단을 바닥에 펴고 전체가 보이게 다시 찍어 주십시오.", "Couldn't find the fabric in the photo. Lay it flat on the floor and take it again with all of it in view.", "No encontramos la tela en la foto. Extiéndela en el suelo y vuelve a hacer la foto con toda la tela a la vista.") };
 
-  let scale: A4Scale | null = null, paperGrid: Grid | null = null, why = "A4 용지를 찾지 못했습니다.";
+  let scale: A4Scale | null = null, paperGrid: Grid | null = null, why: Local = L("A4 용지를 찾지 못했습니다.", "No A4 sheet found.", "No encontramos la hoja A4.");
   for (const p of good(pap).sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))) {
     const g = rasterize(p, photo.width, photo.height);
     const s = a4Scale(g);

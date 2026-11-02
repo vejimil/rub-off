@@ -12,6 +12,7 @@ import { ELASTIC_CM } from "../pattern/garments/lower.ts";
 import { CUFF_HEIGHT } from "../pattern/garments/top.ts";
 import { withDefaults, type MeasuresOf } from "../pattern/measures.ts";
 import type { Fabric, GarmentKind } from "../pattern/types.ts";
+import { L, type Local } from "../i18n/lang.ts";
 import type { Alteration } from "./alter.ts";
 
 export type View = "front" | "back";
@@ -19,7 +20,7 @@ export type View = "front" | "back";
 export interface Tag {
   n: number; // the work order's number
   anchors: Pt[];
-  text: string;
+  text: Local;
   at?: Pt; // where the marker sits in the margin, set by placeTags
 }
 
@@ -197,6 +198,8 @@ export function baseFor(garment: GarmentKind, measures: Record<string, number>, 
 }
 
 const NOMINAL = 2; // drawn size of an amount the tailor will measure
+const TO_MEASURE = L("재서 정함", "to measure", "a medir");
+const PATCH = L("덧댐", "patch", "refuerzo");
 
 // The flat's two views with the work order marked on them.
 export function flatFor(garment: GarmentKind, measures: Record<string, number>, fabric: Fabric, order: readonly Alteration[]): FlatView[] | null {
@@ -214,9 +217,10 @@ export function flatFor(garment: GarmentKind, measures: Record<string, number>, 
 function mark(base: Base, views: Record<View, FlatView>, a: Alteration, n: number) {
   const amt = a.amountCm ?? NOMINAL;
   const known = a.amountCm !== undefined;
-  const text = (sign: "−" | "+" | "") => (known ? `${sign}${a.amountCm} cm` : "재서 정함");
+  const same = (s: string) => L(s, s, s);
+  const text = (sign: "−" | "+" | "") => (known ? same(`${sign}${a.amountCm} cm`) : TO_MEASURE);
   // A symmetric mark is tagged on one side only, so the leader doesn't cross the garment.
-  const tag = (view: View, anchors: Pt[], t: string) => {
+  const tag = (view: View, anchors: Pt[], t: Local) => {
     const right = anchors.filter((p) => p[0] >= -1e-6);
     views[view].tags.push({ n, anchors: right.length && right.length < anchors.length ? right : anchors, text: t });
   };
@@ -297,7 +301,8 @@ function mark(base: Base, views: Record<View, FlatView>, a: Alteration, n: numbe
     case "waist-loose":
       if (base.waist) {
         views.front.marks.push([[-W, base.waist.band / 2], [W, base.waist.band / 2]]);
-        tag("front", [[W, base.waist.band / 2]], known ? `고무줄 ${id === "waist" && dir > 0 ? "+" : "−"}${id === "waist" ? 2 * a.amountCm! : a.amountCm} cm` : "재서 정함");
+        const n = `${id === "waist" && dir > 0 ? "+" : "−"}${id === "waist" ? 2 * a.amountCm! : a.amountCm} cm`;
+        tag("front", [[W, base.waist.band / 2]], known ? L(`고무줄 ${n}`, `elastic ${n}`, `elástico ${n}`) : TO_MEASURE);
       }
       return;
     case "frontRise":
@@ -320,7 +325,7 @@ function mark(base: Base, views: Record<View, FlatView>, a: Alteration, n: numbe
       const y = base.waist.band + 3, cx = base.hip / 2;
       const pocket = (x: number): Pt[] => [[x - 6.5, y], [x + 6.5, y], [x + 6, y + 14], [x, y + 15.5], [x - 6, y + 14]];
       views.back.remove.push(pocket(cx), pocket(-cx));
-      return tag("back", [[cx, y + 7], [-cx, y + 7]], "떼기");
+      return tag("back", [[cx, y + 7], [-cx, y + 7]], L("떼기", "remove", "quitar"));
     }
     case "cast-leg": {
       if (!base.legs) return;
@@ -336,7 +341,7 @@ function mark(base: Base, views: Record<View, FlatView>, a: Alteration, n: numbe
           const p = pointAlong(leg, d);
           views.front.markDots.push(sg > 0 ? p : [-p[0], p[1]]);
         }
-        tag("front", [line[Math.floor(line.length / 2)]], known ? `트임 ${a.amountCm} cm` : "재서 정함");
+        tag("front", [line[Math.floor(line.length / 2)]], known ? L(`트임 ${a.amountCm} cm`, `open ${a.amountCm} cm`, `abrir ${a.amountCm} cm`) : TO_MEASURE);
       }
       return;
     }
@@ -344,7 +349,7 @@ function mark(base: Base, views: Record<View, FlatView>, a: Alteration, n: numbe
       if (!base.waist) return;
       const loops = [-W + 3, 0, W - 3].map((x): Pt[] => [[x - 1, 0], [x - 1, 4], [x + 1, 4], [x + 1, 0]]);
       views.back.marks.push(...loops);
-      return tag("back", loops.map((l) => l[1]), "고리");
+      return tag("back", loops.map((l) => l[1]), L("고리", "loops", "presillas"));
     }
     case "seat-top-bunches": {
       const [l, r] = base.hems[0];
@@ -359,22 +364,22 @@ function mark(base: Base, views: Record<View, FlatView>, a: Alteration, n: numbe
       const c = add(lerp(s.sp, s.top, 0.6), scale([-s.axis[1], s.axis[0]], dist(s.top, s.cuff) / 2));
       const patch = ellipse(c, s.axis, 5, 3.5);
       views.back.add.push(patch, mirror(patch));
-      return tag("back", [c, [-c[0], c[1]]], "덧댐");
+      return tag("back", [c, [-c[0], c[1]]], PATCH);
     }
     case "crutch-underarm": {
       if (!base.pit) return;
       const patch = ellipse(base.pit, [0, 1], 4, 3);
       views.front.add.push(patch, mirror(patch));
-      return tag("front", [base.pit, [-base.pit[0], base.pit[1]]], "덧댐");
+      return tag("front", [base.pit, [-base.pit[0], base.pit[1]]], PATCH);
     }
     case "hard-fasten": {
       if (base.kind === "top") {
         const dots = base.front.dots.length ? base.front.dots : [[0, base.cfTop + 6] as Pt];
         views.front.markDots.push(...dots);
-        return tag("front", [dots[Math.floor(dots.length / 2)]], "자석");
+        return tag("front", [dots[Math.floor(dots.length / 2)]], L("자석", "magnets", "imanes"));
       }
       views.front.marks.push([[-1, 0], [-1, 5], [1, 5], [1, 0]]);
-      return tag("front", [[0, 5]], "고리");
+      return tag("front", [[0, 5]], L("고리", "pull", "tirador"));
     }
     default:
       return;

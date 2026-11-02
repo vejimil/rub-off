@@ -46,6 +46,7 @@ Everything in this repository was written during the hackathon. The commit histo
 - [OpenAI Node SDK](https://github.com/openai/openai-node), used as the client for the OpenAI-compatible Meta Model API
 - [`@meta-sam/parser`](https://www.npmjs.com/package/@meta-sam/parser), Meta's parser for SAM 3.1 output and masks
 - [pdf-lib](https://pdf-lib.js.org) for writing the PDF, [clipper-lib](https://www.npmjs.com/package/clipper-lib) for polygon union in the seam allowance, [sharp](https://sharp.pixelplumbing.com) for preparing photos
+- [@pdf-lib/fontkit](https://github.com/Hopding/fontkit) to embed a font in the PDF, and [Noto Sans KR](https://fonts.google.com/noto/specimen/Noto+Sans+KR) (SIL Open Font License 1.1, licence in `public/fonts/`) for Korean patterns, cut down to the 2,350 KS X 1001 Hangul syllables plus Latin
 - Meta models via [Meta Model API](https://dev.meta.ai): Muse Spark, Muse Image, SAM 3.1
 
 ## Run locally

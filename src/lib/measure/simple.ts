@@ -3,6 +3,7 @@
 
 import type { Pt } from "../geom/point.ts";
 import { polygonArea, perimeter, rotation, translation } from "../geom/polygon.ts";
+import { L, type Local } from "../i18n/lang.ts";
 import type { BagMeasures, SkirtMeasures } from "../pattern/measures.ts";
 import { argBest, compose, dist, inRange, quarterTurns, transform, valueOf, widthAt, type Measured, type Shape, type Value } from "./shape.ts";
 
@@ -34,7 +35,7 @@ function upright(outline: readonly Pt[], widerDown: boolean) {
   return quarterTurns(best.k);
 }
 
-export function measureSkirt(shape: Shape): Measured<SkirtKey> | { ok: false; detail: string } {
+export function measureSkirt(shape: Shape): Measured<SkirtKey> | { ok: false; detail: Local } {
   let m = upright(shape.outline, true);
   let poly = transform(m, shape.outline);
   const corners = (p: Pt[]) => {
@@ -55,7 +56,7 @@ export function measureSkirt(shape: Shape): Measured<SkirtKey> | { ok: false; de
   m = compose(translation(-(poly[c.wl][0] + poly[c.wr][0]) / 2, -(poly[c.wl][1] + poly[c.wr][1]) / 2), m);
   poly = transform(m, shape.outline);
   c = corners(poly);
-  if (new Set([c.wl, c.wr, c.hl, c.hr]).size < 4) return { ok: false, detail: "허리와 밑단 모서리를 찾지 못했습니다." };
+  if (new Set([c.wl, c.wr, c.hl, c.hr]).size < 4) return { ok: false, detail: L("허리와 밑단 모서리를 찾지 못했습니다.", "Couldn't find the corners of the waist and the hem.", "No encontramos las esquinas de la cintura y del bajo.") };
   const [wl, wr, hl, hr] = [poly[c.wl], poly[c.wr], poly[c.hl], poly[c.hr]];
   const hemY = (hl[1] + hr[1]) / 2;
   const v = (cm: number): Value => valueOf(cm, shape);
@@ -79,7 +80,7 @@ export type BagKey = Exclude<keyof BagMeasures, "gusset">;
 const BAG_RANGES: Record<BagKey, [number, number]> = { width: [10, 80], height: [10, 80], handleLength: [10, 150], handleWidth: [1, 10] };
 const BODY_SHARE = 0.85; // the body is near rectangular; the handles' arch is much narrower
 
-export function measureBag(shape: Shape, handles: Pt[][]): Measured<BagKey> | { ok: false; detail: string } {
+export function measureBag(shape: Shape, handles: Pt[][]): Measured<BagKey> | { ok: false; detail: Local } {
   // Body at the bottom, handles on top: the narrow end goes up.
   const m0 = upright(shape.outline, true);
   let poly = transform(m0, shape.outline);
@@ -116,6 +117,8 @@ export function measureBag(shape: Shape, handles: Pt[][]): Measured<BagKey> | { 
     segments: w ? [{ key: "width", a: [w.left, height / 2], b: [w.right, height / 2] }, { key: "height", a: [(w.left + w.right) / 2, 0], b: [(w.left + w.right) / 2, height] }] : [],
     outline: poly,
     frame: m,
-    notes: [...shape.notes, ...(straps.length ? ["손잡이 길이와 폭은 손잡이 마스크 넓이로 추정했습니다. 재단 전에 재 주십시오."] : ["손잡이를 찾지 못했습니다. 손잡이 길이를 입력해 주십시오."])],
+    notes: [...shape.notes, ...(straps.length
+        ? [L("손잡이 길이와 폭은 사진에 보이는 손잡이 넓이로 추정했습니다. 재단 전에 재 주십시오.", "Handle length and width are estimated from the handles' area in the photo. Measure them before cutting.", "El largo y el ancho de las asas se estimaron por su superficie en la foto. Mídelos antes de cortar.")]
+        : [L("손잡이를 찾지 못했습니다. 손잡이 길이를 입력해 주십시오.", "Couldn't find the handles. Enter the handle length.", "No encontramos las asas. Escribe el largo del asa.")])],
   };
 }

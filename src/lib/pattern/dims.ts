@@ -5,42 +5,25 @@
 
 import { pointAlong, polylineLength, sub, type Pt } from "../geom/point.ts";
 import { normalized } from "./seam.ts";
+import { L, type Lang, type Local } from "../i18n/lang.ts";
 import type { EdgeKind, Pattern, Piece } from "./types.ts";
 
-export const EDGE_EN: Record<EdgeKind, string> = {
-  side: "Side",
-  shoulder: "Shoulder",
-  armhole: "Armhole",
-  "sleeve-cap": "Cap",
-  underarm: "Underarm",
-  hem: "Hem",
-  "sleeve-hem": "Hem",
-  neck: "Neck",
-  waist: "Waist",
-  casing: "Waist",
-  "bag-top": "Top",
-  inseam: "Inseam",
-  crotch: "Crotch",
-  seam: "",
-  fold: "Fold",
-};
-
-export const EDGE_KO: Record<EdgeKind, string> = {
-  side: "옆선",
-  shoulder: "어깨",
-  armhole: "진동",
-  "sleeve-cap": "소매산",
-  underarm: "소매 밑선",
-  hem: "밑단",
-  "sleeve-hem": "소매단",
-  neck: "목둘레",
-  waist: "허리",
-  casing: "허리",
-  "bag-top": "입구",
-  inseam: "안솔기",
-  crotch: "밑위",
-  seam: "",
-  fold: "골선",
+export const EDGE_NAME: Record<EdgeKind, Local> = {
+  side: L("옆선", "Side", "Costado"),
+  shoulder: L("어깨", "Shoulder", "Hombro"),
+  armhole: L("진동", "Armhole", "Sisa"),
+  "sleeve-cap": L("소매산", "Cap", "Copa"),
+  underarm: L("소매 밑선", "Underarm", "Bajo brazo"),
+  hem: L("밑단", "Hem", "Bajo"),
+  "sleeve-hem": L("소매단", "Hem", "Bajo"),
+  neck: L("목둘레", "Neck", "Escote"),
+  waist: L("허리", "Waist", "Cintura"),
+  casing: L("허리", "Waist", "Cintura"),
+  "bag-top": L("입구", "Top", "Boca"),
+  inseam: L("안솔기", "Inseam", "Entrepierna"),
+  crotch: L("밑위", "Crotch", "Tiro"),
+  seam: L("", "", ""),
+  fold: L("골선", "Fold", "Doblez"),
 };
 
 export interface EdgeDim {
@@ -67,10 +50,9 @@ export function edgeDims(piece: Piece): EdgeDim[] {
 }
 
 export interface SeamMatch {
-  en: string; // "Side seam"
-  ko: string;
-  a: { en: string; ko: string; cm: number };
-  b: { en: string; ko: string; cm: number };
+  name: Local; // "Side seam"
+  a: { name: Local; cm: number };
+  b: { name: Local; cm: number };
   // b − a. For a sleeve cap it is the ease; between front and back it should be about 0.
   diff: number;
   ease: boolean;
@@ -79,39 +61,63 @@ export interface SeamMatch {
 const lengthOf = (piece: Piece | undefined, kind: EdgeKind) =>
   piece ? piece.edges.filter((e) => e.kind === kind).reduce((s, e) => s + polylineLength(e.pts), 0) : 0;
 
+const FRONT = L("앞", "front", "delantero"), BACK = L("뒤", "back", "trasero");
+
 // Seams sewn to each other, from the pieces that share them.
 export function seamMatches(pattern: Pick<Pattern, "pieces">): SeamMatch[] {
   const by = (id: string) => pattern.pieces.find((p) => p.id === id);
   const front = by("front"), back = by("back"), sleeve = by("sleeve"), hood = by("hood");
   const out: SeamMatch[] = [];
-  const pair = (kind: EdgeKind, en: string, ko: string) => {
+  const pair = (kind: EdgeKind, name: Local) => {
     const a = lengthOf(front, kind), b = lengthOf(back, kind);
-    if (a > 0 && b > 0) out.push({ en, ko, a: { en: "front", ko: "앞", cm: a }, b: { en: "back", ko: "뒤", cm: b }, diff: b - a, ease: false });
+    if (a > 0 && b > 0) out.push({ name, a: { name: FRONT, cm: a }, b: { name: BACK, cm: b }, diff: b - a, ease: false });
   };
-  pair("shoulder", "Shoulder seam", "어깨선");
-  pair("side", "Side seam", "옆선");
-  pair("inseam", "Inseam", "안솔기");
+  pair("shoulder", L("어깨선", "Shoulder seam", "Costura de hombro"));
+  pair("side", L("옆선", "Side seam", "Costado"));
+  pair("inseam", L("안솔기", "Inseam", "Entrepierna"));
   const armhole = lengthOf(front, "armhole") + lengthOf(back, "armhole");
   const cap = lengthOf(sleeve, "sleeve-cap");
   if (armhole > 0 && cap > 0) {
-    out.push({ en: "Sleeve into armhole", ko: "소매 달기", a: { en: "armhole, front + back", ko: "진동 앞+뒤", cm: armhole }, b: { en: "sleeve cap", ko: "소매산", cm: cap }, diff: cap - armhole, ease: true });
+    out.push({
+      name: L("소매 달기", "Sleeve into armhole", "Montar la manga"),
+      a: { name: L("진동 앞+뒤", "armhole, front + back", "sisa, delantero + trasero"), cm: armhole },
+      b: { name: L("소매산", "sleeve cap", "copa de manga"), cm: cap },
+      diff: cap - armhole,
+      ease: true,
+    });
   }
   const neck = lengthOf(front, "neck") + lengthOf(back, "neck");
   const hoodNeck = lengthOf(hood, "neck");
   if (neck > 0 && hoodNeck > 0) {
-    out.push({ en: "Hood into neckline", ko: "모자 달기", a: { en: "neckline, front + back", ko: "목둘레 앞+뒤", cm: neck }, b: { en: "hood", ko: "모자", cm: hoodNeck }, diff: hoodNeck - neck, ease: true });
+    out.push({
+      name: L("모자 달기", "Hood into neckline", "Montar la capucha"),
+      a: { name: L("목둘레 앞+뒤", "neckline, front + back", "escote, delantero + trasero"), cm: neck },
+      b: { name: L("모자", "hood", "capucha"), cm: hoodNeck },
+      diff: hoodNeck - neck,
+      ease: true,
+    });
   }
   return out;
 }
 
 const f1 = (x: number) => (Math.abs(x) < 0.05 ? 0 : x).toFixed(1); // no "-0.0"
 
-export function matchText(m: SeamMatch, lang: "en" | "ko"): string {
-  const L = lang === "en" ? { name: m.en, a: m.a.en, b: m.b.en } : { name: m.ko, a: m.a.ko, b: m.b.ko };
-  const head = `${L.name}: ${L.a} ${f1(m.a.cm)} / ${L.b} ${f1(m.b.cm)} cm`;
+export function matchText(m: SeamMatch, lang: Lang): string {
+  const head = `${m.name[lang]}: ${m.a.name[lang]} ${f1(m.a.cm)} / ${m.b.name[lang]} ${f1(m.b.cm)} cm`;
   const d = Math.abs(m.diff);
-  if (m.ease && d >= 0.05) return lang === "en" ? `${head}, ease ${f1(m.diff)} cm` : `${head}, 오그림 ${f1(m.diff)} cm`;
-  if (d < 0.05) return lang === "en" ? `${head}, equal` : `${head}, 같음`;
-  const longer = m.diff > 0 ? L.b : L.a;
-  return lang === "en" ? `${head}, ${longer} ${f1(d)} cm longer` : `${head}, ${longer === "뒤" ? "뒤가" : "앞이"} ${f1(d)} cm 김`;
+  if (m.ease && d >= 0.05) return `${head}, ${L("오그림", "ease", "embebido")[lang]} ${f1(m.diff)} cm`;
+  if (d < 0.05) return `${head}, ${L("같음", "equal", "iguales")[lang]}`;
+  const longer = m.diff > 0 ? m.b.name : m.a.name;
+  if (lang === "ko") return `${head}, ${longer.ko === "뒤" ? "뒤가" : "앞이"} ${f1(d)} cm 김`;
+  return lang === "en" ? `${head}, ${longer.en} ${f1(d)} cm longer` : `${head}, ${longer.es} ${f1(d)} cm más largo`;
+}
+
+// "Cut 1 on fold", "골선 1장", "Cortar 2 (simétricas)". The list form (inside brackets on the PDF
+// cover) is lower case with a comma: "cut 2, mirror".
+export function cutText(p: Piece, lang: Lang, list = false): string {
+  const { count, onFold, mirror } = p.cut;
+  const m = L("대칭", "mirror", "simétricas")[lang];
+  const extra = mirror ? (list ? `, ${m}` : ` (${m})`) : "";
+  const t = onFold ? L(`골선 ${count}장`, `Cut ${count} on fold`, `Cortar ${count} al doblez`)[lang] : L(`${count}장`, `Cut ${count}`, `Cortar ${count}`)[lang] + extra;
+  return list && lang !== "ko" ? t[0].toLowerCase() + t.slice(1) : t;
 }

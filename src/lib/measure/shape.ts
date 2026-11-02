@@ -4,7 +4,10 @@
 import { area, fillHoles, largestComponent, traceOuter, union, type Grid } from "../geom/grid.ts";
 import { dist, type Pt } from "../geom/point.ts";
 import { applyAffine, compose, crossings, rotation, simplifyClosed, type Affine } from "../geom/polygon.ts";
+import { L, type Local } from "../i18n/lang.ts";
 import { confidenceOf, garmentPlane, type A4Scale, type Confidence, type Plane, type ScaleFailure } from "../scale/a4.ts";
+
+export const NO_GARMENT = L("옷을 찾지 못했습니다.", "Couldn't find the garment.", "No encontramos la prenda.");
 
 export const SIMPLIFY_CM = 0.3;
 const EDGE_PX = 2; // a mask edge is good to about this many pixels at each end of a measurement
@@ -20,7 +23,7 @@ export interface Shape {
   outline: Pt[]; // cm on the floor plane, simplified, clockwise on screen
   plane: Plane;
   pxPerCm: number;
-  notes: string[];
+  notes: Local[];
 }
 
 export interface Measured<K extends string = string> {
@@ -31,11 +34,11 @@ export interface Measured<K extends string = string> {
   outline: Pt[]; // the same frame
   frame: Affine; // floor-plane cm → this frame
   refused: { key: K; cm: number; range: [number, number] }[]; // out of physical range, not shown
-  notes: string[];
+  notes: Local[];
 }
 
 export function shapeFromMasks(garment: Grid, paper: Grid, scale: A4Scale): Shape | ScaleFailure {
-  const notes: string[] = [];
+  const notes: Local[] = [];
   // A sheet lying on the garment counts as garment where it mostly overlaps, so it can't cut a
   // notch into the outline. A sheet beside the garment is left out.
   const filled = fillHoles(largestComponent(garment));
@@ -47,8 +50,11 @@ export function shapeFromMasks(garment: Grid, paper: Grid, scale: A4Scale): Shap
   }
   const onGarment = inside / Math.max(1, paperArea) >= 0.5;
   const shape = onGarment ? fillHoles(union(filled, paper)) : filled;
-  if (onGarment) notes.push(`A4 용지가 옷 위에 놓여 있어(${Math.round((100 * inside) / paperArea)}% 겹침) 옷의 일부로 보고 윤곽을 잡았습니다.`);
-  if (area(shape) === 0) return { ok: false, reason: "no-paper", detail: "옷을 찾지 못했습니다." };
+  if (onGarment) {
+    const pct = Math.round((100 * inside) / paperArea);
+    notes.push(L(`A4 용지가 옷 위에 놓여 있어(${pct}% 겹침) 옷의 일부로 보고 윤곽을 잡았습니다.`, `The A4 sheet lies on the garment (${pct}% overlap), so it was counted as part of the outline.`, `La hoja A4 está sobre la prenda (${pct}% superpuesta), así que se tomó como parte del contorno.`));
+  }
+  if (area(shape) === 0) return { ok: false, reason: "no-paper", detail: NO_GARMENT };
   const contourPx = traceOuter(largestComponent(shape));
   const plane = garmentPlane(scale, contourPx);
   if ("ok" in plane) return plane;
@@ -58,7 +64,7 @@ export function shapeFromMasks(garment: Grid, paper: Grid, scale: A4Scale): Shap
 
 // No A4 in the photo: a plain scale of `pxPerCm`, with no perspective correction, so `rel` must
 // carry that.
-export function shapeWithPlainScale(garment: Grid, pxPerCm: number, rel: number, notes: string[] = []): Shape | null {
+export function shapeWithPlainScale(garment: Grid, pxPerCm: number, rel: number, notes: Local[] = []): Shape | null {
   const shape = fillHoles(largestComponent(garment));
   if (area(shape) === 0) return null;
   const contourPx = traceOuter(shape);

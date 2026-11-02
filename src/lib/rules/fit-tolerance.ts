@@ -3,6 +3,7 @@
 // The wanted fit shifts the window: "looser" wants the shop's garment bigger, "tighter" smaller.
 // [A] Drafted by Claude from common fitting practice; the owner confirms.
 
+import { L, type Local } from "../i18n/lang.ts";
 import type { Fabric } from "../pattern/types.ts";
 
 export type Fit = "same" | "looser" | "tighter";
@@ -46,16 +47,16 @@ export function tolerance(key: SizeKey, fabric: Fabric, fit: Fit): [number, numb
 // Points of measure that decide first when sizes tie, most important first.
 export const PRIORITY: readonly SizeKey[] = ["chest", "shoulder", "hip", "waist", "length", "sleeve", "outseam", "thigh", "hem", "frontRise", "legOpening"];
 
-export const SIZE_KEY_KO: Record<SizeKey, string> = {
-  chest: "가슴단면",
-  length: "총장",
-  shoulder: "어깨너비",
-  sleeve: "소매길이",
-  hem: "밑단단면",
-  waist: "허리단면",
-  hip: "엉덩이단면",
-  thigh: "허벅지단면",
-  frontRise: "밑위",
-  outseam: "바지총장",
-  legOpening: "밑단단면",
+export const SIZE_KEY_NAME: Record<SizeKey, Local> = {
+  chest: L("가슴단면", "Chest (flat)", "Pecho (plano)"),
+  length: L("총장", "Length", "Largo total"),
+  shoulder: L("어깨너비", "Shoulder", "Hombros"),
+  sleeve: L("소매길이", "Sleeve", "Largo de manga"),
+  hem: L("밑단단면", "Hem (flat)", "Bajo (plano)"),
+  waist: L("허리단면", "Waist (flat)", "Cintura (plano)"),
+  hip: L("엉덩이단면", "Hip (flat)", "Cadera (plano)"),
+  thigh: L("허벅지단면", "Thigh (flat)", "Muslo (plano)"),
+  frontRise: L("밑위", "Rise", "Tiro"),
+  outseam: L("바지총장", "Outseam", "Largo exterior"),
+  legOpening: L("밑단단면", "Leg opening (flat)", "Bajo de pierna (plano)"),
 };

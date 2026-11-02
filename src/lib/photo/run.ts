@@ -15,7 +15,9 @@ import { measureBag, measureSkirt } from "../measure/simple.ts";
 import { measureTop, type TopOptions } from "../measure/top.ts";
 import { cachedLayoutCheck, layoutCheck, usableSleeves, WRINKLE_REL, type LayoutCheck } from "./layout-check.ts";
 import { draft } from "../pattern/draft.ts";
-import { MEASURE_KO, type MeasuresOf } from "../pattern/measures.ts";
+import { L, type Local } from "../i18n/lang.ts";
+import { MEASURE_NAME, type MeasuresOf } from "../pattern/measures.ts";
+import { NO_GARMENT } from "../measure/shape.ts";
 import type { Fabric, GarmentKind, Pattern } from "../pattern/types.ts";
 import { a4Scale, type A4Scale } from "../scale/a4.ts";
 
@@ -34,6 +36,8 @@ export const CONCEPTS: Record<GarmentKind, { garment: string; parts: string[] }>
 };
 export const PAPER = "paper";
 const SPARK_CHECK_USD = 0.01; // one layout check, a 1024 px image and a short answer
+// A photo not analysed yet, when analysis isn't allowed (the routes then check the visitor's limits).
+export const NEEDS_ANALYSIS = L("이 사진은 아직 분석하지 않았습니다.", "This photo hasn't been analysed yet.", "Esta foto aún no se ha analizado.");
 const EDGE_PX = 4;
 
 export interface Prepared {
@@ -66,7 +70,7 @@ export interface PhotoRunInput {
 }
 
 export type PhotoRun =
-  | { ok: false; stage: "cost" | "segment" | "scale" | "measure" | "draft"; detail: string; pendingConcepts?: string[]; usd?: number; missingA4?: boolean }
+  | { ok: false; stage: "cost" | "segment" | "scale" | "measure" | "draft"; detail: Local; pendingConcepts?: string[]; usd?: number; missingA4?: boolean }
   | {
       ok: true;
       garment: GarmentKind;
@@ -89,7 +93,7 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
   const pending: string[] = [];
   for (const c of all) if (!(await cachedImageConcept(cacheDir, c))) pending.push(c);
   if (pending.length && !input.allowApi) {
-    return { ok: false, stage: "cost", detail: `SAM would run ${pending.length} concept(s)`, pendingConcepts: pending, usd: pending.length * SAM_IMAGE_USD + SPARK_CHECK_USD };
+    return { ok: false, stage: "cost", detail: NEEDS_ANALYSIS, pendingConcepts: pending, usd: pending.length * SAM_IMAGE_USD + SPARK_CHECK_USD };
   }
 
   const image = { bytes: photo.bytes, mime: "image/jpeg" as const };
@@ -100,20 +104,20 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
   };
   const toGrid = (ms: ReturnType<typeof masksOfWord>): Grid =>
     ms.length ? unionAll(ms.map((m) => rasterize(m, photo.width, photo.height)), photo.width, photo.height) : emptyGrid(photo.width, photo.height);
-  if (masksOfWord(words.garment).length === 0) return { ok: false, stage: "segment", detail: "사진에서 옷을 찾지 못했습니다. 옷 전체가 보이게, 무늬 없는 바닥에서 다시 찍어 주십시오." };
-  const notes: string[] = [];
+  if (masksOfWord(words.garment).length === 0) return { ok: false, stage: "segment", detail: L("사진에서 옷을 찾지 못했습니다. 옷 전체가 보이게, 무늬 없는 바닥에서 다시 찍어 주십시오.", "Couldn't find the garment in the photo. Take it again on a plain floor with the whole garment in view.", "No encontramos la prenda en la foto. Vuelve a hacerla sobre un suelo liso, con la prenda entera a la vista.") };
+  const notes: Local[] = [];
 
   // A hood comes off the body outline (it would hide the neck points); a "sleeve" lying mostly
   // on the hood is the hood.
   const hood = toGrid(masksOfWord("hood"));
   const hasHood = area(hood) > 0;
   const garmentGrid = hasHood ? subtract(toGrid(masksOfWord(words.garment)), dilate(hood, 2)) : toGrid(masksOfWord(words.garment));
-  if (hasHood) notes.push("모자(후드)는 몸판 윤곽에서 빼고 쟀습니다.");
+  if (hasHood) notes.push(L("모자(후드)는 몸판 윤곽에서 빼고 쟀습니다.", "The hood was left out of the body outline.", "La capucha se dejó fuera del contorno del cuerpo."));
   const sleeveGrids = masksOfWord("sleeve")
     .map((m) => rasterize(m, photo.width, photo.height))
     .filter((g) => {
       const onHood = hasHood ? area(intersect(g, hood)) / Math.max(1, area(g)) : 0;
-      if (onHood > 0.3) notes.push("SAM 3.1이 소매로 표시한 영역 하나가 모자 위에 있어 소매에서 뺐습니다.");
+      if (onHood > 0.3) notes.push(L("소매로 잡힌 부분 하나가 모자 위에 있어 소매에서 뺐습니다.", "One area taken for a sleeve lies on the hood, so it wasn't counted as a sleeve.", "Una zona tomada por manga está sobre la capucha, así que no se contó como manga."));
       return onHood <= 0.3;
     });
   const partGrids = words.parts.includes("handle") ? masksOfWord("handle").map((m) => rasterize(m, photo.width, photo.height)) : sleeveGrids;
@@ -124,22 +128,26 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
     try {
       layout = await layoutCheck(photo, sleeveGrids.map((g) => simplifyClosed(traceOuter(largestComponent(g)), 2)), cacheDir);
     } catch (e) {
-      notes.push(`Muse Spark 확인을 건너뛰었습니다(${(e as Error).message.slice(0, 60)}). 소매 접힘은 기하로만 판단했습니다.`);
+      console.error("layout check skipped", e);
+      notes.push(L("소매가 펴졌는지 따로 확인하지 못해 윤곽 모양으로만 판단했습니다.", "Whether the sleeves are spread out was judged from the outline alone.", "Si las mangas están extendidas se juzgó solo por el contorno."));
     }
   }
   const measureOpts = {
     sleeveUsable: layout ? usableSleeves(layout, sleeveGrids.length) : undefined,
     extraRel: layout ? WRINKLE_REL[layout.wrinkles] : 0,
   };
-  if (layout?.wrinkles === "some wrinkles") notes.push("Muse Spark가 옷에 주름이 조금 있다고 보아 ±를 키웠습니다.");
-  if (layout?.wrinkles === "heavily wrinkled or bunched") notes.push("Muse Spark가 옷이 많이 구겨졌다고 보아 ±를 크게 키웠습니다. 펴서 다시 찍으면 정확해집니다.");
-  if (input.shoulders?.length) notes.push(`어깨점 ${input.shoulders.length}개는 사진에서 직접 찍은 점을 썼습니다.`);
-  if (layout?.hem === "folded or rolled") notes.push("Muse Spark가 밑단이 접혀 있다고 보았습니다. 총장이 짧게 나올 수 있습니다.");
+  if (layout?.wrinkles === "some wrinkles") notes.push(L("옷에 주름이 조금 있어 ±를 키웠습니다.", "The garment has a few wrinkles, so the ± was widened.", "La prenda tiene algunas arrugas, así que se amplió el ±."));
+  if (layout?.wrinkles === "heavily wrinkled or bunched") notes.push(L("옷이 많이 구겨져 ±를 크게 키웠습니다. 펴서 다시 찍으면 정확해집니다.", "The garment is badly wrinkled, so the ± was widened a lot. Smooth it out and take it again for exact values.", "La prenda está muy arrugada, así que el ± se amplió mucho. Alísala y vuelve a hacer la foto para valores exactos."));
+  if (input.shoulders?.length) {
+    const n = input.shoulders.length;
+    notes.push(L(`어깨점 ${n}개는 사진에서 직접 찍은 점을 썼습니다.`, `${n} shoulder point${n > 1 ? "s were" : " was"} taken from your taps on the photo.`, `${n === 1 ? "Se usó 1 punto" : `Se usaron ${n} puntos`} de hombro marcados por ti en la foto.`));
+  }
+  if (layout?.hem === "folded or rolled") notes.push(L("밑단이 접혀 있는 것으로 보입니다. 총장이 짧게 나올 수 있습니다.", "The hem looks folded or rolled. The length may come out short.", "El bajo parece doblado o enrollado. El largo puede salir corto."));
 
   // The sheet: the most confident "paper" that fits as A4.
   const papers = masksOfWord(PAPER).sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));
   let scale: A4Scale | null = null, paperGrid: Grid | null = null;
-  let why = "사진에서 A4 용지를 찾지 못했습니다.";
+  let why: Local = L("사진에서 A4 용지를 찾지 못했습니다.", "No A4 sheet found in the photo.", "No encontramos la hoja A4 en la foto.");
   for (const p of papers) {
     const g = rasterize(p, photo.width, photo.height);
     const s = a4Scale(g);
@@ -168,7 +176,7 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
     if ("ok" in s) return { ok: false, stage: "scale", detail: s.detail };
     shape = s;
   } else {
-    return { ok: false, stage: "scale", detail: `${why} A4를 옆에 두고 다시 찍거나, 줄자로 잰 치수 하나를 입력해 주십시오.`, missingA4: true };
+    return { ok: false, stage: "scale", detail: L(`${why.ko} A4를 옆에 두고 다시 찍거나, 줄자로 잰 치수 하나를 입력해 주십시오.`, `${why.en} Take it again with an A4 sheet beside the garment, or enter one measurement taken with a tape.`, `${why.es} Vuelve a hacer la foto con una hoja A4 al lado, o escribe una medida tomada con cinta.`), missingA4: true };
   }
 
   const parts = partsFor(shape);
@@ -180,7 +188,16 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
   const onEdge = (p: Pt) => nearEdge(toPhoto(p));
   const clipped = new Set(m0.segments.filter((sg) => !sg.mirrored && (onEdge(sg.a) || onEdge(sg.b))).map((sg) => sg.key));
   const kept = Object.fromEntries(Object.entries(m0.values).filter(([k]) => !clipped.has(k)));
-  if (clipped.size) notes.push(`옷이 사진 가장자리에 잘려 다음은 재지 않았습니다: ${[...clipped].map((k) => MEASURE_KO[k] ?? k).join(", ")}. 옷 전체가 사진 안에 들어오게 찍어 주십시오.`);
+  if (clipped.size) {
+    const names = (lang: "ko" | "en" | "es") => [...clipped].map((k) => MEASURE_NAME[k]?.[lang] ?? k).join(", ");
+    notes.push(
+      L(
+        `옷이 사진 가장자리에 잘려 다음은 재지 않았습니다: ${names("ko")}. 옷 전체가 사진 안에 들어오게 찍어 주십시오.`,
+        `The garment is cut off by the edge of the photo, so these weren't measured: ${names("en")}. Get the whole garment in the photo.`,
+        `La prenda queda cortada por el borde de la foto, así que no se midió: ${names("es")}. Haz que la prenda entera entre en la foto.`,
+      ),
+    );
+  }
   const measured = { ...m0, values: kept, segments: m0.segments.filter((sg) => !clipped.has(sg.key)), notes: [...m0.notes, ...notes] };
 
   const back = invertAffine(measured.frame);
@@ -216,7 +233,7 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
   };
 }
 
-function measureOf(garment: GarmentKind, shape: Shape, parts: Pt[][], opts: TopOptions): Measured | { ok: false; detail: string } {
+function measureOf(garment: GarmentKind, shape: Shape, parts: Pt[][], opts: TopOptions): Measured | { ok: false; detail: Local } {
   const m =
     garment === "shirt" || garment === "t-shirt" || garment === "hoodie"
       ? measureTop(shape, parts, opts)
@@ -225,7 +242,7 @@ function measureOf(garment: GarmentKind, shape: Shape, parts: Pt[][], opts: TopO
         : garment === "skirt"
           ? measureSkirt(shape)
           : measureBag(shape, parts);
-  return m as Measured | { ok: false; detail: string };
+  return m as Measured | { ok: false; detail: Local };
 }
 
 // Without an A4 sheet: measure once at a provisional scale, then set the scale so the reference
@@ -237,19 +254,26 @@ const TAPE_CM = 0.5;
 function tapeScaled(
   garment: Grid,
   ref: { key: string; cm: number },
-  measure: (s: Shape) => Measured | { ok: false; detail: string },
-): Shape | { ok: false; detail: string } {
+  measure: (s: Shape) => Measured | { ok: false; detail: Local },
+): Shape | { ok: false; detail: Local } {
   const box = gridBox(garment);
-  if (!box) return { ok: false, detail: "옷을 찾지 못했습니다." };
+  if (!box) return { ok: false, detail: NO_GARMENT };
   const k0 = Math.max(box[2] - box[0], box[3] - box[1]) / 75; // about the size of a garment
   const first = shapeWithPlainScale(garment, k0, 0);
-  if (!first) return { ok: false, detail: "옷을 찾지 못했습니다." };
+  if (!first) return { ok: false, detail: NO_GARMENT };
   const m = measure(first);
   if ("ok" in m) return m;
   const v = (m.values as Record<string, { cm: number }>)[ref.key];
-  if (!v) return { ok: false, detail: "기준으로 넣은 치수를 사진에서 재지 못했습니다. 다른 치수를 넣어 주십시오." };
+  if (!v) return { ok: false, detail: L("기준으로 넣은 치수를 사진에서 재지 못했습니다. 다른 치수를 넣어 주십시오.", "The measurement you entered couldn't be found in the photo. Enter a different one.", "No pudimos encontrar en la foto la medida que escribiste. Escribe otra.") };
   const k = (v.cm * k0) / ref.cm;
   const rel = Math.hypot(TAPE_PERSPECTIVE_REL, TAPE_CM / ref.cm);
-  const shape = shapeWithPlainScale(garment, k, rel, [`A4가 없어 줄자로 잰 ${ref.key} ${ref.cm} cm를 기준으로 비례해 쟀습니다. 원근 보정이 없어 ±가 큽니다.`]);
-  return shape ?? { ok: false, detail: "옷을 찾지 못했습니다." };
+  const name = MEASURE_NAME[ref.key] ?? L(ref.key, ref.key, ref.key);
+  const shape = shapeWithPlainScale(garment, k, rel, [
+    L(
+      `A4가 없어 줄자로 잰 ${name.ko} ${ref.cm} cm를 기준으로 비례해 쟀습니다. 원근 보정이 없어 ±가 큽니다.`,
+      `With no A4 sheet, everything was scaled from your tape measurement of ${name.en}, ${ref.cm} cm. Without perspective correction the ± is large.`,
+      `Sin hoja A4, todo se escaló a partir de tu medida con cinta de ${name.es}, ${ref.cm} cm. Sin corrección de perspectiva el ± es grande.`,
+    ),
+  ]);
+  return shape ?? { ok: false, detail: NO_GARMENT };
 }

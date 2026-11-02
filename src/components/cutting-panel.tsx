@@ -6,7 +6,9 @@ import { applyH, type Mat3 } from "@/lib/geom/homography";
 import type { Pt } from "@/lib/geom/point";
 import { svgPath } from "@/lib/geom/point";
 import { bounds } from "@/lib/geom/polygon";
+import { useLang } from "@/components/lang";
 import { buttonGhost } from "@/components/ui";
+import { L, type Local } from "@/lib/i18n/lang";
 import { nest, piecesToCut } from "@/lib/nest/nest";
 import type { Pattern } from "@/lib/pattern/types";
 
@@ -18,15 +20,52 @@ interface FabricPhoto {
   cmToPx: Mat3;
 }
 
-const ERRORS: Record<string, string> = {
-  live_disabled: "지금은 원단 사진 분석을 쉬고 있습니다. 원단 크기를 입력해 주십시오.",
-  visitor_limit: "오늘 분석할 수 있는 사진 수를 모두 썼습니다.",
-  daily_limit: "오늘 전체 사용량을 모두 썼습니다.",
+const ERRORS = {
+  live_disabled: L("지금은 원단 사진 분석을 쉬고 있습니다. 원단 크기를 입력해 주십시오.", "Fabric photos can't be read right now. Type your fabric's size instead.", "Ahora no podemos leer fotos de tela. Escribe el tamaño de tu tela."),
+  visitor_limit: L("오늘 분석할 수 있는 사진 수를 모두 썼습니다. 원단 크기를 입력해 주십시오.", "You've used today's photo readings. Type your fabric's size instead.", "Ya usaste las lecturas de fotos de hoy. Escribe el tamaño de tu tela."),
+  daily_limit: L("오늘 분석할 수 있는 양을 모두 썼습니다. 원단 크기를 입력해 주십시오.", "Today's photo readings are used up. Type your fabric's size instead.", "Se agotaron las lecturas de fotos de hoy. Escribe el tamaño de tu tela."),
+  failed: L("원단 사진을 읽지 못했습니다. 잠시 후 다시 해 주십시오.", "Couldn't read the fabric photo. Try again in a moment.", "No pudimos leer la foto de la tela. Inténtalo de nuevo en un momento."),
+} as const;
+
+const T = {
+  sizes: L("원단 크기(cm, 가로x세로, 여러 장은 쉼표)", "Fabric size (cm, width x length, commas between pieces)", "Tamaño de la tela (cm, ancho x largo, comas entre piezas)"),
+  finding: L("원단을 찾는 중…", "Finding the fabric…", "Buscando la tela…"),
+  fromPhoto: L("원단 사진으로", "From a fabric photo", "Desde una foto de la tela"),
+  crossGrain: L("식서 90° 돌림 허용", "Allow turning 90° off the grain", "Permitir girar 90° respecto al hilo"),
+  grainNote: L(
+    "원단의 식서(세로 방향)는 사진·입력의 세로입니다. 조각은 식서를 따라 0°·180°로만 돌리고, 원단 가장자리와 조각 사이에 1 cm 이상 띄웁니다.",
+    "The fabric's grain (lengthwise) runs up and down the photo or the size you typed. Pieces turn only 0° or 180° along the grain and stay at least 1 cm from the edges and from each other.",
+    "El hilo de la tela (a lo largo) va de arriba abajo en la foto o en el tamaño que escribiste. Las piezas solo giran 0° o 180° siguiendo el hilo y quedan al menos a 1 cm de los bordes y entre sí.",
+  ),
+  fabricAlt: L("원단", "Fabric", "Tela"),
+  layoutLabel: L("원단 위 재단 배치", "Cutting layout on the fabric", "Colocación de las piezas sobre la tela"),
 };
+
+const allFit = (n: number, pct: number) =>
+  L(`조각 ${n}장이 모두 들어갑니다. 원단 사용률 ${pct}%.`, `All ${n} pieces fit. ${pct}% of the fabric is used.`, `Caben las ${n} piezas. Se usa el ${pct}% de la tela.`);
+const noFit = (name: Local, w: string, h: string, fw: number, fh: number) =>
+  L(
+    `${subject(name.ko)} 들어가지 않습니다: 조각 ${w} × ${h} cm, 남은 가장 큰 빈 곳 ${fw} × ${fh} cm.`,
+    `${name.en} doesn't fit: the piece is ${w} × ${h} cm, the largest space left is ${fw} × ${fh} cm.`,
+    `${name.es} no cabe: la pieza mide ${w} × ${h} cm y el mayor hueco libre es de ${fw} × ${fh} cm.`,
+  );
+const turnHint = L(
+  " 식서를 90° 돌리면 들어갈 수 있습니다(원단에 따라 늘어남·광택이 달라집니다).",
+  " It would fit turned 90° off the grain (stretch and sheen may change with the fabric).",
+  " Cabría girada 90° respecto al hilo (según la tela, cambian la elasticidad y el brillo).",
+);
+
+// 이/가 after a Korean name, by its last syllable.
+const subject = (w: string) => {
+  const c = w.charCodeAt(w.length - 1) - 0xac00;
+  return w + (c >= 0 && c < 11172 && c % 28 !== 0 ? "이" : "가");
+};
+const f2 = (n: number) => n.toFixed(2);
 
 // Mode 3: does the pattern fit on the fabric you have? Scraps from a photo (SAM 3.1 + A4) or typed
 // sizes; the layout is deterministic and runs here in the browser.
 export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolean }) {
+  const lang = useLang();
   const [sizes, setSizes] = useState("110x100");
   const [photo, setPhoto] = useState<FabricPhoto | null>(null);
   const [crossGrain, setCrossGrain] = useState(false);
@@ -56,9 +95,11 @@ export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolea
       form.set("photo", r.blob, "fabric.jpg");
       const res = await fetch("/api/fabric", { method: "POST", body: form });
       const body = await res.json();
-      if (!res.ok) setError(ERRORS[body.error] ?? "원단 사진을 분석하지 못했습니다.");
-      else if (!body.run.ok) setError(body.run.detail);
+      if (!res.ok) setError((ERRORS[body.error as keyof typeof ERRORS] ?? ERRORS.failed)[lang]);
+      else if (!body.run.ok) setError(body.run.detail[lang]);
       else setPhoto({ src: r.url, width: r.width, height: r.height, scrapsCm: body.run.scrapsCm, cmToPx: body.run.cmToPx });
+    } catch {
+      setError(ERRORS.failed[lang]);
     } finally {
       setBusy(false);
     }
@@ -69,34 +110,34 @@ export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolea
     <section className="space-y-4">
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <label>
-          원단 크기(cm, 가로x세로, 여러 장은 쉼표){" "}
+          {T.sizes[lang]}{" "}
           <input value={sizes} onChange={(e) => { setSizes(e.target.value); setPhoto(null); }} className="w-44 rounded-lg border border-line bg-field px-2 py-1" />
         </label>
         {live && (
           <label className={`${buttonGhost} cursor-pointer`}>
-            {busy ? "원단을 찾는 중…" : "원단 사진으로"}
+            {busy ? T.finding[lang] : T.fromPhoto[lang]}
             <input type="file" accept="image/*" className="hidden" disabled={busy} onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
           </label>
         )}
         <label>
-          <input type="checkbox" checked={crossGrain} onChange={(e) => setCrossGrain(e.target.checked)} /> 식서 90° 돌림 허용
+          <input type="checkbox" checked={crossGrain} onChange={(e) => setCrossGrain(e.target.checked)} /> {T.crossGrain[lang]}
         </label>
       </div>
-      <p className="text-sm text-muted">원단의 식서(세로 방향)는 사진·입력의 세로입니다. 조각은 식서를 따라 0°·180°로만 돌리고, 원단 가장자리와 조각 사이에 1 cm 이상 띄웁니다.</p>
+      <p className="text-sm text-muted">{T.grainNote[lang]}</p>
       {error && <p className="rounded-xl bg-mark-soft p-3 text-sm">{error}</p>}
 
       {result && (
         <>
           {result.unplaced.length === 0 ? (
             <p className="rounded-xl bg-ok-soft p-3 text-sm">
-              조각 {result.placed.length}장이 모두 들어갑니다. 원단 사용률 {Math.round((100 * result.usedAreaCm2) / result.fabricAreaCm2)}%.
+              {allFit(result.placed.length, Math.round((100 * result.usedAreaCm2) / result.fabricAreaCm2))[lang]}
             </p>
           ) : (
             <ul className="space-y-1 rounded-xl bg-mark-soft p-3 text-sm">
               {result.unplaced.map((u) => (
                 <li key={u.piece.id}>
-                  {u.piece.nameKo}이(가) 들어가지 않습니다: 조각 {u.size[0].toFixed(0)} × {u.size[1].toFixed(0)} cm, 남은 가장 큰 빈 곳 {u.largestFree[0]} × {u.largestFree[1]} cm.
-                  {!crossGrain && u.size[1] <= u.largestFree[0] && u.size[0] <= u.largestFree[1] && " 식서를 90° 돌리면 들어갈 수 있습니다(원단에 따라 늘어남·광택이 달라집니다)."}
+                  {noFit(u.piece.label, u.size[0].toFixed(0), u.size[1].toFixed(0), u.largestFree[0], u.largestFree[1])[lang]}
+                  {!crossGrain && u.size[1] <= u.largestFree[0] && u.size[0] <= u.largestFree[1] && turnHint[lang]}
                 </li>
               ))}
             </ul>
@@ -104,7 +145,7 @@ export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolea
           {photo ? (
             <figure className="relative overflow-hidden rounded-xl bg-well">
               {/* eslint-disable-next-line @next/next/no-img-element -- the user's own fabric photo */}
-              <img src={photo.src} alt="원단" className="block h-auto w-full" />
+              <img src={photo.src} alt={T.fabricAlt[lang]} className="block h-auto w-full" />
               <svg viewBox={`0 0 ${photo.width} ${photo.height}`} className="absolute inset-0 h-full w-full" aria-hidden>
                 {result.placed.map((p) => (
                   <path key={p.piece.id} d={svgPath(p.outline.map((q) => applyH(photo.cmToPx, q)), true)} fill="rgba(6,43,138,0.25)" stroke="var(--ink)" strokeWidth={photo.width / 300} />
@@ -112,7 +153,7 @@ export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolea
               </svg>
             </figure>
           ) : (
-            <svg viewBox={`${fb.minX - 2} ${fb.minY - 2} ${fb.maxX - fb.minX + 4} ${fb.maxY - fb.minY + 4}`} className="h-auto w-full rounded-xl bg-well" role="img" aria-label="원단 위 재단 배치">
+            <svg viewBox={`${fb.minX - 2} ${fb.minY - 2} ${fb.maxX - fb.minX + 4} ${fb.maxY - fb.minY + 4}`} className="h-auto w-full rounded-xl bg-well" role="img" aria-label={T.layoutLabel[lang]}>
               {fabric.map((f, i) => (
                 <path key={i} d={svgPath(f, true)} fill="var(--sand)" stroke="var(--muted)" strokeWidth={0.3} />
               ))}
@@ -121,8 +162,8 @@ export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolea
                 return (
                   <g key={p.piece.id}>
                     <path d={svgPath(p.outline, true)} fill="rgba(6,43,138,0.12)" stroke="var(--ink)" strokeWidth={0.3} />
-                    <text x={(b.minX + b.maxX) / 2} y={(b.minY + b.maxY) / 2} fontSize={2.5} textAnchor="middle" fill="var(--ink)">
-                      {p.piece.nameKo}
+                    <text x={f2((b.minX + b.maxX) / 2)} y={f2((b.minY + b.maxY) / 2)} fontSize={2.5} textAnchor="middle" fill="var(--ink)">
+                      {p.piece.label[lang]}
                     </text>
                   </g>
                 );

@@ -101,7 +101,7 @@ test("a sleeve folded over the body is not used; the other side is mirrored", ()
   close(m.values.chest?.cm, 54);
   close(m.values.shoulder?.cm, 47);
   close(m.values.sleeve?.cm, Math.hypot(36 - 23.5, 15 - 4));
-  assert.ok(m.notes.some((x) => x.includes("접혀")), m.notes.join("\n"));
+  assert.ok(m.notes.some((x) => x.en.includes("folded over the body")), m.notes.map((x) => x.en).join("\n"));
   assert.ok(m.values.chest!.plusMinusCm > 0.6, "mirrored values carry more ±");
 });
 
@@ -109,7 +109,7 @@ test("a sleeve the layout check rejects is not used", () => {
   const m = measureTop(shapeOf(TEE), SLEEVES, { sleeveUsable: [true, false] });
   assert.ok(!("ok" in m));
   close(m.values.chest?.cm, 54);
-  assert.ok(m.notes.some((x) => x.includes("Muse Spark")));
+  assert.ok(m.notes.some((x) => x.en.includes("doesn't look spread out")));
 });
 
 test("tapped shoulder points replace the masks' and narrow the ±", () => {

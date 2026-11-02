@@ -18,6 +18,9 @@ import type { Pt } from "../geom/point.ts";
 import { applyAffine, invertAffine, polygonCentroid, rotation, segDist, simplify, translation } from "../geom/polygon.ts";
 import type { TopMeasures } from "../pattern/measures.ts";
 import { arc, argBest, compose, crossings, defects, dist, inRange, transform, valueOf, type Measured, type Shape, type Value } from "./shape.ts";
+import { L as Loc, type Local } from "../i18n/lang.ts";
+
+const NO_HEM = Loc("밑단을 찾지 못했습니다.", "Couldn't find the hem.", "No encontramos el bajo.");
 
 export type TopKey = Exclude<keyof TopMeasures, "frontNeckDrop" | "backNeckDrop">;
 
@@ -59,8 +62,8 @@ export interface TopOptions {
 
 type SideName = "left" | "right";
 
-export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {}): Measured<TopKey> | { ok: false; detail: string } {
-  const notes: string[] = [];
+export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {}): Measured<TopKey> | { ok: false; detail: Local } {
+  const notes: Local[] = [];
 
   // Hem corners: ends of the widest run of outline near the bottom, then the lowest-outward points there.
   // Which way is up: toward the hood, else toward the sleeves (they hang from the top of the
@@ -98,7 +101,7 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
     return hl < 0 || hr < 0 ? null : { hl, hr, top, h };
   };
   const h0 = hemCorners(upright, 0.3);
-  if (!h0) return { ok: false, detail: "밑단을 찾지 못했습니다." };
+  if (!h0) return { ok: false, detail: NO_HEM };
 
   // Level the hem; the origin is the middle of the hem.
   const a = upright[h0.hl], b = upright[h0.hr];
@@ -108,7 +111,7 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
   const outline = transform(m, shape.outline);
   const n = outline.length;
   const hc = hemCorners(outline, 0.12);
-  if (!hc) return { ok: false, detail: "밑단을 찾지 못했습니다." };
+  if (!hc) return { ok: false, detail: NO_HEM };
   const hemL = outline[hc.hl], hemR = outline[hc.hr];
   const half = (hemR[0] - hemL[0]) / 2;
   const cx = (hemL[0] + hemR[0]) / 2;
@@ -125,8 +128,8 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
     const c = polygonCentroid(sl);
     const folded = Math.abs(c[0] - cx) < FOLDED_SHARE * half;
     const vetoed = opts.sleeveUsable?.[i] === false;
-    if (folded) notes.push(`${side === "left" ? "왼쪽" : "오른쪽"}(사진 기준) 소매가 몸판 위로 접혀 있어 그쪽은 재지 않았습니다.`);
-    else if (vetoed) notes.push(`Muse Spark가 ${side === "left" ? "왼쪽" : "오른쪽"}(사진 기준) 소매를 펴진 소매가 아니라고 보아 그쪽은 재지 않았습니다.`);
+    if (folded) notes.push(Loc(`${side === "left" ? "왼쪽" : "오른쪽"}(사진 기준) 소매가 몸판 위로 접혀 있어 그쪽은 재지 않았습니다.`, `The ${side} sleeve (as seen in the photo) is folded over the body, so that side wasn't measured.`, `La manga ${side === "left" ? "izquierda" : "derecha"} (según la foto) está doblada sobre el cuerpo, así que ese lado no se midió.`));
+    else if (vetoed) notes.push(Loc(`${side === "left" ? "왼쪽" : "오른쪽"}(사진 기준) 소매가 펴져 있지 않아 보여 그쪽은 재지 않았습니다.`, `The ${side} sleeve (as seen in the photo) doesn't look spread out, so that side wasn't measured.`, `La manga ${side === "left" ? "izquierda" : "derecha"} (según la foto) no parece extendida, así que ese lado no se midió.`));
     else if (!usableBy[side]) usableBy[side] = sl;
   });
   // No sleeve masks at all: fall back to the outline on both sides (shoulder less certain).
@@ -135,7 +138,7 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
   // Side neck points: highest point either side of the centre line.
   const nearNeck = (s: -1 | 1) => (p: Pt) => p[1] < -0.4 * (hc.h) && s * (p[0] - cx) > 0.5 && s * (p[0] - cx) < 0.6 * half;
   const nl = argBest(outline, ([, y]) => -y, nearNeck(-1)), nr = argBest(outline, ([, y]) => -y, nearNeck(1));
-  if (nl < 0 || nr < 0) return { ok: false, detail: "목둘레를 찾지 못했습니다. 목이 사진 위쪽으로 오게 펴 주십시오." };
+  if (nl < 0 || nr < 0) return { ok: false, detail: Loc("목둘레를 찾지 못했습니다. 목이 사진 위쪽으로 오게 펴 주십시오.", "Couldn't find the neckline. Lay the garment with the neck at the top of the photo.", "No encontramos el escote. Extiende la prenda con el cuello en la parte de arriba de la foto.") };
   const snpL = outline[nl], snpR = outline[nr];
   const snpY = (snpL[1] + snpR[1]) / 2;
 
@@ -197,14 +200,18 @@ export function measureTop(shape: Shape, sleeves: Pt[][], opts: TopOptions = {})
     return { pit, sp, cuffTop, cuffBottom, sleeve: dist(sp, cuffTop), opening: dist(cuffTop, cuffBottom), bicep, cutOff, spCm: byUser ? USER_POINT_CM : SHOULDER_POINT_CM };
   };
   const L = measureSide("left"), R = measureSide("right");
-  if (fallback) notes.push("SAM이 소매를 찾지 못해 어깨점을 윤곽이 꺾이는 곳으로 잡았습니다(± 큼). 어깨너비를 확인해 주십시오.");
+  if (fallback) notes.push(Loc("소매를 찾지 못해 어깨점을 윤곽이 꺾이는 곳으로 잡았습니다(± 큼). 어깨너비를 확인해 주십시오.", "The sleeves weren't found, so the shoulder points were set where the outline bends (large ±). Check the shoulder width.", "No encontramos las mangas, así que los puntos del hombro se pusieron donde se quiebra el contorno (± grande). Revisa el ancho de hombros."));
   const sides = [L, R].filter((x): x is NonNullable<typeof x> => !!x);
-  if (sides.length === 1) notes.push("한쪽 소매만 쓸 수 있어 가슴단면·어깨너비는 그쪽을 중심선에 대칭시켜 쟀습니다(± 큼).");
-  if (sides.length === 0) notes.push("펴진 소매가 없어 가슴단면·어깨너비·소매 치수는 재지 않았습니다. 소매를 펴서 다시 찍거나 줄자로 재 주십시오.");
+  if (sides.length === 1) notes.push(Loc("한쪽 소매만 쓸 수 있어 가슴단면·어깨너비는 그쪽을 중심선에 대칭시켜 쟀습니다(± 큼).", "Only one sleeve could be used, so chest and shoulder were measured by mirroring that side across the centre (large ±).", "Solo se pudo usar una manga, así que el pecho y los hombros se midieron reflejando ese lado sobre el centro (± grande)."));
+  if (sides.length === 0) notes.push(Loc("펴진 소매가 없어 가슴단면·어깨너비·소매 치수는 재지 않았습니다. 소매를 펴서 다시 찍거나 줄자로 재 주십시오.", "No sleeve is spread out, so chest, shoulder and sleeve weren't measured. Spread the sleeves and take it again, or measure them with a tape.", "Ninguna manga está extendida, así que no se midieron pecho, hombros ni mangas. Extiende las mangas y vuelve a hacer la foto, o mídelas con cinta."));
   // Sleeve length and opening only from a side whose cuff is inside the photo.
   const sleeveSides = sides.filter((x) => !x.cutOff);
   if (sides.length && sleeveSides.length < sides.length) {
-    notes.push(sleeveSides.length ? "한쪽 소맷부리가 사진 가장자리에 잘려 소매길이·소매단면은 다른 쪽에서 쟀습니다." : "소맷부리가 사진 가장자리에 잘려 소매길이·소매단면은 재지 않았습니다. 옷 전체가 사진 안에 들어오게 찍어 주십시오.");
+    notes.push(
+      sleeveSides.length
+        ? Loc("한쪽 소맷부리가 사진 가장자리에 잘려 소매길이·소매단면은 다른 쪽에서 쟀습니다.", "One cuff is cut off by the edge of the photo, so sleeve length and opening were taken from the other side.", "Un puño queda cortado por el borde de la foto, así que el largo y la boca de manga se tomaron del otro lado.")
+        : Loc("소맷부리가 사진 가장자리에 잘려 소매길이·소매단면은 재지 않았습니다. 옷 전체가 사진 안에 들어오게 찍어 주십시오.", "The cuffs are cut off by the edge of the photo, so sleeve length and opening weren't measured. Get the whole garment in the photo.", "Los puños quedan cortados por el borde de la foto, así que no se midieron el largo ni la boca de manga. Haz que la prenda entera entre en la foto."),
+    );
   }
 
   const hemYAt = (x: number) => hemL[1] + ((x - hemL[0]) / (hemR[0] - hemL[0] || 1)) * (hemR[1] - hemL[1]);

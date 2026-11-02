@@ -12,6 +12,7 @@ import type { Pt } from "../geom/point.ts";
 import { bounds, polygonArea } from "../geom/polygon.ts";
 import { cuttingLine } from "../pattern/seam.ts";
 import type { Pattern, Piece } from "../pattern/types.ts";
+import type { Local } from "../i18n/lang.ts";
 
 export const CELL_CM = 1;
 
@@ -19,6 +20,7 @@ export interface CutPiece {
   id: string; // piece id plus copy, e.g. "sleeve#2m"
   name: string;
   nameKo: string;
+  label: Local; // the name in every language
   outline: Pt[]; // cutting line, cm, grainline along +y
 }
 
@@ -46,6 +48,8 @@ function alongGrain(outline: Pt[], grain: [Pt, Pt]): Pt[] {
 const mirrorPts = (pts: Pt[]): Pt[] => pts.map(([x, y]): Pt => [-x, y]).reverse();
 
 // Every piece as it will be cut on a single layer.
+const pieceLabel = (p: Pattern["pieces"][number]): Local => p.names;
+
 export function piecesToCut(pattern: Pattern): CutPiece[] {
   const out: CutPiece[] = [];
   for (const p of pattern.pieces) {
@@ -55,7 +59,7 @@ export function piecesToCut(pattern: Pattern): CutPiece[] {
     const copies = p.cut.count;
     for (let k = 0; k < copies; k++) {
       const mirrored = p.cut.mirror && k % 2 === 1;
-      out.push({ id: `${p.id}#${k + 1}${mirrored ? "m" : ""}`, name: p.name, nameKo: p.nameKo, outline: mirrored ? mirrorPts(base) : base });
+      out.push({ id: `${p.id}#${k + 1}${mirrored ? "m" : ""}`, name: p.name, nameKo: p.nameKo, label: pieceLabel(p), outline: mirrored ? mirrorPts(base) : base });
     }
   }
   return out;

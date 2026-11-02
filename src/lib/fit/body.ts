@@ -4,34 +4,35 @@
 // Nothing here describes the body: the numbers only become garment sizes.
 // [A] Ease values drafted by Claude from common ready-to-wear practice; the owner confirms.
 
+import { L, type Local } from "../i18n/lang.ts";
 import type { Fabric, GarmentKind } from "../pattern/types.ts";
 
 export type BodyKey = "chestGirth" | "shoulderWidth" | "armLength" | "bicepGirth" | "waistGirth" | "hipGirth" | "thighGirth" | "crotchDepth" | "waistToAnkle";
 export type BodyFit = "slim" | "regular" | "loose";
 
-export const BODY_KO: Record<BodyKey, string> = {
-  chestGirth: "가슴둘레",
-  shoulderWidth: "어깨너비",
-  armLength: "팔길이",
-  bicepGirth: "위팔둘레",
-  waistGirth: "허리둘레",
-  hipGirth: "엉덩이둘레",
-  thighGirth: "허벅지둘레",
-  crotchDepth: "앉은 밑위",
-  waistToAnkle: "허리–발목",
+export const BODY_NAME: Record<BodyKey, Local> = {
+  chestGirth: L("가슴둘레", "Chest", "Contorno de pecho"),
+  shoulderWidth: L("어깨너비", "Shoulder width", "Ancho de hombros"),
+  armLength: L("팔길이", "Arm length", "Largo de brazo"),
+  bicepGirth: L("위팔둘레", "Upper arm", "Contorno de brazo"),
+  waistGirth: L("허리둘레", "Waist", "Contorno de cintura"),
+  hipGirth: L("엉덩이둘레", "Hip", "Contorno de cadera"),
+  thighGirth: L("허벅지둘레", "Thigh", "Contorno de muslo"),
+  crotchDepth: L("앉은 밑위", "Seated rise", "Tiro sentado"),
+  waistToAnkle: L("허리–발목", "Waist to ankle", "Cintura a tobillo"),
 };
 
 // How to take each one, shown beside the field.
-export const BODY_HOW: Record<BodyKey, string> = {
-  chestGirth: "겨드랑이 아래 가장 두꺼운 곳을 수평으로 한 바퀴",
-  shoulderWidth: "등 뒤에서 한쪽 어깨끝에서 다른 쪽 어깨끝까지",
-  armLength: "어깨끝에서 팔을 편 채 손목뼈까지",
-  bicepGirth: "겨드랑이 바로 아래 위팔 한 바퀴",
-  waistGirth: "바지를 입는 높이에서 한 바퀴",
-  hipGirth: "엉덩이의 가장 나온 곳을 수평으로 한 바퀴",
-  thighGirth: "가랑이 바로 아래 허벅지 한 바퀴",
-  crotchDepth: "의자에 앉아 옆에서, 허리에서 의자 면까지 수직으로",
-  waistToAnkle: "서서 옆에서, 허리에서 발목뼈까지",
+export const BODY_HOW: Record<BodyKey, Local> = {
+  chestGirth: L("겨드랑이 아래 가장 두꺼운 곳을 수평으로 한 바퀴", "Level all round, at the fullest part just below the armpits", "En horizontal, por la parte más ancha justo bajo las axilas"),
+  shoulderWidth: L("등 뒤에서 한쪽 어깨끝에서 다른 쪽 어깨끝까지", "Across the back, from one shoulder point to the other", "Por la espalda, de un extremo del hombro al otro"),
+  armLength: L("어깨끝에서 팔을 편 채 손목뼈까지", "From the shoulder point to the wrist bone, arm straight", "Del extremo del hombro al hueso de la muñeca, con el brazo estirado"),
+  bicepGirth: L("겨드랑이 바로 아래 위팔 한 바퀴", "Round the upper arm, just below the armpit", "Alrededor del brazo, justo bajo la axila"),
+  waistGirth: L("바지를 입는 높이에서 한 바퀴", "All round, at the height you wear your trousers", "Alrededor, a la altura a la que llevas el pantalón"),
+  hipGirth: L("엉덩이의 가장 나온 곳을 수평으로 한 바퀴", "Level round the fullest part of the hips", "En horizontal, por la parte más ancha de la cadera"),
+  thighGirth: L("가랑이 바로 아래 허벅지 한 바퀴", "Round the thigh, just below the crotch", "Alrededor del muslo, justo bajo la entrepierna"),
+  crotchDepth: L("의자에 앉아 옆에서, 허리에서 의자 면까지 수직으로", "Seated, from the side: straight down from the waist to the chair seat", "En posición sentada, de lado: en vertical de la cintura al asiento"),
+  waistToAnkle: L("서서 옆에서, 허리에서 발목뼈까지", "Standing, from the side: from the waist to the ankle bone", "De pie, de lado: de la cintura al hueso del tobillo"),
 };
 
 export const BODY_KEYS: Record<GarmentKind, BodyKey[]> = {
@@ -68,7 +69,7 @@ export interface Target {
   cm: number;
   min?: boolean; // only a lower bound: bigger is fine (a gathered skirt)
   // How it was worked out, every number in it computed here.
-  howKo: string;
+  how: Local;
 }
 
 const r1 = (x: number) => Math.round(x * 10) / 10;
@@ -80,11 +81,17 @@ export function targetsFromBody(garment: GarmentKind, body: Partial<Record<BodyK
   const girth = (key: string, b: BodyKey, ease: number) => {
     if (!has(b)) return;
     const around = body[b]! + ease;
-    out.push({ key, cm: r1(around / 2), howKo: `${BODY_KO[b]} ${r1(body[b]!)} + 여유 ${ease} = 둘레 ${r1(around)}, 단면 ${r1(around / 2)}` });
+    const n = BODY_NAME[b], v = r1(body[b]!), ar = r1(around), fl = r1(around / 2);
+    out.push({
+      key,
+      cm: fl,
+      how: L(`${n.ko} ${v} + 여유 ${ease} = 둘레 ${ar}, 단면 ${fl}`, `${n.en} ${v} + ${ease} ease = ${ar} around, ${fl} flat`, `${n.es} ${v} + ${ease} de holgura = ${ar} de contorno, ${fl} en plano`),
+    });
   };
   const plus = (key: string, b: BodyKey, add: number) => {
     if (!has(b)) return;
-    out.push({ key, cm: r1(body[b]! + add), howKo: add ? `${BODY_KO[b]} ${r1(body[b]!)} + ${add}` : `${BODY_KO[b]} ${r1(body[b]!)}` });
+    const n = BODY_NAME[b], v = r1(body[b]!), tail = add ? ` + ${add}` : "";
+    out.push({ key, cm: r1(body[b]! + add), how: L(`${n.ko} ${v}${tail}`, `${n.en} ${v}${tail}`, `${n.es} ${v}${tail}`) });
   };
 
   if (garment === "shirt" || garment === "t-shirt" || garment === "hoodie") {
@@ -96,7 +103,16 @@ export function targetsFromBody(garment: GarmentKind, body: Partial<Record<BodyK
     // Elastic waist: relaxed, the elastic is cut shorter than the waist so it holds (pattern notes).
     if (has("waistGirth")) {
       const relaxed = r1(ELASTIC_SHARE * body.waistGirth!);
-      out.push({ key: "waist", cm: r1(relaxed / 2), howKo: `${BODY_KO.waistGirth} ${r1(body.waistGirth!)} × ${ELASTIC_SHARE} = ${relaxed} (고무줄은 허리보다 짧게), 단면 ${r1(relaxed / 2)}` });
+      const n = BODY_NAME.waistGirth, v = r1(body.waistGirth!), fl = r1(relaxed / 2);
+      out.push({
+        key: "waist",
+        cm: fl,
+        how: L(
+          `${n.ko} ${v} × ${ELASTIC_SHARE} = ${relaxed} (고무줄은 허리보다 짧게), 단면 ${fl}`,
+          `${n.en} ${v} × ${ELASTIC_SHARE} = ${relaxed} (the elastic is cut shorter than the waist), ${fl} flat`,
+          `${n.es} ${v} × ${ELASTIC_SHARE} = ${relaxed} (el elástico se corta más corto que la cintura), ${fl} en plano`,
+        ),
+      });
     }
     girth("hip", "hipGirth", EASE.hip[fabric][i]);
     girth("thigh", "thighGirth", EASE.thigh[fabric][i]);
@@ -104,7 +120,17 @@ export function targetsFromBody(garment: GarmentKind, body: Partial<Record<BodyK
     if (has("waistToAnkle") && (garmentNow.outseam ?? Infinity) >= FULL_LENGTH_SHARE * body.waistToAnkle!) plus("outseam", "waistToAnkle", 0);
   } else if (garment === "skirt" && has("hipGirth")) {
     const around = body.hipGirth! + SKIRT_PASS_EASE;
-    out.push({ key: "hem", cm: r1(around / 2), min: true, howKo: `${BODY_KO.hipGirth} ${r1(body.hipGirth!)} + ${SKIRT_PASS_EASE} = 둘레 ${r1(around)}, 단면 ${r1(around / 2)} 이상 (엉덩이를 지나야 함)` });
+    const n = BODY_NAME.hipGirth, v = r1(body.hipGirth!), ar = r1(around), fl = r1(around / 2);
+    out.push({
+      key: "hem",
+      cm: fl,
+      min: true,
+      how: L(
+        `${n.ko} ${v} + ${SKIRT_PASS_EASE} = 둘레 ${ar}, 단면 ${fl} 이상 (엉덩이를 지나야 함)`,
+        `${n.en} ${v} + ${SKIRT_PASS_EASE} = ${ar} around, at least ${fl} flat (it has to pass over the hips)`,
+        `${n.es} ${v} + ${SKIRT_PASS_EASE} = ${ar} de contorno, al menos ${fl} en plano (tiene que pasar por la cadera)`,
+      ),
+    });
   }
   return out;
 }

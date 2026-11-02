@@ -1,7 +1,11 @@
+"use client";
+
+import { useLang } from "@/components/lang";
 import { svgPath } from "@/lib/geom/point";
 import { A4_TILING, pagesFor, type Sheet } from "@/lib/pattern/layout";
 import { bounds } from "@/lib/geom/polygon";
-import { EDGE_KO, edgeDims, matchText, seamMatches } from "@/lib/pattern/dims";
+import { L } from "@/lib/i18n/lang";
+import { cutText, EDGE_NAME, edgeDims, matchText, seamMatches } from "@/lib/pattern/dims";
 
 // Coordinates written to two decimals: the server and the browser can differ in the last digits
 // of the same computation, and React would report the mismatch on hydration.
@@ -13,10 +17,11 @@ const HALO = { stroke: "var(--field)", strokeWidth: 0.35, paintOrder: "stroke", 
 // The laid-out pattern at a glance: cutting lines, seam lines, grainlines and the A4 pages it
 // prints on, with each seam line's length when `dims` is on. Units are cm.
 export function PatternPreview({ sheet, dims = false, className = "h-auto w-full rounded-xl bg-field" }: { sheet: Sheet; dims?: boolean; className?: string }) {
+  const lang = useLang();
   const [cols, rows] = pagesFor(sheet.width, sheet.height);
   const W = (cols - 1) * A4_TILING.step[0] + A4_TILING.content[0], H = (rows - 1) * A4_TILING.step[1] + A4_TILING.content[1];
   return (
-    <svg viewBox={`-1 -1 ${W + 2} ${H + 2}`} className={className} role="img" aria-label="패턴 배치와 인쇄 페이지">
+    <svg viewBox={`-1 -1 ${W + 2} ${H + 2}`} className={className} role="img" aria-label={L("패턴 배치와 인쇄 페이지", "Pattern layout and printed pages", "Disposición del patrón y páginas impresas")[lang]}>
       {Array.from({ length: rows * cols }, (_, i) => {
         const r = Math.floor(i / cols), c = i % cols;
         return (
@@ -47,15 +52,15 @@ export function PatternPreview({ sheet, dims = false, className = "h-auto w-full
                 if (ang < -90) ang += 180;
                 return (
                   <text key={`d${i}`} x={f2(x)} y={f2(y)} transform={`rotate(${ang.toFixed(1)} ${f2(x)} ${f2(y)})`} fontSize={1.05} textAnchor="middle" dominantBaseline="middle" fill="var(--ink)" {...HALO}>
-                    {`${EDGE_KO[d.kind]} ${d.cm.toFixed(1)}`.trim()}
+                    {`${EDGE_NAME[d.kind][lang]} ${d.cm.toFixed(1)}`.trim()}
                   </text>
                 );
               })}
             <text x={f2((b.minX + b.maxX) / 2)} y={f2((b.minY + b.maxY) / 2 - 0.4)} fontSize={2.2} textAnchor="middle" fill="var(--ink)" fontWeight={600} {...HALO}>
-              {pp.piece.nameKo}
+              {pp.piece.names[lang]}
             </text>
             <text x={f2((b.minX + b.maxX) / 2)} y={f2((b.minY + b.maxY) / 2 + 1.6)} fontSize={1.4} textAnchor="middle" fill="var(--muted)" {...HALO}>
-              {pp.piece.cut.onFold ? `골선 ${pp.piece.cut.count}장` : `${pp.piece.cut.count}장${pp.piece.cut.mirror ? " (대칭)" : ""}`}
+              {cutText(pp.piece, lang)}
             </text>
           </g>
         );
@@ -65,21 +70,31 @@ export function PatternPreview({ sheet, dims = false, className = "h-auto w-full
 }
 
 // The seams that are sewn to each other, with their lengths and the difference between them.
+const SEAMS = {
+  title: L("서로 꿰매는 솔기", "Seams sewn together", "Costuras que se unen"),
+  note: L(
+    "패턴에 적힌 길이(cm)는 모두 완성선을 잰 값이고, 시접은 그 바깥에 따로 붙어 있습니다.",
+    "Every length on the pattern (cm) is measured on the seam line; the seam allowance is added outside it.",
+    "Cada largo del patrón (cm) se mide en la línea de costura; el margen de costura va por fuera.",
+  ),
+};
+
 export function SeamChecks({ sheet }: { sheet: Sheet }) {
+  const lang = useLang();
   const matches = seamMatches({ pieces: sheet.pieces.map((pp) => pp.piece) });
   return (
     <div className="rounded-xl bg-field p-3 text-sm">
       {matches.length > 0 && (
         <>
-          <p className="mb-1 font-semibold">서로 꿰매는 솔기</p>
+          <p className="mb-1 font-semibold">{SEAMS.title[lang]}</p>
           <ul className="mb-2 space-y-1 tabular-nums text-muted">
             {matches.map((m) => (
-              <li key={m.en}>{matchText(m, "ko")}</li>
+              <li key={m.name.en}>{matchText(m, lang)}</li>
             ))}
           </ul>
         </>
       )}
-      <p className="text-xs text-muted">패턴에 적힌 길이(cm)는 모두 완성선을 잰 값이고, 시접은 그 바깥에 따로 붙어 있습니다.</p>
+      <p className="text-xs text-muted">{SEAMS.note[lang]}</p>
     </div>
   );
 }

@@ -43,9 +43,9 @@ if (!mineArg) process.exit(0);
 const mine = Object.fromEntries(mineArg.split(",").map((kv) => [kv.split(":")[0], { cm: Number(kv.split(":")[1]) }])) as Partial<Record<SizeKey, { cm: number }>>;
 const d = decideSize(mine, table, (opt("fabric") as Fabric) ?? "woven", (opt("fit") as Fit) ?? "same");
 if (!d.ok) {
-  console.log(`no decision: ${d.reason} (${d.detail})`);
+  console.log(`no decision: ${d.reason} (${d.detail.en})`);
   process.exit(0);
 }
 console.log(`\nrecommended: ${d.best.label}`);
-for (const s of d.sentences) console.log(`  ${s}`);
+for (const s of d.sentences) console.log(`  ${s.ko}\n  ${s.en}`);
 for (const r of d.all) console.log(`  ${r.label}: ${r.fits}/${r.checks.length} fit`);

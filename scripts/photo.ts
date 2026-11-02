@@ -66,13 +66,13 @@ for (const source of sources) {
   console.log(`\n== ${name}`);
   if (!run.ok) {
     if (run.stage === "cost") console.log(`SAM would run ${run.pendingConcepts!.length} word(s) [${run.pendingConcepts!.join(", ")}] plus a layout check, about $${run.usd!.toFixed(4)}. Rerun with --yes.`);
-    else console.log(`stopped at ${run.stage}: ${run.detail}`);
+    else console.log(`stopped at ${run.stage}: ${run.detail.en}`);
     continue;
   }
   console.log(`scale (${run.scale.source}) ${run.scale.pxPerCm.toFixed(2)} px/cm, ±${(run.scale.relError * 100).toFixed(1)}%${run.layout ? `; Spark: ${run.layout.side}, ${run.layout.wrinkles}, hem ${run.layout.hem}, sleeves ${run.layout.sleeves.map((s) => `${s.number}:${s.state}`).join(" ")}` : ""}`);
   for (const [k, v] of Object.entries(run.measured.values)) if (v) line(k, v);
   for (const r of run.measured.refused) console.log(`  refused ${r.key}: ${r.cm.toFixed(1)} cm is outside ${r.range[0]}–${r.range[1]}`);
-  for (const n of run.measured.notes) console.log(`  note: ${n}`);
+  for (const n of run.measured.notes) console.log(`  note: ${n.en}`);
 
   // Overlay: outline, parts, measured segments with their cm.
   const o = run.overlay;
@@ -131,7 +131,7 @@ try {
   const { bytes, pages } = await patternPdf(pattern, { createdFor: names.join(" + ") });
   await writeFile(path.join(outDir, `${names[0]}-pattern.pdf`), bytes);
   console.log(`\nwrote .cache/out/${names[0]}-pattern.pdf (${pages[0] * pages[1] + 1} pages)`);
-  for (const n of pattern.notes) console.log(`  pattern note: ${n}`);
+  for (const n of pattern.notes) console.log(`  pattern note: ${n.en}`);
 } catch (e) {
   console.log(`\nno pattern: ${(e as Error).message}`);
 }

@@ -1,14 +1,20 @@
 "use client";
 
 import { svgPath, type Pt } from "@/lib/geom/point";
-import { MEASURE_KO } from "@/lib/pattern/measures";
+import { useLang } from "@/components/lang";
+import { L } from "@/lib/i18n/lang";
+import { MEASURE_NAME } from "@/lib/pattern/measures";
 import type { OkRun, PhotoView } from "@/lib/client/types";
+
+const ALT = L("펴 놓은 옷과 A4 용지", "The garment laid flat with an A4 sheet", "La prenda extendida con una hoja A4");
 
 // The photo with what the pipeline found: the A4 sheet, the garment outline, the SAM part masks
 // and each measured line with its cm. With onTap, a click reports where on the photo it landed
 // (as fractions of its width and height), and taps are drawn as rings.
 export function PhotoOverlay({ photo, run, onTap, taps = [], className = "rounded-xl" }: { photo: PhotoView; run?: OkRun; onTap?: (p: Pt) => void; taps?: Pt[]; className?: string }) {
+  const lang = useLang();
   const fs = Math.round(Math.max(photo.width, photo.height) / 55);
+  const glyph = lang === "ko" ? 0.62 : 0.56; // average character width, in font sizes
   return (
     <figure
       className={`relative overflow-hidden bg-well ${className} ${onTap ? "cursor-crosshair ring-2 ring-ink" : ""}`}
@@ -19,7 +25,7 @@ export function PhotoOverlay({ photo, run, onTap, taps = [], className = "rounde
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- a local object URL or a sample, shown at its own size */}
-      <img src={photo.src} alt="펴놓은 옷과 A4 용지" width={photo.width} height={photo.height} className="block h-auto w-full" />
+      <img src={photo.src} alt={ALT[lang]} width={photo.width} height={photo.height} className="block h-auto w-full" />
       {run && (
         <svg viewBox={`0 0 ${photo.width} ${photo.height}`} className="absolute inset-0 h-full w-full" aria-hidden>
           <path d={svgPath(run.scale.cornersPx, true)} fill="rgba(255,255,255,0.35)" stroke="var(--ink)" strokeWidth={fs / 5} />
@@ -38,8 +44,8 @@ export function PhotoOverlay({ photo, run, onTap, taps = [], className = "rounde
           ))}
           {/* Labels last, so no line crosses a label. */}
           {dedupe(run.overlay.segmentsPx).map((s) => {
-            const label = `${MEASURE_KO[s.key] ?? s.key} ${s.cm.toFixed(1)}`;
-            const w = label.length * fs * 0.62 + fs;
+            const label = `${MEASURE_NAME[s.key]?.[lang] ?? s.key} ${s.cm.toFixed(1)}`;
+            const w = label.length * fs * glyph + fs;
             const h = fs * 1.5;
             const x = Math.min(photo.width - w / 2 - fs / 2, Math.max(w / 2 + fs / 2, (s.a[0] + s.b[0]) / 2));
             const y = Math.min(photo.height - h, Math.max(h, (s.a[1] + s.b[1]) / 2));

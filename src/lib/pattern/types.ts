@@ -3,6 +3,7 @@
 // piece never stores a cutting line of its own.
 
 import type { Pt } from "../geom/point.ts";
+import type { Local } from "../i18n/lang.ts";
 
 export type EdgeKind =
   | "side" // side seam
@@ -34,8 +35,9 @@ export interface Notch {
 
 export interface Piece {
   id: string;
-  name: string; // printed on the pattern (ASCII: the PDF uses a standard font)
-  nameKo: string;
+  name: string; // English, same as names.en
+  nameKo: string; // same as names.ko
+  names: Local; // printed on the pattern and shown on screen, per language
   cut: { count: number; onFold: boolean; mirror: boolean }; // "Cut 2, mirror", "Cut 1 on fold"
   edges: Edge[];
   grain: [Pt, Pt]; // grainline arrow, parallel to the selvage
@@ -53,7 +55,7 @@ export interface Pattern {
   sizeLabel: string; // "Original", or the graded size
   fabric: Fabric;
   pieces: Piece[];
-  notes: string[];
+  notes: Local[]; // every note in each language, with the same numbers
   // The flat measurements it was drafted from (after grading), and which of them are typical values
   // rather than measured.
   measures: Record<string, number>;
@@ -61,5 +63,8 @@ export interface Pattern {
 }
 
 export type GarmentKind = "shirt" | "t-shirt" | "hoodie" | "skirt" | "eco-bag" | "pants";
+
+// A piece's names in every language, with the English and Korean fields older code reads.
+export const named = (names: Local) => ({ name: names.en, nameKo: names.ko, names });
 
 export const seamLine = (p: Piece): Pt[] => p.edges.flatMap((e) => e.pts.slice(0, -1));

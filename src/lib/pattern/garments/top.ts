@@ -8,7 +8,8 @@
 import { mirrorX, type Pt } from "../../geom/point.ts";
 import { cubic, line, polylineLength, quad, solveIncreasing } from "../curves.ts";
 import type { HoodieMeasures, TopMeasures } from "../measures.ts";
-import type { Edge, Fabric, Piece } from "../types.ts";
+import { L, type Local } from "../../i18n/lang.ts";
+import { named, type Edge, type Fabric, type Piece } from "../types.ts";
 import { pointAlong } from "../../geom/point.ts";
 
 const CAP_EASE: Record<Fabric, number> = { woven: 1.5, knit: 0 };
@@ -58,8 +59,8 @@ function body(m: TopMeasures, neckDrop: number, hemDepth: number): Body {
 // arrives at the top level, an S-curve.
 const halfCap = (b: number, h: number): Pt[] => cubic([-b, h], [-0.55 * b, h], [-0.45 * b, 0], [0, 0]);
 
-export function draftTop(kind: "shirt" | "t-shirt" | "hoodie", mIn: TopMeasures | HoodieMeasures, fabric: Fabric, unmeasured: string[]): { pieces: Piece[]; notes: string[] } {
-  const notes: string[] = [];
+export function draftTop(kind: "shirt" | "t-shirt" | "hoodie", mIn: TopMeasures | HoodieMeasures, fabric: Fabric, unmeasured: string[]): { pieces: Piece[]; notes: Local[] } {
+  const notes: Local[] = [];
   const shirt = kind === "shirt";
   const hoodie = kind === "hoodie";
   const hm = mIn as HoodieMeasures;
@@ -79,7 +80,13 @@ export function draftTop(kind: "shirt" | "t-shirt" | "hoodie", mIn: TopMeasures 
   let capH = solveIncreasing(capLen, target, 0.5, Math.max(1, sleeveLength - 2));
   if (capH === null) {
     capH = Math.min(0.6 * m.armholeDepth, sleeveLength - 2);
-    notes.push(`Sleeve cap could not match the armhole (${armholeTotal.toFixed(1)} cm); cap height set to ${capH.toFixed(1)} cm. Check before cutting.`);
+    notes.push(
+      L(
+        `소매산을 진동둘레(${armholeTotal.toFixed(1)} cm)에 맞추지 못해 소매산 높이를 ${capH.toFixed(1)} cm로 두었습니다. 재단 전에 확인하십시오.`,
+        `Sleeve cap could not match the armhole (${armholeTotal.toFixed(1)} cm); cap height set to ${capH.toFixed(1)} cm. Check before cutting.`,
+        `La copa de manga no se pudo ajustar a la sisa (${armholeTotal.toFixed(1)} cm); altura de copa fijada en ${capH.toFixed(1)} cm. Compruébalo antes de cortar.`,
+      ),
+    );
   }
   const left = halfCap(b, capH);
   const right = mirrorX(left).reverse();
@@ -87,8 +94,7 @@ export function draftTop(kind: "shirt" | "t-shirt" | "hoodie", mIn: TopMeasures 
   const sleeveHemR: Pt = [opening, sleeveLength], sleeveHemL: Pt = [-opening, sleeveLength];
   const sleeve: Piece = {
     id: "sleeve",
-    name: "Sleeve",
-    nameKo: "소매",
+    ...named(L("소매", "Sleeve", "Manga")),
     cut: { count: 2, onFold: false, mirror: true },
     edges: [
       { kind: "sleeve-cap", pts: left },
@@ -110,8 +116,7 @@ export function draftTop(kind: "shirt" | "t-shirt" | "hoodie", mIn: TopMeasures 
   const notchOn = (pts: Pt[], t: number) => pointAlong(pts, t * polylineLength(pts));
   const bodyPiece = (id: "front" | "back", bd: Body, count: 1 | 2): Piece => ({
     id,
-    name: id === "front" ? "Front" : "Back",
-    nameKo: id === "front" ? "앞판" : "뒤판",
+    ...named(id === "front" ? L("앞판", "Front", "Delantero") : L("뒤판", "Back", "Espalda")),
     cut: { count: 1, onFold: true, mirror: false },
     edges: bd.edges,
     grain: [[0.5 * (m.chest / 2), 0.3 * m.length], [0.5 * (m.chest / 2), 0.8 * m.length]],
@@ -126,7 +131,13 @@ export function draftTop(kind: "shirt" | "t-shirt" | "hoodie", mIn: TopMeasures 
     frontPiece.cut = { count: 2, onFold: false, mirror: true };
     frontPiece.edges = frontPiece.edges.map((e) => (e.kind === "fold" ? { kind: "seam", pts: e.pts, allowanceCm: BUTTON_STAND + FACING } : e));
     frontPiece.marks = [...(frontPiece.marks ?? []), { kind: "placement", a: [0, m.frontNeckDrop], b: [0, m.length] }];
-    notes.push(`Shirt front: ${BUTTON_STAND} cm button stand and ${FACING} cm facing are added past the centre front line.`);
+    notes.push(
+      L(
+        `셔츠 앞판: 앞중심선 바깥으로 단추 여밈분 ${BUTTON_STAND} cm와 안단 ${FACING} cm를 붙였습니다.`,
+        `Shirt front: ${BUTTON_STAND} cm button stand and ${FACING} cm facing are added past the centre front line.`,
+        `Delantero de camisa: se añaden ${BUTTON_STAND} cm de tapeta para botones y ${FACING} cm de vista más allá del centro delantero.`,
+      ),
+    );
   }
   if (hoodie) {
     // A zip front: two fronts, the centre front edge sewn to the zip tape.
@@ -142,21 +153,47 @@ export function draftTop(kind: "shirt" | "t-shirt" | "hoodie", mIn: TopMeasures 
     const halfNeck = polylineLength(front.neck) + polylineLength(back.neck);
     pieces.push(hood(hm, halfNeck, polylineLength(front.neck)));
     // Rib bands: the measured hem and cuff are the bands' relaxed width, folded in half lengthwise.
-    pieces.push(rect("hem-rib", "Hem rib", "밑단 시보리", 2 * mIn.hem, 2 * rib, { count: 1, onFold: false, mirror: false }));
-    pieces.push(rect("cuff-rib", "Cuff rib", "소매 시보리", 2 * mIn.sleeveOpening, 2 * rib, { count: 2, onFold: false, mirror: false }));
-    notes.push(`Hoodie: zip front (${ZIP_ALLOWANCE} cm to the zip tape); body ${(m.length - rib).toFixed(1)} cm long above a ${rib} cm hem rib; rib bands fold lengthwise and stretch onto the body.`);
-    notes.push("Hood height and depth can't be read from a flat photo; measure them before cutting.");
+    pieces.push(rect("hem-rib", L("밑단 시보리", "Hem rib", "Canalé del bajo"), 2 * mIn.hem, 2 * rib, { count: 1, onFold: false, mirror: false }));
+    pieces.push(rect("cuff-rib", L("소매 시보리", "Cuff rib", "Canalé de puño"), 2 * mIn.sleeveOpening, 2 * rib, { count: 2, onFold: false, mirror: false }));
+    const bodyLen = (m.length - rib).toFixed(1);
+    notes.push(
+      L(
+        `후드 집업: 지퍼 앞여밈(지퍼 테이프까지 ${ZIP_ALLOWANCE} cm), 몸판 길이 ${bodyLen} cm 아래에 시보리 ${rib} cm. 시보리는 길이 방향으로 반 접어 늘려 가며 몸판에 박습니다.`,
+        `Hoodie: zip front (${ZIP_ALLOWANCE} cm to the zip tape); body ${bodyLen} cm long above a ${rib} cm hem rib; rib bands fold lengthwise and stretch onto the body.`,
+        `Sudadera: delantero con cremallera (${ZIP_ALLOWANCE} cm hasta la cinta); cuerpo de ${bodyLen} cm sobre un canalé de ${rib} cm en el bajo; el canalé se dobla a lo largo y se cose estirándolo sobre el cuerpo.`,
+      ),
+    );
+    notes.push(
+      L(
+        "모자 높이와 폭은 펴 놓은 사진으로 잴 수 없습니다. 재단 전에 재 주십시오.",
+        "Hood height and depth can't be read from a flat photo; measure them before cutting.",
+        "El alto y el fondo de la capucha no se pueden medir en una foto en plano; mídelos antes de cortar.",
+      ),
+    );
   }
 
   if (shirt) {
     const neckline = 2 * (polylineLength(front.neck) + polylineLength(back.neck));
     const collarLen = neckline + 2 * BUTTON_STAND;
-    pieces.push(rect("collar", "Collar", "칼라", collarLen, 2 * COLLAR_HEIGHT, { count: 1, onFold: false, mirror: false }));
+    pieces.push(rect("collar", L("칼라", "Collar", "Cuello"), collarLen, 2 * COLLAR_HEIGHT, { count: 1, onFold: false, mirror: false }));
     const cuffLen = 2 * m.sleeveOpening + CUFF_OVERLAP;
-    pieces.push(rect("cuff", "Cuff", "커프스", cuffLen, 2 * CUFF_HEIGHT, { count: 2, onFold: false, mirror: false }));
-    notes.push(`Collar length ${collarLen.toFixed(1)} cm from the drafted neckline; cuff ${cuffLen.toFixed(1)} cm. Both fold lengthwise.`);
+    pieces.push(rect("cuff", L("커프스", "Cuff", "Puño"), cuffLen, 2 * CUFF_HEIGHT, { count: 2, onFold: false, mirror: false }));
+    notes.push(
+      L(
+        `칼라 길이 ${collarLen.toFixed(1)} cm(제도한 목둘레에서), 커프스 ${cuffLen.toFixed(1)} cm. 둘 다 길이 방향으로 반 접습니다.`,
+        `Collar length ${collarLen.toFixed(1)} cm from the drafted neckline; cuff ${cuffLen.toFixed(1)} cm. Both fold lengthwise.`,
+        `Cuello de ${collarLen.toFixed(1)} cm según el escote trazado; puño de ${cuffLen.toFixed(1)} cm. Ambos se doblan a lo largo.`,
+      ),
+    );
   }
-  if (fabric === "knit") notes.push("Knit: a flat-laid knit may be stretched or relaxed; every width carries extra ±.");
+  if (fabric === "knit")
+    notes.push(
+      L(
+        "니트: 펴 놓은 니트는 늘어나 있거나 줄어 있을 수 있어 너비마다 ±가 더 큽니다.",
+        "Knit: a flat-laid knit may be stretched or relaxed; every width carries extra ±.",
+        "Punto: una prenda de punto extendida puede estar estirada o recogida; cada ancho lleva un ± mayor.",
+      ),
+    );
   return { pieces, notes };
 }
 
@@ -173,8 +210,7 @@ function hood(m: HoodieMeasures, halfNeck: number, frontNeck: number): Piece {
   const backSeam = cubic([w, H - rise], [depth, 0.6 * H], [depth, 0], [0.45 * depth, 0]);
   return {
     id: "hood",
-    name: "Hood",
-    nameKo: "모자",
+    ...named(L("모자", "Hood", "Capucha")),
     cut: { count: 2, onFold: false, mirror: true },
     edges: [
       { kind: "seam", pts: line([0, 0], [0.45 * depth, 0]) },
@@ -189,11 +225,10 @@ function hood(m: HoodieMeasures, halfNeck: number, frontNeck: number): Piece {
 }
 
 // A rectangle seamed on all sides (collar, cuff, waistband).
-export function rect(id: string, name: string, nameKo: string, w: number, h: number, cut: Piece["cut"]): Piece {
+export function rect(id: string, names: Local, w: number, h: number, cut: Piece["cut"]): Piece {
   return {
     id,
-    name,
-    nameKo,
+    ...named(names),
     cut,
     edges: [
       { kind: "seam", pts: line([0, 0], [w, 0]) },

@@ -6,7 +6,8 @@ import { dist } from "../../geom/point.ts";
 import { casingAllowance } from "../../rules/seam-rules.ts";
 import { line, quad } from "../curves.ts";
 import type { BagMeasures, PantsMeasures, SkirtMeasures } from "../measures.ts";
-import type { Piece } from "../types.ts";
+import { L, type Local } from "../../i18n/lang.ts";
+import { named, type Piece } from "../types.ts";
 
 export const ELASTIC_CM = 3; // [A] default elastic width; the user can change it
 
@@ -15,8 +16,8 @@ export const ELASTIC_CM = 3; // [A] default elastic width; the user can change i
 const FRONT_EXT = 2 / 16;
 const BACK_EXT = 2 / 10;
 
-export function draftPants(m: PantsMeasures, unmeasured: string[], elastic = ELASTIC_CM): { pieces: Piece[]; notes: string[] } {
-  const notes: string[] = [];
+export function draftPants(m: PantsMeasures, unmeasured: string[], elastic = ELASTIC_CM): { pieces: Piece[]; notes: Local[] } {
+  const notes: Local[] = [];
   const quarter = m.hip / 2; // a quarter of the hip circumference
   const frontHip = quarter - 1, backHip = quarter + 1;
   const frontHem = m.legOpening - 1, backHem = m.legOpening + 1; // the leg opening is half its circumference
@@ -41,8 +42,7 @@ export function draftPants(m: PantsMeasures, unmeasured: string[], elastic = ELA
       inseam: dist(crotch, hemIn),
       piece: {
         id,
-        name: front ? "Front leg" : "Back leg",
-        nameKo: front ? "앞판" : "뒤판",
+        ...named(front ? L("앞판", "Front leg", "Delantero") : L("뒤판", "Back leg", "Trasero")),
         cut: { count: 2, onFold: false, mirror: true },
         edges: [
           { kind: "casing", pts: line(waistC, waistS), allowanceCm: casing },
@@ -60,23 +60,43 @@ export function draftPants(m: PantsMeasures, unmeasured: string[], elastic = ELA
   };
   const front = half("front"), back = half("back");
   const diff = back.inseam - front.inseam;
-  if (Math.abs(diff) > 0.5) notes.push(`Back inseam is ${diff.toFixed(1)} cm longer than the front; ease it in above the knee or shorten the back crotch point.`);
-  notes.push(`Waist casing for ${elastic} cm elastic (${casing.toFixed(1)} cm allowance): turn under 1 cm, then fold ${(casing - 1).toFixed(1)} cm. Cut the elastic to your waist minus about 10%.`);
+  if (Math.abs(diff) > 0.5)
+    notes.push(
+      L(
+        `뒤 안솔기가 앞보다 ${diff.toFixed(1)} cm 깁니다. 무릎 위에서 오그려 박거나 뒤 밑위 끝을 줄이십시오.`,
+        `Back inseam is ${diff.toFixed(1)} cm longer than the front; ease it in above the knee or shorten the back crotch point.`,
+        `La entrepierna trasera es ${diff.toFixed(1)} cm más larga que la delantera; embébela por encima de la rodilla o acorta la punta del tiro trasero.`,
+      ),
+    );
+  const fold = (casing - 1).toFixed(1);
+  notes.push(
+    L(
+      `고무줄 ${elastic} cm용 허리 통(시접 ${casing.toFixed(1)} cm): 1 cm 접고 다시 ${fold} cm 접어 박습니다. 고무줄은 허리둘레보다 10% 정도 짧게 자릅니다.`,
+      `Waist casing for ${elastic} cm elastic (${casing.toFixed(1)} cm allowance): turn under 1 cm, then fold ${fold} cm. Cut the elastic to your waist minus about 10%.`,
+      `Jareta para elástico de ${elastic} cm (margen de ${casing.toFixed(1)} cm): dobla 1 cm y luego ${fold} cm. Corta el elástico a tu cintura menos un 10 %.`,
+    ),
+  );
   if (m.thigh > 0) {
     // Around the leg at crotch level: both pieces from the crotch point to the side seam.
     const legW = frontHip + backHip + m.hip * (FRONT_EXT + BACK_EXT);
-    if (legW < 2 * m.thigh) notes.push(`Thigh on the pattern may be narrower than the original (${m.thigh.toFixed(1)} cm flat). Check before cutting.`);
+    if (legW < 2 * m.thigh)
+      notes.push(
+        L(
+          `패턴의 허벅지가 원래 옷(단면 ${m.thigh.toFixed(1)} cm)보다 좁을 수 있습니다. 재단 전에 확인하십시오.`,
+          `Thigh on the pattern may be narrower than the original (${m.thigh.toFixed(1)} cm flat). Check before cutting.`,
+          `El muslo del patrón puede quedar más estrecho que el original (${m.thigh.toFixed(1)} cm en plano). Compruébalo antes de cortar.`,
+        ),
+      );
   }
   return { pieces: [front.piece, back.piece], notes };
 }
 
-export function draftSkirt(m: SkirtMeasures, elastic = ELASTIC_CM): { pieces: Piece[]; notes: string[] } {
+export function draftSkirt(m: SkirtMeasures, elastic = ELASTIC_CM): { pieces: Piece[]; notes: Local[] } {
   const w = m.hem / 2; // half a panel, cut on the fold
   const casing = casingAllowance(elastic);
   const piece: Piece = {
     id: "panel",
-    name: "Front & back",
-    nameKo: "앞·뒤판",
+    ...named(L("앞·뒤판", "Front & back", "Delantero y trasero")),
     cut: { count: 2, onFold: true, mirror: false },
     edges: [
       { kind: "casing", pts: line([0, 0], [w, 0]), allowanceCm: casing },
@@ -91,20 +111,27 @@ export function draftSkirt(m: SkirtMeasures, elastic = ELASTIC_CM): { pieces: Pi
   return {
     pieces: [piece],
     notes: [
-      `Gathered skirt: the waist is as wide as the hem and the ${elastic} cm elastic gathers it; the panels must pass over your hips.`,
-      `Waist casing (${casing.toFixed(1)} cm allowance): turn under 1 cm, then fold ${(casing - 1).toFixed(1)} cm.`,
+      L(
+        `개더 스커트: 허리가 밑단만큼 넓고, ${elastic} cm 고무줄이 주름을 잡습니다. 판이 엉덩이를 지나가야 합니다.`,
+        `Gathered skirt: the waist is as wide as the hem and the ${elastic} cm elastic gathers it; the panels must pass over your hips.`,
+        `Falda fruncida: la cintura es tan ancha como el bajo y el elástico de ${elastic} cm la frunce; los paneles deben pasar por tus caderas.`,
+      ),
+      L(
+        `허리 통(시접 ${casing.toFixed(1)} cm): 1 cm 접고 다시 ${(casing - 1).toFixed(1)} cm 접어 박습니다.`,
+        `Waist casing (${casing.toFixed(1)} cm allowance): turn under 1 cm, then fold ${(casing - 1).toFixed(1)} cm.`,
+        `Jareta (margen de ${casing.toFixed(1)} cm): dobla 1 cm y luego ${(casing - 1).toFixed(1)} cm.`,
+      ),
     ],
   };
 }
 
 const HANDLE_INTO_TOP = 3; // each handle end tucked under the top hem
 
-export function draftBag(m: BagMeasures): { pieces: Piece[]; notes: string[] } {
+export function draftBag(m: BagMeasures): { pieces: Piece[]; notes: Local[] } {
   const w = m.width + m.gusset, h = m.height + m.gusset / 2;
   const body: Piece = {
     id: "body",
-    name: "Body",
-    nameKo: "몸판",
+    ...named(L("몸판", "Body", "Cuerpo")),
     // One piece, folded at the bottom: front and back in one.
     cut: { count: 1, onFold: true, mirror: false },
     edges: [
@@ -122,8 +149,7 @@ export function draftBag(m: BagMeasures): { pieces: Piece[]; notes: string[] } {
   const len = m.handleLength + 2 * HANDLE_INTO_TOP, wid = 4 * m.handleWidth; // pressed in quarters
   const handle: Piece = {
     id: "handle",
-    name: "Handle",
-    nameKo: "손잡이",
+    ...named(L("손잡이", "Handle", "Asa")),
     cut: { count: 2, onFold: false, mirror: false },
     edges: [
       { kind: "seam", pts: line([0, 0], [wid, 0]), allowanceCm: 0 },
@@ -134,10 +160,25 @@ export function draftBag(m: BagMeasures): { pieces: Piece[]; notes: string[] } {
     grain: [[wid / 2, 0.2 * len], [wid / 2, 0.8 * len]],
     notches: [],
   };
-  const notes = [
-    "Handles: allowances included. Press both long edges to the centre, fold again, topstitch.",
-    `Handle ends go ${HANDLE_INTO_TOP} cm under the top hem, at the notches.`,
+  const notes: Local[] = [
+    L(
+      "손잡이: 시접 포함. 긴 두 변을 가운데로 접어 다리고, 한 번 더 접어 상침합니다.",
+      "Handles: allowances included. Press both long edges to the centre, fold again, topstitch.",
+      "Asas: margen incluido. Plancha los dos lados largos hacia el centro, dobla otra vez y pespuntea.",
+    ),
+    L(
+      `손잡이 끝은 맞춤점 자리에서 입구 단 아래로 ${HANDLE_INTO_TOP} cm 넣습니다.`,
+      `Handle ends go ${HANDLE_INTO_TOP} cm under the top hem, at the notches.`,
+      `Los extremos de las asas van ${HANDLE_INTO_TOP} cm bajo el dobladillo superior, en los piquetes.`,
+    ),
   ];
-  if (m.gusset > 0) notes.push(`Box the bottom corners: after sewing the sides, stitch across each corner ${m.gusset.toFixed(1)} cm wide.`);
+  if (m.gusset > 0)
+    notes.push(
+      L(
+        `바닥 모서리 박기: 옆선을 박은 뒤 모서리마다 ${m.gusset.toFixed(1)} cm 폭으로 가로질러 박습니다.`,
+        `Box the bottom corners: after sewing the sides, stitch across each corner ${m.gusset.toFixed(1)} cm wide.`,
+        `Esquinas en caja: después de coser los lados, cose a través de cada esquina con ${m.gusset.toFixed(1)} cm de ancho.`,
+      ),
+    );
   return { pieces: [body, handle], notes };
 }

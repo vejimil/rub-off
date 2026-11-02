@@ -12,6 +12,7 @@ import { area, gridBox, largestComponent, traceOuter, type Box, type Grid } from
 import { applyH, homography, planeDistance, type Mat3 } from "../geom/homography.ts";
 import { dist, type Pt } from "../geom/point.ts";
 import { convexHull, polygonArea, quadCorners } from "../geom/polygon.ts";
+import { L as Loc, type Local } from "../i18n/lang.ts";
 
 export const A4_CM = [21, 29.7] as const;
 const A4_ASPECT = 29.7 / 21;
@@ -35,7 +36,7 @@ export type ScaleFailureReason = "no-paper" | "paper-edge" | "paper-corners" | "
 export interface ScaleFailure {
   ok: false;
   reason: ScaleFailureReason;
-  detail: string;
+  detail: Local;
 }
 
 export interface A4Scale {
@@ -57,24 +58,24 @@ export function a4Scale(paperMask: Grid): ScaleResult {
   const shape = largestComponent(paperMask);
   const contour = traceOuter(shape);
   const box = gridBox(shape);
-  if (contour.length < 20 || !box) return { ok: false, reason: "no-paper", detail: "사진에서 A4 용지를 찾지 못했습니다." };
+  if (contour.length < 20 || !box) return { ok: false, reason: "no-paper", detail: Loc("사진에서 A4 용지를 찾지 못했습니다.", "No A4 sheet found in the photo.", "No encontramos la hoja A4 en la foto.") };
   if (box[0] <= EDGE_PX || box[1] <= EDGE_PX || box[2] >= paperMask.width - EDGE_PX || box[3] >= paperMask.height - EDGE_PX) {
-    return { ok: false, reason: "paper-edge", detail: "A4 용지가 사진 가장자리에 걸렸습니다. 네 모서리가 모두 보이게 다시 찍어 주십시오." };
+    return { ok: false, reason: "paper-edge", detail: Loc("A4 용지가 사진 가장자리에 걸렸습니다. 네 모서리가 모두 보이게 다시 찍어 주십시오.", "The A4 sheet touches the edge of the photo. Take it again with all four corners in view.", "La hoja A4 toca el borde de la foto. Vuelve a hacerla con las cuatro esquinas a la vista.") };
   }
   const rough = quadCorners(convexHull(contour));
-  if (!rough) return { ok: false, reason: "paper-corners", detail: "A4 용지의 네 모서리를 찾지 못했습니다." };
+  if (!rough) return { ok: false, reason: "paper-corners", detail: Loc("A4 용지의 네 모서리를 찾지 못했습니다.", "Couldn't find the four corners of the A4 sheet.", "No encontramos las cuatro esquinas de la hoja A4.") };
   const corners = refineCorners(contour, rough) ?? rough;
 
   // Below 1: something covers part of it. Above 1: a corner is missing, so the corners found aren't its.
   const fill = area(shape) / polygonArea(corners);
   if (!(Math.abs(1 - fill) <= 1 - MIN_FILL)) {
-    return { ok: false, reason: "paper-covered", detail: `A4 용지가 가려졌거나 접혀 있습니다(윤곽의 ${(fill * 100).toFixed(0)}%만 보임). 용지 위를 비워 주십시오.` };
+    return { ok: false, reason: "paper-covered", detail: Loc(`A4 용지가 가려졌거나 접혀 있습니다(윤곽의 ${(fill * 100).toFixed(0)}%만 보임). 용지 위를 비워 주십시오.`, `The A4 sheet is covered or folded (only ${(fill * 100).toFixed(0)}% of it shows). Clear anything off it.`, `La hoja A4 está tapada o doblada (solo se ve el ${(fill * 100).toFixed(0)}%). Quita lo que tenga encima.`) };
   }
   const [tl, tr, br, bl] = corners;
   const across = dist(tl, tr) + dist(br, bl), down = dist(tr, br) + dist(bl, tl);
   const aspect = Math.max(across, down) / Math.min(across, down);
   if (Math.abs(aspect / A4_ASPECT - 1) > ASPECT_TOLERANCE) {
-    return { ok: false, reason: "paper-aspect", detail: `용지 비율이 ${aspect.toFixed(2)} : 1로 A4(1.41 : 1)가 아닙니다. A4가 아니거나 사진이 기울었습니다.` };
+    return { ok: false, reason: "paper-aspect", detail: Loc(`용지 비율이 ${aspect.toFixed(2)} : 1로 A4(1.41 : 1)가 아닙니다. A4가 아니거나 사진이 기울었습니다.`, `The sheet is ${aspect.toFixed(2)} : 1, not A4 (1.41 : 1). It isn't A4, or the photo is tilted.`, `La hoja mide ${aspect.toFixed(2)} : 1, no es A4 (1.41 : 1). No es A4 o la foto está inclinada.`) };
   }
 
   // The longer pair of opposite sides is the long edge.
@@ -142,7 +143,7 @@ export function garmentPlane(s: A4Scale, pointsPx: readonly Pt[]): Plane | Scale
   };
   const a = span(toCm), b = span(plain);
   if (Math.abs(a / b - 1) > PLANE_AGREEMENT) {
-    return { ok: false, reason: "paper-aspect", detail: `사진이 너무 기울어 잴 수 없습니다(원근 ${(100 * Math.abs(a / b - 1)).toFixed(0)}%). 바로 위에서 찍어 주십시오.` };
+    return { ok: false, reason: "paper-aspect", detail: Loc(`사진이 너무 기울어 잴 수 없습니다(원근 ${(100 * Math.abs(a / b - 1)).toFixed(0)}%). 바로 위에서 찍어 주십시오.`, `The photo is too tilted to measure (${(100 * Math.abs(a / b - 1)).toFixed(0)}% perspective). Shoot from directly above.`, `La foto está demasiado inclinada para medir (perspectiva del ${(100 * Math.abs(a / b - 1)).toFixed(0)}%). Hazla desde justo encima.`) };
   }
   return { toCm, toPx, rel: Math.hypot(s.relError, far), perspective: true };
 }
