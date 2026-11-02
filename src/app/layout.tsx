@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Black_Han_Sans, IBM_Plex_Sans_KR } from "next/font/google";
 import Link from "next/link";
-import { PageScript } from "@/components/page-script";
 import "./globals.css";
 
 // Two faces: a heavy, constructed Korean display face for the few big words, and a grotesk for
@@ -18,9 +17,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ko" className={`${display.variable} ${text.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
-        <PageScript />
         <header className="sticky top-0 z-30 bg-sand">
-          <div className="flex h-12 w-full items-center gap-6 px-4 sm:px-8">
+          <div className="flex h-12 w-full items-center gap-6 px-5 sm:px-10 lg:px-16">
             <Link href="/" className="flex items-center gap-2 font-display text-lg tracking-tight">
               <Mark />
               Rub-Off

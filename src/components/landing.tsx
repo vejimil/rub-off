@@ -1,109 +1,48 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { PatternPreview } from "@/components/pattern-preview";
 import { draft } from "@/lib/pattern/draft";
 import { layOut } from "@/lib/pattern/layout";
 import { MEASURE_KO } from "@/lib/pattern/measures";
 import { grade, GRADE_STEP } from "@/lib/rules/grading";
 
-const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-// Progress 0..1 of a tall wrapper scrolling past its sticky stage, written straight to one element.
-function useStageProgress(onProgress: (p: number) => void) {
-  const ref = useRef<HTMLDivElement>(null);
-  const cb = useRef(onProgress);
-  useEffect(() => {
-    cb.current = onProgress;
-  });
-  useEffect(() => {
-    let raf = 0;
-    const update = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const el = ref.current;
-        if (!el) return;
-        const total = el.offsetHeight - window.innerHeight;
-        cb.current(total > 0 ? Math.min(1, Math.max(0, -el.getBoundingClientRect().top / total)) : 0);
-      });
-    };
-    update();
-    window.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
-    };
-  }, []);
-  return ref;
-}
-
-// Each step holds still for the middle half of its share of the scroll, then moves on.
-const held = (p: number, steps: number) => {
-  const s = p * (steps - 1);
-  const i = Math.min(steps - 2, Math.floor(s));
-  const t = Math.min(1, Math.max(0, (s - i - 0.25) / 0.5));
-  return i + t * t * (3 - 2 * t);
-};
-
 export interface Frame {
   node: ReactNode;
   caption: string;
 }
 
-// The hero: a sentence split by a frame. The two halves hold their place while the frame in the
-// middle steps through the garment's run: photo, measured, pattern, laid on fabric.
+// The hero: a sentence split by a column of frames. The two halves stay put while the frames
+// (photo, measured, pattern) scroll up past them with the page: plain scrolling, nothing scripted.
 export function HeroReel({ left, right, sentence, frames }: { left: string; right: string; sentence: string; frames: Frame[] }) {
-  const reel = useRef<HTMLDivElement>(null);
-  const [step, setStep] = useState(0);
-  const wrap = useStageProgress((p) => {
-    const el = reel.current;
-    if (!el || window.innerWidth < 1024) return;
-    const f = held(p, frames.length);
-    const pitch = (el.firstElementChild as HTMLElement | null)?.offsetHeight ?? 0;
-    el.style.transform = `translateY(${-f * (pitch + 16)}px)`;
-    setStep(Math.round(f));
-  });
   return (
-    <section ref={wrap} aria-labelledby="hero-title" className="relative lg:h-[200svh]">
-      <div className="flex flex-col px-4 pb-16 pt-6 sm:px-8 lg:sticky lg:top-12 lg:block lg:h-[calc(100svh-3rem)] lg:overflow-hidden lg:p-0">
-        <h1
-          id="hero-title"
-          className="font-display text-[11vw] leading-[1.02] tracking-[-0.02em] sm:text-[8vw] lg:absolute lg:inset-x-8 lg:top-1/2 lg:z-10 lg:flex lg:-translate-y-1/2 lg:justify-between lg:text-[clamp(36px,3.6vw,56px)]"
-        >
-          <span className="block">{left}</span>
-          <span className="block text-right">{right}</span>
-        </h1>
-        {/* The reel: centred column, the frames before and after showing as slivers. */}
-        <div className="order-3 mt-10 lg:absolute lg:inset-x-0 lg:top-10 lg:mx-auto lg:mt-0 lg:w-[calc((100svh-3rem-80px-32px)*0.83)]">
-          <div ref={reel} className="space-y-4 will-change-transform">
-            {frames.map((f, i) => (
-              <figure
-                key={f.caption}
-                className={`relative flex aspect-[5/6] flex-col overflow-hidden rounded-[4px] bg-sand lg:h-[calc(100svh-3rem-80px-32px)] lg:aspect-auto ${i > 0 ? "hidden lg:flex" : ""}`}
-              >
-                <div className="relative min-h-0 flex-1 overflow-hidden">{f.node}</div>
-                <figcaption className="order-first flex items-center justify-between gap-4 bg-ink px-4 py-2.5 text-[15px] text-sand lg:order-none">
-                  <span>{f.caption}</span>
-                  <span className="num hidden shrink-0 opacity-80 lg:inline">
-                    {i + 1} / {frames.length}
-                  </span>
-                </figcaption>
-              </figure>
-            ))}
+    <section aria-labelledby="hero-title" className="relative">
+      {/* The held layer lives in a box as tall as the section, so it lets go when the section ends. */}
+      <div className="pointer-events-none z-10 px-5 pt-8 sm:px-10 lg:absolute lg:inset-0 lg:p-0">
+        <div className="lg:sticky lg:top-12 lg:h-[calc(100svh-3rem)]">
+          <h1
+            id="hero-title"
+            className="pointer-events-auto font-display text-[11vw] leading-[1.02] tracking-[-0.02em] sm:text-[8vw] lg:absolute lg:inset-x-16 lg:top-1/2 lg:flex lg:-translate-y-1/2 lg:justify-between lg:text-[clamp(32px,3.2vw,50px)]"
+          >
+            <span className="block">{left}</span>
+            <span className="block text-right">{right}</span>
+          </h1>
+          <div className="pointer-events-auto mt-8 max-w-md lg:absolute lg:bottom-12 lg:left-16 lg:mt-0 lg:max-w-[min(22vw,340px)]">
+            <p className="text-lg leading-relaxed">{sentence}</p>
+            <Link href="/make" className="press mt-6 inline-flex rounded-[4px] bg-ink px-6 py-3 font-medium text-sand hover:bg-ink-strong">
+              패턴 만들기
+            </Link>
           </div>
         </div>
-        <div className="order-2 mt-6 max-w-md lg:absolute lg:bottom-8 lg:left-8 lg:mt-0 lg:max-w-[min(30vw,380px)]">
-          <p className="text-lg leading-relaxed">{sentence}</p>
-          <Link href="/make" className="press mt-5 inline-flex rounded-[4px] bg-ink px-6 py-3 font-medium text-sand hover:bg-ink-strong">
-            패턴 만들기
-          </Link>
-        </div>
-        <p className="sr-only" aria-live="polite">
-          {frames[step]?.caption}
-        </p>
+      </div>
+      <div className="mt-12 space-y-8 px-5 pb-24 sm:px-10 lg:mx-auto lg:mt-0 lg:w-[calc((100svh-3rem-104px)*0.8)] lg:space-y-14 lg:px-0 lg:pb-14 lg:pt-[52px]">
+        {frames.map((f) => (
+          <figure key={f.caption} className="flex aspect-[5/6] flex-col overflow-hidden rounded-[4px] bg-sand lg:aspect-auto lg:h-[calc(100svh-3rem-104px)]">
+            <div className="relative min-h-0 flex-1 overflow-hidden">{f.node}</div>
+            <figcaption className="bg-ink px-4 py-2.5 text-[15px] text-sand">{f.caption}</figcaption>
+          </figure>
+        ))}
       </div>
     </section>
   );
@@ -116,42 +55,55 @@ export interface GarmentCard {
   tone: string;
 }
 
-// Cards crossing a held photograph: the six garments travel right to left over the 1763 plate of
-// a tailor's pieces laid flat, while the page scrolls.
-export function GarmentRun({ heading, sub, lead, cards }: { heading: string; sub: string; lead: ReactNode; cards: GarmentCard[] }) {
-  const track = useRef<HTMLDivElement>(null);
-  const wrap = useStageProgress((p) => {
-    const el = track.current;
-    if (!el || window.innerWidth < 1024 || reduced()) {
-      if (el) el.style.transform = "";
-      return;
-    }
-    const travel = el.scrollWidth - (el.parentElement?.clientWidth ?? window.innerWidth);
-    el.style.transform = `translateX(${-p * travel}px)`;
-  });
+// The six garments in a row of their own: it scrolls sideways (trackpad, shift + wheel, a swipe, the
+// arrow buttons or the keyboard) and never takes over the page's vertical scroll.
+export function GarmentRow({ heading, sub, cards }: { heading: string; sub: string; cards: GarmentCard[] }) {
+  const row = useRef<HTMLDivElement>(null);
+  const [edge, setEdge] = useState<"start" | "middle" | "end">("start");
+  const onScroll = () => {
+    const el = row.current;
+    if (!el) return;
+    setEdge(el.scrollLeft < 8 ? "start" : el.scrollLeft > el.scrollWidth - el.clientWidth - 8 ? "end" : "middle");
+  };
+  const page = (dir: 1 | -1) => row.current?.scrollBy({ left: dir * row.current.clientWidth * 0.8, behavior: "smooth" });
+  const arrow = "press flex h-11 w-11 items-center justify-center rounded-full border border-sand/40 hover:border-sand disabled:opacity-30";
   return (
-    <section ref={wrap} aria-labelledby="garments-title" className="relative bg-ink text-sand lg:h-[180svh]">
-      <div className="relative overflow-hidden lg:sticky lg:top-12 lg:h-[calc(100svh-3rem)]">
-        <div className="relative px-4 pt-16 sm:px-8 lg:pt-10">
-          <h2 id="garments-title" className="font-display text-[9vw] leading-none tracking-[-0.02em] lg:text-[clamp(36px,3.6vw,56px)]">
-            {heading}
-          </h2>
-          <p className="mt-3 max-w-xl text-lg">{sub}</p>
+    <section aria-labelledby="garments-title" className="bg-ink py-28 text-sand lg:py-40">
+      <div className="grid gap-6 px-5 sm:grid-cols-12 sm:items-end sm:gap-x-12 sm:px-10 lg:px-16">
+        <h2 id="garments-title" className="font-display text-[9vw] leading-none tracking-[-0.02em] sm:col-span-5 sm:text-[8vw] lg:text-[clamp(32px,3.2vw,50px)]">
+          {heading}
+        </h2>
+        <p className="max-w-xl text-lg leading-relaxed sm:col-span-5">{sub}</p>
+        <div className="hidden justify-end gap-3 sm:col-span-2 sm:flex">
+          <button type="button" aria-label="이전 옷" onClick={() => page(-1)} disabled={edge === "start"} className={arrow}>
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
+              <path d="M11 3 L5 9 L11 15" fill="none" stroke="currentColor" strokeWidth="1.8" />
+            </svg>
+          </button>
+          <button type="button" aria-label="다음 옷" onClick={() => page(1)} disabled={edge === "end"} className={arrow}>
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
+              <path d="M7 3 L13 9 L7 15" fill="none" stroke="currentColor" strokeWidth="1.8" />
+            </svg>
+          </button>
         </div>
-        <div className="relative mt-8 lg:absolute lg:inset-x-8 lg:bottom-[max(32px,6svh)] lg:mt-0 lg:overflow-hidden">
-          <div ref={track} className="flex flex-col gap-6 px-4 pb-16 sm:px-8 lg:flex-row lg:gap-8 lg:p-0 lg:will-change-transform">
-            {lead}
-            {cards.map((c) => (
-              <article key={c.name} className="flex shrink-0 flex-col overflow-hidden text-ink lg:h-[min(500px,60svh)] lg:w-[min(460px,32vw)]">
-                <div className="relative aspect-[4/3] bg-sand lg:aspect-auto lg:min-h-0 lg:flex-1">{c.picture}</div>
-                <div className="flex flex-col gap-3 p-6" style={{ background: c.tone }}>
-                  <h3 className="shrink-0 font-display text-[32px] leading-none">{c.name}</h3>
-                  <p className="text-lg leading-snug">{c.text}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
+      </div>
+      <div
+        ref={row}
+        onScroll={onScroll}
+        tabIndex={0}
+        role="region"
+        aria-label="여섯 가지 옷, 옆으로 넘기기"
+        className="row-scroll mx-5 mt-14 flex snap-x snap-mandatory gap-6 overflow-x-auto overscroll-x-contain scroll-smooth pb-6 sm:mx-10 lg:mx-16 lg:gap-8"
+      >
+        {cards.map((c) => (
+          <article key={c.name} className="flex w-[78vw] shrink-0 snap-start flex-col overflow-hidden text-ink sm:w-[360px] lg:w-[400px]">
+            <div className="relative aspect-[4/3] bg-sand">{c.picture}</div>
+            <div className="flex flex-1 flex-col gap-3 p-6" style={{ background: c.tone }}>
+              <h3 className="font-display text-[32px] leading-none">{c.name}</h3>
+              <p className="text-lg leading-snug">{c.text}</p>
+            </div>
+          </article>
+        ))}
       </div>
     </section>
   );

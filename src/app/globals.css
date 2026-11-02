@@ -126,44 +126,11 @@ p {
     opacity: 1;
     transform: none;
   }
-  .js [data-deal] {
-    opacity: 0;
-    transform: translateY(80px) rotate(0deg);
-    transition:
-      opacity 600ms var(--ease-out),
-      transform 1000ms var(--ease-expo);
-    transition-delay: calc(var(--d, 0) * 90ms);
-  }
-  .js [data-deal].is-in {
-    opacity: 1;
-    transform: rotate(var(--rot));
-  }
-  .drift {
-    animation: drift 18s var(--ease-soft) infinite alternate;
-  }
-  .marquee {
-    animation: marquee 48s linear infinite;
-  }
 }
-[data-deal] {
-  --rot: 0deg;
-  transform: rotate(var(--rot));
-}
-@media (min-width: 1024px) {
-  [data-deal] {
-    --rot: var(--r, 0deg);
-  }
-}
-@keyframes drift {
-  from {
-    transform: scale(1.02) translate(0, 0);
-  }
-  to {
-    transform: scale(1.08) translate(-1.5%, -1%);
-  }
-}
-@keyframes marquee {
-  to {
-    transform: translateX(-50%);
-  }
+
+/* A row that scrolls sideways on its own: a slim scrollbar in the section's ink. */
+.row-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, currentColor 45%, transparent) transparent;
+  -webkit-overflow-scrolling: touch;
 }

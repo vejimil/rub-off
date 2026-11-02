@@ -207,7 +207,7 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
   ];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start">
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start lg:gap-10">
       {/* Left: the photo canvas */}
       <div className="space-y-4 lg:sticky lg:top-16">
         <Card className="space-y-4">
@@ -395,7 +395,7 @@ export function Workbench({ live, initial, sampleTable, initialEdits, initialTab
             <p className="mb-4 text-sm text-muted">사진의 기하에서 잰 단면 값(cm). 줄자로 잰 값이 있으면 고쳐 쓰십시오.</p>
             <div className="divide-y divide-line">
               {rows.map((r) => (
-                <div key={r.key} className="flex items-center gap-3 py-2.5">
+                <div key={r.key} className="flex items-center gap-3 py-3.5">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-sm font-medium">{MEASURE_KO[r.key] ?? r.key}</span>
