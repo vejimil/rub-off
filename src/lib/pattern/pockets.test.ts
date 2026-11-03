@@ -34,7 +34,8 @@ test("a default pocket fits its panel on every garment that takes one, and becom
   }
   assert.deepEqual(pocketKinds(ex("cushion")), []);
   assert.deepEqual(pocketKinds(ex("sweatshirt")), ["patch", "round", "kangaroo"]);
-  assert.deepEqual(pocketKinds(ex("hoodie")), ["patch", "round"]); // zip front: no fold to straddle
+  assert.deepEqual(pocketKinds(ex("hoodie")), ["patch", "round", "kangaroo"]); // split by the zip, a half on each front
+  assert.deepEqual(pocketKinds(ex("shirt")), ["patch", "round"]); // the button stand is past the centre line
 });
 
 test("a pocket's place follows its panel when the pattern is graded; one that no longer fits is left out with a note", () => {

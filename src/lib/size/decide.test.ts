@@ -57,3 +57,21 @@ test("a trouser table's 총장 is compared with the outseam", () => {
   assert.ok(d.ok);
   assert.deepEqual(d.best.checks.map((c) => c.key).sort(), ["outseam", "waist"]);
 });
+
+test("a length no size comes near is another style: left out of the comparison, and said so", () => {
+  // A short-sleeved T-shirt against a long-sleeved table: the sleeve is 23 cm, the table 59–61.
+  const d = decideSize({ ...MINE, sleeve: { cm: 23 } }, TABLE, "woven", "same");
+  assert.ok(d.ok);
+  assert.deepEqual(d.unlike.map((u) => u.key), ["sleeve"]);
+  assert.ok(d.all.every((r) => r.checks.every((c) => c.key !== "sleeve")));
+  assert.equal(d.best.label, "M");
+  const said = d.sentences.find((s) => s.en.startsWith("Sleeve"));
+  assert.ok(said && /59\.0–61\.0 cm/.test(said.en) && /23\.0 cm/.test(said.ko), d.sentences.map((s) => s.en).join("\n"));
+});
+
+test("a nearby length is still a size question", () => {
+  const d = decideSize({ ...MINE, sleeve: { cm: 45 } }, TABLE, "woven", "same");
+  assert.ok(d.ok);
+  assert.equal(d.unlike.length, 0);
+  assert.ok(d.best.checks.some((c) => c.key === "sleeve"));
+});

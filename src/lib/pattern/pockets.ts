@@ -21,6 +21,7 @@ export interface Pocket {
   v: number; // and of its height (0 top, 1 bottom)
   width: number; // finished, cm
   height: number;
+  fromPhoto?: boolean; // measured on the photo, not placed by hand
 }
 
 export const POCKET_NAME: Record<PocketKind, Local> = {
@@ -39,10 +40,15 @@ export function pocketHosts(pattern: Pick<Pattern, "garment" | "pieces">): Piece
   return pattern.pieces.filter((p) => HOSTS.includes(p.id));
 }
 
-// A kangaroo pocket straddles the centre front, so it needs a front cut on the fold.
-const foldAtZero = (p: Piece) => p.edges.some((e) => e.kind === "fold" && e.pts.every(([x]) => Math.abs(x) < 1e-6));
+// A kangaroo pocket straddles the centre front: on a front cut on the fold it is one piece cut on
+// the fold; on a zip front (a hoodie) it is split by the zip, a half on each front, its centre
+// edge sewn into the zip seam. Not on a shirt: its button stand is past the centre line.
+const atZero = (p: Piece, kind: Edge["kind"]) => p.edges.some((e) => e.kind === kind && e.pts.every(([x]) => Math.abs(x) < 1e-6));
+const foldAtZero = (p: Piece) => atZero(p, "fold");
 export const kangarooHost = (pattern: Pick<Pattern, "garment" | "pieces">) =>
-  isTop(pattern.garment) ? pocketHosts(pattern).find((p) => p.id === "front" && foldAtZero(p)) : undefined;
+  isTop(pattern.garment) && pattern.garment !== "shirt"
+    ? pocketHosts(pattern).find((p) => p.id === "front" && (foldAtZero(p) || (pattern.garment === "hoodie" && atZero(p, "seam"))))
+    : undefined;
 
 export function pocketKinds(pattern: Pick<Pattern, "garment" | "pieces">): PocketKind[] {
   if (!pocketHosts(pattern).length) return [];
@@ -68,6 +74,26 @@ export function defaultPocket(pattern: Pick<Pattern, "garment" | "pieces">, kind
   for (const k of [1, 0.85, 0.7, 0.55, 0.4])
     for (const dv of [0, 0.1, 0.2, 0.3]) {
       const p: Pocket = { id, kind, host: host.id, u: at[0], v: Math.min(at[1] + dv, 0.9), width: clampSize(k * size[0]), height: clampSize(k * size[1]) };
+      if (placed(host, p).fits) return p;
+    }
+  return null;
+}
+
+// A pocket measured on a photo of a top (cm across from the centre line and down from the high
+// point of the shoulder, the draft's own origin), set on the drafted piece. If it doesn't quite
+// fit (a rib band shortens the body, the photo's ± ran over the hem), it goes up a little, then
+// shrinks a little; past that it is left for the hand.
+export function pocketFromPhoto(
+  pattern: Pick<Pattern, "garment" | "pieces">,
+  f: { kind: PocketKind; host: string; fromCentre: number; belowNeck: number; width: number; height: number },
+  id: string,
+): Pocket | null {
+  const host = f.kind === "kangaroo" ? kangarooHost(pattern) : pocketHosts(pattern).find((h) => h.id === f.host);
+  if (!host) return null;
+  for (const k of [1, 0.95, 0.9])
+    for (const up of [0, 1, 2, 3, 4]) {
+      const at = shareOf(host, [f.kind === "kangaroo" ? 0 : f.fromCentre, f.belowNeck - up]);
+      const p: Pocket = { id, kind: f.kind, host: host.id, ...at, width: clampSize(k * f.width), height: clampSize(k * f.height), fromPhoto: true };
       if (placed(host, p).fits) return p;
     }
   return null;
@@ -128,6 +154,7 @@ export function inside([x, y]: Pt, poly: readonly Pt[]): boolean {
 // The pocket as a piece to cut. Opening at the top (turned twice), the rest turned under.
 function pocketPiece(p: Pocket, n: number, host: Piece): Piece {
   const w = p.width, h = p.height;
+  const onFold = foldAtZero(host);
   const names = L(`${POCKET_NAME[p.kind].ko} ${n}`, `${POCKET_NAME[p.kind].en} ${n}`, `${POCKET_NAME[p.kind].es} ${n}`);
   let edges: Edge[];
   if (p.kind === "kangaroo") {
@@ -137,7 +164,7 @@ function pocketPiece(p: Pocket, n: number, host: Piece): Piece {
       { kind: "bag-top", pts: line([w / 2 - s, 0], [w / 2, oh]) },
       { kind: "seam", pts: line([w / 2, oh], [w / 2, h]) },
       { kind: "seam", pts: line([w / 2, h], [0, h]) },
-      { kind: "fold", pts: line([0, h], [0, 0]) },
+      { kind: onFold ? "fold" : "seam", pts: line([0, h], [0, 0]) },
     ];
   } else {
     const shape = pocketShape(p.kind, w, h).map(([x, y]): Pt => [x + w / 2, y]);
@@ -151,7 +178,8 @@ function pocketPiece(p: Pocket, n: number, host: Piece): Piece {
     id: `pocket-${n}`,
     ...named(names),
     // On a piece cut twice (trouser legs, a shirt's two fronts) there is a pocket on each.
-    cut: { count: p.kind === "kangaroo" ? 1 : host.cut.count, onFold: p.kind === "kangaroo", mirror: false },
+    // On a zip front a kangaroo is two halves, one for each front.
+    cut: p.kind === "kangaroo" ? (onFold ? { count: 1, onFold: true, mirror: false } : { count: 2, onFold: false, mirror: true }) : { count: host.cut.count, onFold: false, mirror: false },
     edges,
     grain: [[gx, 0.2 * h], [gx, 0.8 * h]],
     notches: [],

@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
 import sharp from "sharp";
-import { area, dilate, emptyGrid, gridBox, intersect, largestComponent, rasterize, subtract, traceOuter, unionAll, type Grid } from "../geom/grid.ts";
+import { area, dilate, emptyGrid, fillHoles, gridBox, intersect, largestComponent, rasterize, subtract, traceOuter, unionAll, type Grid } from "../geom/grid.ts";
 import type { Pt } from "../geom/point.ts";
 import { applyAffine, invertAffine, simplifyClosed } from "../geom/polygon.ts";
 import { cachedImageConcept, imageMasks, SAM_IMAGE_USD, segmentImageConcept } from "../meta/sam-image.ts";
@@ -13,7 +13,10 @@ import { measurePants } from "../measure/pants.ts";
 import { partPolygon, shapeFromMasks, shapeWithPlainScale, type Measured, type Shape } from "../measure/shape.ts";
 import { measureApron, measureBag, measureRect, measureSkirt } from "../measure/simple.ts";
 import { measureTop, type TopOptions } from "../measure/top.ts";
-import { cachedLayoutCheck, layoutCheck, usableSleeves, WRINKLE_REL, type LayoutCheck } from "./layout-check.ts";
+import { cachedLayoutCheck, layoutCheck, MAX_REGIONS, usableSleeves, WRINKLE_REL, type LayoutCheck } from "./layout-check.ts";
+import { cachedPocketCheck, pocketCheck } from "./pocket-check.ts";
+import type { Identified } from "./identify.ts";
+import { pocketsFromMasks, type FoundPocket } from "../measure/pockets.ts";
 import { draft } from "../pattern/draft.ts";
 import { L, type Local } from "../i18n/lang.ts";
 import { MEASURE_NAME, type MeasuresOf } from "../pattern/measures.ts";
@@ -23,16 +26,17 @@ import { a4Scale, type A4Scale } from "../scale/a4.ts";
 
 export const LONG_SIDE_PX = 2000;
 
-// SAM words per garment. One short noun each; "pants" found trousers where "trousers" found
+// SAM words per garment. One short noun each; "pocket" on tops found both halves of the owner's
+// zip hoodie's kangaroo pocket (0.75, 0.79; 11/3); "pants" found trousers where "trousers" found
 // nothing (Seated Tailor, 10/31). [A] The rest to be compared on real photos.
 export const CONCEPTS: Record<GarmentKind, { garment: string; parts: string[] }> = {
-  "t-shirt": { garment: "t-shirt", parts: ["sleeve", "hood"] },
-  "long-sleeve": { garment: "shirt", parts: ["sleeve"] },
-  sweatshirt: { garment: "sweatshirt", parts: ["sleeve"] },
-  dress: { garment: "dress", parts: ["sleeve"] },
-  shirt: { garment: "shirt", parts: ["sleeve", "hood"] },
+  "t-shirt": { garment: "t-shirt", parts: ["sleeve", "hood", "pocket"] },
+  "long-sleeve": { garment: "shirt", parts: ["sleeve", "pocket"] },
+  sweatshirt: { garment: "sweatshirt", parts: ["sleeve", "pocket"] },
+  dress: { garment: "dress", parts: ["sleeve", "pocket"] },
+  shirt: { garment: "shirt", parts: ["sleeve", "hood", "pocket"] },
   // "jacket" found nothing on the owner's zip hoodie; "hoodie" found it (0.92, 0.73).
-  hoodie: { garment: "hoodie", parts: ["sleeve", "hood"] },
+  hoodie: { garment: "hoodie", parts: ["sleeve", "hood", "pocket"] },
   pants: { garment: "pants", parts: [] },
   skirt: { garment: "skirt", parts: [] },
   "a-line-skirt": { garment: "skirt", parts: [] },
@@ -42,6 +46,18 @@ export const CONCEPTS: Record<GarmentKind, { garment: string; parts: string[] }>
   pouch: { garment: "pouch", parts: [] },
 };
 export const PAPER = "paper";
+// The last word tried when the kind's own words find nothing: "hoodie", "jacket" and "sweatshirt"
+// found nothing on the owner's denim zip hoodie where "clothing" found it (0.94; 11/3). It also
+// finds whatever else is lying about (the owner's pyjamas at the edge of the back photo), so only
+// its largest mask is taken for the garment.
+export const LAST_WORD = "clothing";
+type Mask = ReturnType<typeof imageMasks>[number];
+const garmentOf = (word: string, masks: Mask[], w: number, h: number): Mask[] => {
+  const ms = masks.filter((m) => (m.confidence ?? 1) >= 0.5);
+  if (word !== LAST_WORD || ms.length < 2) return ms;
+  const size = ms.map((m) => area(rasterize(m, w, h, 4)));
+  return [ms[size.indexOf(Math.max(...size))]];
+};
 const SPARK_CHECK_USD = 0.01; // one layout check, a 1024 px image and a short answer
 // A photo not analysed yet, when analysis isn't allowed (the routes then check the visitor's limits).
 export const NEEDS_ANALYSIS = L("이 사진은 아직 재지 않았습니다.", "This photo hasn't been measured yet.", "Esta foto aún no se ha medido.");
@@ -77,7 +93,7 @@ export interface PhotoRunInput {
 }
 
 export type PhotoRun =
-  | { ok: false; stage: "cost" | "segment" | "scale" | "measure" | "draft"; detail: Local; pendingConcepts?: string[]; usd?: number; missingA4?: boolean }
+  | { ok: false; stage: "cost" | "identify" | "segment" | "scale" | "measure" | "draft"; detail: Local; pendingConcepts?: string[]; usd?: number; missingA4?: boolean }
   | {
       ok: true;
       garment: GarmentKind;
@@ -85,17 +101,21 @@ export type PhotoRun =
       scale: Pick<A4Scale, "cornersPx" | "pxPerCm" | "relError" | "aspect" | "fill"> & { source: "a4" | "tape" };
       measured: Measured;
       // The same outline and segments mapped back onto the photo, for the overlay.
-      overlay: { outlinePx: Pt[]; segmentsPx: { key: string; a: Pt; b: Pt; cm: number }[]; partsPx: Pt[][] };
+      overlay: { outlinePx: Pt[]; segmentsPx: { key: string; a: Pt; b: Pt; cm: number }[]; partsPx: Pt[][]; pocketsPx?: Pt[][] };
       layout?: LayoutCheck;
+      pockets?: FoundPocket[]; // patch and kangaroo pockets measured on a top, for the pattern
+      identified?: Identified; // what Muse Spark took the item for, when the app was asked to tell
       pattern?: Pattern;
       draftError?: string;
     };
+
+export const photoCacheDir = (cacheRoot: string, photo: Prepared) => path.join(cacheRoot, photo.sha256.slice(0, 16));
 
 export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
   const { photo, garment } = input;
   const words = { ...CONCEPTS[garment], ...(input.garmentConcept && { garment: input.garmentConcept }) };
   const all = [words.garment, PAPER, ...words.parts];
-  const cacheDir = path.join(input.cacheRoot, photo.sha256.slice(0, 16));
+  const cacheDir = photoCacheDir(input.cacheRoot, photo);
 
   const pending: string[] = [];
   for (const c of all) if (!(await cachedImageConcept(cacheDir, c))) pending.push(c);
@@ -111,18 +131,29 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
   };
   const toGrid = (ms: ReturnType<typeof masksOfWord>): Grid =>
     ms.length ? unionAll(ms.map((m) => rasterize(m, photo.width, photo.height)), photo.width, photo.height) : emptyGrid(photo.width, photo.height);
-  if (masksOfWord(words.garment).length === 0) return { ok: false, stage: "segment", detail: L("사진에서 옷을 찾지 못했습니다. 옷 전체가 보이게, 무늬 없는 바닥에서 다시 찍어 주십시오.", "Couldn't find the garment in the photo. Take it again on a plain floor with the whole garment in view.", "No encontramos la prenda en la foto. Vuelve a hacerla sobre un suelo liso, con la prenda entera a la vista.") };
+  // The garment word found nothing: the kind's own word, then the last word, each once.
+  let garmentWord = words.garment;
+  let garmentMasks = garmentOf(garmentWord, imageMasks(results[0]), photo.width, photo.height);
+  for (const w of [CONCEPTS[garment].garment, LAST_WORD]) {
+    if (garmentMasks.length || w === garmentWord) continue;
+    if (!input.allowApi && !(await cachedImageConcept(cacheDir, w))) return { ok: false, stage: "cost", detail: NEEDS_ANALYSIS, pendingConcepts: [w], usd: SAM_IMAGE_USD + SPARK_CHECK_USD };
+    garmentWord = w;
+    garmentMasks = garmentOf(w, imageMasks(await segmentImageConcept(image, w, cacheDir)), photo.width, photo.height);
+  }
+  if (garmentMasks.length === 0) return { ok: false, stage: "segment", detail: L("사진에서 옷을 찾지 못했습니다. 옷 전체가 보이게, 무늬 없는 바닥에서 다시 찍어 주십시오.", "Couldn't find the garment in the photo. Take it again on a plain floor with the whole garment in view.", "No encontramos la prenda en la foto. Vuelve a hacerla sobre un suelo liso, con la prenda entera a la vista.") };
   const notes: Local[] = [];
 
   // A hood comes off the body outline (it would hide the neck points); a "sleeve" lying mostly
   // on the hood is the hood.
   const hood = toGrid(masksOfWord("hood"));
   const hasHood = area(hood) > 0;
-  const garmentGrid = hasHood ? subtract(toGrid(masksOfWord(words.garment)), dilate(hood, 2)) : toGrid(masksOfWord(words.garment));
+  const garmentGrid = hasHood ? subtract(toGrid(garmentMasks), dilate(hood, 2)) : toGrid(garmentMasks);
   if (hasHood) notes.push(L("모자(후드)는 몸판 윤곽에서 빼고 쟀습니다.", "The hood was left out of the body outline.", "La capucha se dejó fuera del contorno del cuerpo."));
   const sleeveGrids = masksOfWord("sleeve")
     .map((m) => rasterize(m, photo.width, photo.height))
     .filter((g) => {
+      // A "sleeve" mostly off the garment is something else lying about (the owner's pyjama leg, 11/3).
+      if (area(intersect(g, toGrid(garmentMasks))) < 0.5 * area(g)) return false;
       const onHood = hasHood ? area(intersect(g, hood)) / Math.max(1, area(g)) : 0;
       if (onHood > 0.3) notes.push(L("소매로 잡힌 부분 하나가 모자 위에 있어 소매에서 뺐습니다.", "One area taken for a sleeve lies on the hood, so it wasn't counted as a sleeve.", "Una zona tomada por manga está sobre la capucha, así que no se contó como manga."));
       return onHood <= 0.3;
@@ -190,6 +221,30 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
   const m0 = measureOf(garment, shape, parts, optsFor(shape));
   if ("ok" in m0) return { ok: false, stage: "measure", detail: m0.detail };
 
+  // Pockets on a top: SAM's masks, Spark's word on what each is, the size and place from the masks.
+  let pockets: FoundPocket[] | undefined;
+  let pocketsPx: Pt[][] = [];
+  const pocketGrids = masksOfWord("pocket").slice(0, MAX_REGIONS).map((m) => rasterize(m, photo.width, photo.height));
+  if (isTop(garment) && pocketGrids.length) {
+    const px = pocketGrids.map((g) => simplifyClosed(traceOuter(largestComponent(g)), 2));
+    let check = await cachedPocketCheck(cacheDir, px.length);
+    if (!check && input.allowApi) {
+      try {
+        check = await pocketCheck(photo, px, cacheDir);
+      } catch (e) {
+        console.error("pocket check skipped", e);
+      }
+    }
+    const { snpL, snpR, hemL, hemR } = m0.landmarks;
+    if (check && snpL && snpR && hemL && hemR) {
+      const polys = pocketGrids.map((g) => partPolygon(g, shape.plane).map((p) => applyAffine(m0.frame, p)));
+      const found = pocketsFromMasks(polys, check, { centreX: (hemL[0] + hemR[0]) / 2, neckY: (snpL[1] + snpR[1]) / 2, side: layout?.side === "back" ? "back" : "front", rel: shape.plane.rel });
+      pockets = found.pockets;
+      pocketsPx = found.pockets.flatMap((p) => p.regions.map((i) => px[i]));
+      notes.push(...found.notes);
+    }
+  }
+
   // A measurement that ends on the photo's edge is of a garment cut off by the frame: refused.
   const toPhoto = (p: Pt) => shape.plane.toPx(applyAffine(invertAffine(m0.frame), p));
   const onEdge = (p: Pt) => nearEdge(toPhoto(p));
@@ -216,6 +271,7 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
       return v ? [{ key: s.key, a: toPx(s.a), b: toPx(s.b), cm: v.cm }] : [];
     }),
     partsPx: parts.map((p) => p.map(shape.plane.toPx)),
+    ...(pocketsPx.length ? { pocketsPx } : {}),
   };
 
   const values = Object.fromEntries(Object.entries(measured.values).map(([k, v]) => [k, (v as { cm: number }).cm]));
@@ -228,12 +284,13 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
   return {
     ok: true,
     garment,
-    concepts: all,
+    concepts: [garmentWord, ...all.slice(1)],
     scale: scale
       ? { cornersPx: scale.cornersPx, pxPerCm: scale.pxPerCm, relError: scale.relError, aspect: scale.aspect, fill: scale.fill, source: "a4" }
       : { cornersPx: [[0, 0], [0, 0], [0, 0], [0, 0]], pxPerCm: shape.pxPerCm, relError: shape.plane.rel, aspect: 0, fill: 0, source: "tape" },
     measured: measured as Measured,
     layout: layout ?? undefined,
+    ...(pockets?.length ? { pockets } : {}),
     overlay,
     pattern,
     draftError,
@@ -286,4 +343,23 @@ function tapeScaled(
     ),
   ]);
   return shape ?? { ok: false, detail: NO_GARMENT };
+}
+
+// The garment's mask on a photo already measured (with the hood; an A4 sheet lying on it cut out),
+// from the cache only: no API call. Null when the photo hasn't been measured with this word.
+export async function cachedGarmentMask(photo: Prepared, cacheRoot: string, word: string): Promise<Grid | null> {
+  const dir = photoCacheDir(cacheRoot, photo);
+  const grids = async (concept: string) => {
+    const r = await cachedImageConcept(dir, concept);
+    return r ? imageMasks(r).filter((m) => (m.confidence ?? 1) >= 0.5).map((m) => rasterize(m, photo.width, photo.height)) : [];
+  };
+  const [body, hood, paper] = await Promise.all([
+    cachedImageConcept(dir, word).then((r) => (r ? garmentOf(word, imageMasks(r), photo.width, photo.height).map((m) => rasterize(m, photo.width, photo.height)) : [])),
+    grids("hood"),
+    grids(PAPER),
+  ]);
+  if (!body.length) return null;
+  // Holes filled: SAM can leave a print or a label out of the garment.
+  const garment = fillHoles(unionAll([...body, ...hood], photo.width, photo.height));
+  return paper.length ? subtract(garment, unionAll(paper, photo.width, photo.height)) : garment;
 }

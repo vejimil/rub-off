@@ -14,6 +14,7 @@ import type { Pattern } from "@/lib/pattern/types";
 
 interface FabricPhoto {
   src: string;
+  blob: Blob;
   width: number;
   height: number;
   scrapsCm: Pt[][];
@@ -39,7 +40,22 @@ const T = {
   ),
   fabricAlt: L("원단", "Fabric", "Tela"),
   layoutLabel: L("원단 위 재단 배치", "Cutting layout on the fabric", "Colocación de las piezas sobre la tela"),
+  seeIt: L("이 원단으로 만든 모습 보기", "See the garment in this fabric", "Ver la prenda en esta tela"),
+  drawing: L("그리는 중… 30초쯤 걸립니다", "Drawing it… about 30 seconds", "Dibujándola… unos 30 segundos"),
+  previewAlt: L("이 원단으로 만든 옷 미리보기", "The garment shown in this fabric", "La prenda mostrada en esta tela"),
+  previewNote: L(
+    "옷 모양과 주변은 사진 그대로 두고 옷감만 바꿔 그린 그림입니다. 실제 색과 무늬 크기는 다를 수 있습니다.",
+    "Only the cloth is redrawn; the garment's shape and everything around it are your photo. Real colours and print size may differ.",
+    "Solo se redibuja la tela; la forma de la prenda y lo que la rodea son tu foto. Los colores y el tamaño del estampado reales pueden variar.",
+  ),
 };
+
+const PREVIEW_ERRORS = {
+  ...ERRORS,
+  measure_first: L("옷 사진을 먼저 재 주십시오.", "Measure the garment photo first.", "Mide primero la foto de la prenda."),
+  failed: L("그림을 만들지 못했습니다. 잠시 후 다시 해 주십시오.", "Couldn't draw it. Try again in a moment.", "No se pudo dibujar. Inténtalo de nuevo en un momento."),
+  live_disabled: L("지금은 미리보기를 만들 수 없습니다.", "The preview isn't available right now.", "Ahora no se puede hacer la vista previa."),
+} as const;
 
 const allFit = (n: number, pct: number) =>
   L(`조각 ${n}장이 모두 들어갑니다. 원단 사용률 ${pct}%.`, `All ${n} pieces fit. ${pct}% of the fabric is used.`, `Caben las ${n} piezas. Se usa el ${pct}% de la tela.`);
@@ -64,13 +80,17 @@ const f2 = (n: number) => n.toFixed(2);
 
 // Mode 3: does the pattern fit on the fabric you have? Scraps from a photo (SAM 3.1 + A4) or typed
 // sizes; the layout is deterministic and runs here in the browser.
-export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolean }) {
+// garmentPhoto: the garment photo already measured, and the word its outline was found with, for
+// showing the garment in the fabric (Muse Image, kept to the garment's own outline).
+export function CuttingPanel({ pattern, live, garmentPhoto }: { pattern: Pattern; live: boolean; garmentPhoto?: { file: Blob; word: string } }) {
   const lang = useLang();
   const [sizes, setSizes] = useState("110x100");
   const [photo, setPhoto] = useState<FabricPhoto | null>(null);
   const [crossGrain, setCrossGrain] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ src: string; for: string } | null>(null);
+  const [drawing, setDrawing] = useState(false);
 
   // Typed scraps, "110x100, 60x45", laid side by side 10 cm apart.
   const typed = useMemo(() => {
@@ -97,11 +117,32 @@ export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolea
       const body = await res.json();
       if (!res.ok) setError((ERRORS[body.error as keyof typeof ERRORS] ?? ERRORS.failed)[lang]);
       else if (!body.run.ok) setError(body.run.detail[lang]);
-      else setPhoto({ src: r.url, width: r.width, height: r.height, scrapsCm: body.run.scrapsCm, cmToPx: body.run.cmToPx });
+      else setPhoto({ src: r.url, blob: r.blob, width: r.width, height: r.height, scrapsCm: body.run.scrapsCm, cmToPx: body.run.cmToPx });
     } catch {
       setError(ERRORS.failed[lang]);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function drawPreview() {
+    if (!photo || !garmentPhoto) return;
+    setDrawing(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.set("photo", garmentPhoto.file, "garment.jpg");
+      form.set("fabric", photo.blob, "fabric.jpg");
+      form.set("word", garmentPhoto.word);
+      const res = await fetch("/api/preview", { method: "POST", body: form });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError((PREVIEW_ERRORS[body.error as keyof typeof PREVIEW_ERRORS] ?? PREVIEW_ERRORS.failed)[lang]);
+      } else setPreview({ src: URL.createObjectURL(await res.blob()), for: photo.src });
+    } catch {
+      setError(PREVIEW_ERRORS.failed[lang]);
+    } finally {
+      setDrawing(false);
     }
   }
 
@@ -125,6 +166,18 @@ export function CuttingPanel({ pattern, live }: { pattern: Pattern; live: boolea
       </div>
       <p className="text-sm text-muted">{T.grainNote[lang]}</p>
       {error && <p className="rounded-xl bg-mark-soft p-3 text-sm">{error}</p>}
+      {live && photo && garmentPhoto && preview?.for !== photo.src && (
+        <button type="button" onClick={drawPreview} disabled={drawing} className={buttonGhost}>
+          {drawing ? T.drawing[lang] : T.seeIt[lang]}
+        </button>
+      )}
+      {photo && preview?.for === photo.src && (
+        <figure className="space-y-2">
+          {/* eslint-disable-next-line @next/next/no-img-element -- a picture made from the user's own photos */}
+          <img src={preview.src} alt={T.previewAlt[lang]} className="block h-auto w-full rounded-xl" />
+          <figcaption className="text-xs text-muted">{T.previewNote[lang]}</figcaption>
+        </figure>
+      )}
 
       {result && (
         <>

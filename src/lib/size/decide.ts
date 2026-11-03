@@ -36,11 +36,23 @@ export interface SizeResult {
   fits: number;
 }
 
+// A length in the table that no size comes near: the table is for another style of the garment
+// (long sleeves against a T-shirt's short ones, trousers against shorts). Not a size question.
+export interface Unlike {
+  key: SizeKey;
+  mine: number;
+  table: [number, number]; // smallest and largest in the table, flat cm
+}
+
 export type Decision =
-  | { ok: true; best: SizeResult; all: SizeResult[]; sentences: Local[] }
+  | { ok: true; best: SizeResult; all: SizeResult[]; sentences: Local[]; unlike: Unlike[] }
   | { ok: false; reason: "ask-basis" | "nothing-to-compare"; detail: Local };
 
 const WIDTH_KEYS: readonly SizeKey[] = ["chest", "hem", "waist", "hip", "thigh", "legOpening"];
+const STYLE_KEYS: readonly SizeKey[] = ["length", "sleeve", "outseam"];
+// Neighbouring sizes differ by a few percent; a length half again as long (or two thirds as
+// long) as yours in every size is another style, not another size.
+const STYLE_RATIO = 1.5;
 const half = (x: number) => Math.round(x * 2) / 2;
 
 // Table cells into flat cm, the way your garment is measured.
@@ -75,11 +87,18 @@ export function decideSize(mine: Partial<Record<SizeKey, Mine>>, table: SizeTabl
   if (mine.outseam && !mine.length) {
     for (const s of flat.sizes) if (s.values.length !== undefined && s.values.outseam === undefined) [s.values.outseam, s.values.length] = [s.values.length, undefined];
   }
+  const unlike: Unlike[] = [];
+  for (const key of STYLE_KEYS) {
+    const m = mine[key];
+    const ts = flat.sizes.flatMap((s) => (s.values[key] !== undefined ? [s.values[key]!] : []));
+    if (!m || !ts.length) continue;
+    if (ts.every((t) => t > STYLE_RATIO * m.cm || t * STYLE_RATIO < m.cm)) unlike.push({ key, mine: m.cm, table: [Math.min(...ts), Math.max(...ts)] });
+  }
   const all: SizeResult[] = flat.sizes.map((s) => {
     const checks: Check[] = [];
     for (const key of PRIORITY) {
       const t = s.values[key], m = mine[key];
-      if (t === undefined || !m) continue;
+      if (t === undefined || !m || unlike.some((u) => u.key === key)) continue;
       const diff = half(t - m.cm);
       const window = tolerance(key, fabric, fit);
       checks.push({ key, table: t, mine: m.cm, diff, window, verdict: diff < window[0] ? "small" : diff > window[1] ? "big" : "fits" });
@@ -98,7 +117,21 @@ export function decideSize(mine: Partial<Record<SizeKey, Mine>>, table: SizeTabl
     }
     return 0;
   })[0];
-  return { ok: true, best, all, sentences: sentences(best) };
+  return { ok: true, best, all, sentences: [...sentences(best), ...unlike.flatMap(unlikeSentence)], unlike };
+}
+
+function unlikeSentence(u: Unlike): Local[] {
+  const [lo, hi] = u.table.map((x) => x.toFixed(1));
+  const range = lo === hi ? lo : `${lo}–${hi}`;
+  const m = u.mine.toFixed(1);
+  const longer = u.table[0] > u.mine;
+  const s = L(
+    `${SIZE_KEY_NAME[u.key].ko}: 표는 ${range} cm, 내 옷은 ${m} cm. 사이즈가 아니라 옷의 종류가 달라 보여(${longer ? "표의 옷이 훨씬 김" : "표의 옷이 훨씬 짧음"}) 비교하지 않았습니다.`,
+    `${SIZE_KEY_NAME[u.key].en}: the table says ${range} cm, your garment ${m} cm. That's a different style of garment (${longer ? "much longer" : "much shorter"}), not a different size, so it wasn't compared.`,
+    `${SIZE_KEY_NAME[u.key].es}: la tabla dice ${range} cm y tu prenda ${m} cm. Es otro estilo de prenda (${longer ? "mucho más larga" : "mucho más corta"}), no otra talla, así que no se comparó.`,
+  );
+  const allowed = [...u.table.map((x) => Number(x.toFixed(1))), Number(m)];
+  return LANGS.every((l) => guardNumbers(s[l], allowed)) ? [s] : [];
 }
 
 // "M: 가슴단면 +1 cm 맞음, 총장 −3 cm 짧음", in every language. Built from the checks, then

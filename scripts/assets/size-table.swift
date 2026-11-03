@@ -6,7 +6,7 @@ let bottoms = CommandLine.arguments.count > 2 && CommandLine.arguments[2] == "bo
 let header = bottoms ? ["사이즈", "허리단면", "엉덩이단면", "허벅지단면", "밑위", "총장", "밑단단면"] : ["사이즈", "총장", "어깨너비", "가슴단면", "소매길이"]
 let rows = bottoms
   ? [["S", "37", "50", "30", "27", "45", "26"], ["M", "39", "52", "31.5", "28", "46", "27"], ["L", "41", "54", "33", "29", "47", "28"], ["XL", "43", "56", "34.5", "30", "48", "29"]]
-  : [["S", "66", "44", "50", "59"], ["M", "68", "46", "53", "60"], ["L", "70", "48", "56", "61"], ["XL", "72", "50", "59", "62"]]
+  : [["S", "66", "44", "50", "20"], ["M", "68", "46", "53", "21"], ["L", "70", "48", "56", "22"], ["XL", "72", "50", "59", "23"]]
 let cellW: CGFloat = bottoms ? 135 : 150, cellH: CGFloat = 56, pad: CGFloat = 40
 let W = pad * 2 + cellW * CGFloat(header.count), H: CGFloat = pad * 2 + 70 + cellH * CGFloat(rows.count + 1) + 50
 let img = NSImage(size: NSSize(width: W, height: H))

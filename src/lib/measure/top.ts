@@ -326,10 +326,19 @@ function cuffCorners(rest: readonly Pt[]): [Pt, Pt] | null {
   if (s.length < 4) return null;
   const start = s[0], end = s[s.length - 1];
   const clear = (i: number) => dist(s[i], start) >= CUFF_CLEAR_CM && dist(s[i], end) >= CUFF_CLEAR_CM;
-  let top = -1, bottom = -1;
-  for (let i = 1; i < s.length - 1 && top < 0; i++) if (clear(i) && turnAt(s, i) > CORNER_TURN) top = i;
-  for (let i = s.length - 2; i > 0 && bottom < 0; i--) if (clear(i) && turnAt(s, i) > CORNER_TURN) bottom = i;
-  return top > 0 && bottom > top ? [s[top], s[bottom]] : null;
+  const corners = s.map((_, i) => i).filter((i) => i > 0 && i < s.length - 1 && clear(i) && turnAt(s, i) > CORNER_TURN);
+  // The cuff is the edge at the sleeve's far end: the corners on either side of the point farthest
+  // from the shoulder. Searching in from the shoulder and the armpit instead took a bend near the
+  // armpit for a cuff corner on the owner's denim hoodie (opening 44 cm, 11/3).
+  const tip = s.reduce((bi, p, i) => (dist(p, start) > dist(s[bi], start) ? i : bi), 0);
+  const before = corners.filter((i) => i <= tip).at(-1), after = corners.find((i) => i >= tip);
+  if (before === undefined || after === undefined) return null;
+  if (before !== after) return [s[before], s[after]];
+  // The tip is itself a corner: the other end of the cuff is the nearer of its neighbouring corners.
+  const prev = corners.filter((i) => i < tip).at(-1), next = corners.find((i) => i > tip);
+  const other = prev === undefined ? next : next === undefined ? prev : dist(s[prev], s[tip]) <= dist(s[next], s[tip]) ? prev : next;
+  if (other === undefined) return null;
+  return other < tip ? [s[other], s[tip]] : [s[tip], s[other]];
 }
 
 // Without a sleeve mask: the shoulder point is the sharpest turn between the side neck point and

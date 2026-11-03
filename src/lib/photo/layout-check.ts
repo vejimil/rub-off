@@ -75,9 +75,22 @@ export async function cachedLayoutCheck(cacheDir: string, sleeveCount: number): 
 export async function layoutCheck(photo: { bytes: Buffer; width: number; height: number }, sleevesPx: Pt[][], cacheDir: string): Promise<LayoutCheck> {
   const cached = await cachedLayoutCheck(cacheDir, sleevesPx.length);
   if (cached) return cached;
+  const { jpeg, regions } = await markedImage(photo, sleevesPx);
+  const prompt = `This is a garment laid on the floor to be measured from above.
+${sleevesPx.length ? `A segmentation model marked these regions as sleeves: ${regions}. For each numbered region, say what it really is: spread flat (lying out to the side, not folded), folded over the body, folded under or hidden, bent or twisted, or not a sleeve (for example a hood or a pocket).` : "No sleeves were marked; return an empty sleeves list."}
+Also say which side faces the camera, how wrinkled the garment's body is, and whether the hem lies flat. Choose only from the given options.`;
+  const result = await sparkJson<LayoutCheck>([text(prompt), image(jpeg)], SCHEMA, 4000);
+  await mkdir(cacheDir, { recursive: true });
+  await writeFile(layoutCacheFile(cacheDir), JSON.stringify({ ...result, sleeveCount: sleevesPx.length }, null, 2));
+  return result;
+}
+
+// The photo at 1024 px with each region filled in its colour and numbered, and the regions named
+// for the prompt ("region 1 (red), region 2 (blue)"). At most four regions.
+export async function markedImage(photo: { bytes: Buffer; width: number; height: number }, regionsPx: Pt[][]): Promise<{ jpeg: Buffer; regions: string }> {
   const k = Math.min(1, LONG_SIDE / Math.max(photo.width, photo.height));
   const w = Math.round(photo.width * k), h = Math.round(photo.height * k);
-  const marks = sleevesPx.slice(0, COLORS.length).map((poly, i) => {
+  const marks = regionsPx.slice(0, COLORS.length).map((poly, i) => {
     const pts = poly.map(([x, y]): Pt => [x * k, y * k]);
     const c: Pt = [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length];
     return `<path d="${svgPath(pts, true)}" fill="${COLORS[i].hex}" fill-opacity="0.35" stroke="${COLORS[i].hex}" stroke-width="4"/>
@@ -85,15 +98,10 @@ export async function layoutCheck(photo: { bytes: Buffer; width: number; height:
   });
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${marks.join("")}</svg>`;
   const jpeg = await sharp(await sharp(photo.bytes).resize(w, h).toBuffer()).composite([{ input: Buffer.from(svg) }]).jpeg({ quality: 85 }).toBuffer();
-  const regions = sleevesPx.slice(0, COLORS.length).map((_, i) => `region ${i + 1} (${COLORS[i].name})`).join(", ");
-  const prompt = `This is a garment laid on the floor to be measured from above.
-${sleevesPx.length ? `A segmentation model marked these regions as sleeves: ${regions}. For each numbered region, say what it really is: spread flat (lying out to the side, not folded), folded over the body, folded under or hidden, bent or twisted, or not a sleeve (for example a hood or a pocket).` : "No sleeves were marked; return an empty sleeves list."}
-Also say which side faces the camera, how wrinkled the garment's body is, and whether the hem lies flat. Choose only from the given options.`;
-  const result = await sparkJson<LayoutCheck>([text(prompt), image(jpeg)], SCHEMA, 2000);
-  await mkdir(cacheDir, { recursive: true });
-  await writeFile(layoutCacheFile(cacheDir), JSON.stringify({ ...result, sleeveCount: sleevesPx.length }, null, 2));
-  return result;
+  const regions = regionsPx.slice(0, COLORS.length).map((_, i) => `region ${i + 1} (${COLORS[i].name})`).join(", ");
+  return { jpeg, regions };
 }
+export const MAX_REGIONS = COLORS.length;
 
 // Spark's answer per sleeve mask, in mask order: usable only when spread flat. A bent sleeve is
 // left out too: its length measured straight would come out short.

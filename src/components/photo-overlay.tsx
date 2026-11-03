@@ -8,7 +8,7 @@ import type { OkRun, PhotoView } from "@/lib/client/types";
 
 const ALT = L("펴 놓은 옷과 A4 용지", "The garment laid flat with an A4 sheet", "La prenda extendida con una hoja A4");
 
-// The photo with what the pipeline found: the A4 sheet, the garment outline, the SAM part masks
+// The photo with what the pipeline found: the A4 sheet, the garment outline, the SAM part masks, the pockets
 // and each measured line with its cm. With onTap, a click reports where on the photo it landed
 // (as fractions of its width and height), and taps are drawn as rings.
 export function PhotoOverlay({ photo, run, onTap, taps = [], className = "rounded-xl" }: { photo: PhotoView; run?: OkRun; onTap?: (p: Pt) => void; taps?: Pt[]; className?: string }) {
@@ -31,6 +31,9 @@ export function PhotoOverlay({ photo, run, onTap, taps = [], className = "rounde
           <path d={svgPath(run.scale.cornersPx, true)} fill="rgba(255,255,255,0.35)" stroke="var(--ink)" strokeWidth={fs / 5} />
           {run.overlay.partsPx.map((p, i) => (
             <path key={i} d={svgPath(p, true)} fill="rgba(6,43,138,0.10)" stroke="var(--muted)" strokeWidth={fs / 7} />
+          ))}
+          {run.overlay.pocketsPx?.map((p, i) => (
+            <path key={`pocket-${i}`} d={svgPath(p, true)} fill="rgba(6,43,138,0.22)" stroke="var(--ink)" strokeWidth={fs / 6} strokeDasharray={`${fs / 3} ${fs / 4}`} />
           ))}
           <path d={svgPath(run.overlay.outlinePx, true)} fill="none" stroke="var(--sand)" strokeWidth={fs / 3} opacity={0.8} />
           <path d={svgPath(run.overlay.outlinePx, true)} fill="none" stroke="var(--ink)" strokeWidth={fs / 7} strokeDasharray={`${fs / 2} ${fs / 3}`} />

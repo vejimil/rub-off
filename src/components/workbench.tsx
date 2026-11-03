@@ -18,7 +18,8 @@ import { layOut } from "@/lib/pattern/layout";
 import { DEFAULTS, MEASURE_NAME, type MeasuresOf } from "@/lib/pattern/measures";
 import { EXAMPLES } from "@/lib/pattern/examples";
 import { patternPdf } from "@/lib/pattern/pdf";
-import { pocketKinds, withPockets, type Pocket } from "@/lib/pattern/pockets";
+import { pocketFromPhoto, pocketKinds, withPockets, type Pocket } from "@/lib/pattern/pockets";
+import type { FoundPocket } from "@/lib/measure/pockets";
 import { loadPdfFont } from "@/lib/pattern/pdf-font";
 import { isTop, NOT_WORN, type Fabric, type GarmentKind } from "@/lib/pattern/types";
 import { SIZE_KEYS, type SizeKey } from "@/lib/rules/fit-tolerance";
@@ -56,6 +57,7 @@ const RUN_ERRORS: Record<string, Local> = {
 
 const STAGE: Record<FailedRun["stage"], Local> = {
   cost: L("오늘 사용량 확인", "Checking today's use", "Revisando el uso de hoy"),
+  identify: L("옷 종류 알아보기", "Telling what the garment is", "Reconociendo la prenda"),
   segment: L("옷·A4 찾기", "Finding the garment and the A4 sheet", "Buscando la prenda y la hoja A4"),
   scale: L("A4로 cm 맞추기", "Setting centimetres from the A4 sheet", "Calculando centímetros con la hoja A4"),
   measure: L("치수 재기", "Measuring", "Midiendo"),
@@ -64,6 +66,8 @@ const STAGE: Record<FailedRun["stage"], Local> = {
 
 // Everything else the workbench says, in each language.
 const T = {
+  autoPick: L("사진 보고 고르기", "Tell from the photo", "Según la foto"),
+  identified: L("사진에서 알아본 옷", "Recognised as", "Reconocida como"),
   fillTypical: L("사진 없이 보통 치수로 채우기", "No photo? Fill in typical measurements", "¿Sin foto? Rellena con medidas típicas"),
   failedRun: L("이 사진으로 재지 못했습니다.", "Couldn't measure this photo.", "No se pudo medir esta foto."),
   noServer: L("서버에 연결하지 못했습니다.", "Couldn't reach the server.", "No se pudo conectar con el servidor."),
@@ -200,6 +204,9 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
   const alter = mode === "alter";
   const lang: Lang = useLang();
   const [garment, setGarment] = useState<GarmentKind>(initial?.garment ?? "t-shirt");
+  // With a new photo and no kind picked by hand, the photo tells the kind (and knit or woven).
+  const [auto, setAuto] = useState(false);
+  const [picked, setPicked] = useState(!!initial);
   const [fabric, setFabric] = useState<Fabric>(initial?.fabric ?? "woven");
   const [shots, setShots] = useState<Shot[]>(initial?.photo ? [{ photo: initial.photo, run: initial.run }] : []);
   const [busy, setBusy] = useState<number | null>(null);
@@ -246,6 +253,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
   async function choose(f: File) {
     const r = await resizeToJpeg(f);
     setShots((all) => [...all, { photo: { src: r.url, width: r.width, height: r.height }, file: r.blob }]);
+    if (!picked && !shots.some((s) => s.run)) setAuto(true);
     setActive(shots.length);
   }
 
@@ -256,7 +264,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
     update(i, { failure: undefined });
     const form = new FormData();
     form.set("photo", shot.file, "photo.jpg");
-    form.set("garment", garment);
+    form.set("garment", auto ? "auto" : garment);
     form.set("fabric", fabric);
     if (ref.cm) {
       form.set("refKey", ref.key);
@@ -266,12 +274,32 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
     try {
       const res = await fetch("/api/photo", { method: "POST", body: form });
       const body = await res.json();
+      // The photo lay on its side: the server stood it upright, and its marks are on the turned one.
+      if (body.upright) {
+        const { jpeg, width, height } = body.upright as { jpeg: string; width: number; height: number };
+        const blob = new Blob([Uint8Array.from(atob(jpeg), (c) => c.charCodeAt(0))], { type: "image/jpeg" });
+        update(i, { photo: { src: URL.createObjectURL(blob), width, height }, file: blob, taps: undefined });
+      }
       if (!res.ok) update(i, { failure: RUN_ERRORS[body.error] ?? T.failedRun });
       else if (!body.run.ok) {
         const f = body.run as FailedRun;
         const detail = f.detail;
         update(i, { failure: L(`${STAGE[f.stage].ko}: ${detail.ko}`, `${STAGE[f.stage].en}: ${detail.en}`, `${STAGE[f.stage].es}: ${detail.es}`), missingA4: f.missingA4, run: undefined });
-      } else update(i, { run: body.run, failure: undefined, missingA4: false, tapping: false });
+        if (f.stage === "identify") setAuto(false);
+        // Taken for the wrong kind: the chips show what it was taken for, ready to be changed.
+        else if (body.identified && body.identified.garment !== "something else") {
+          setGarment(body.identified.garment);
+          setAuto(false);
+        }
+      } else {
+        const run = body.run as OkRun;
+        if (run.identified) {
+          setGarment(run.garment);
+          if (run.identified.fabric !== "unclear") setFabric(run.identified.fabric);
+          setAuto(false);
+        }
+        update(i, { run, failure: undefined, missingA4: false, tapping: false });
+      }
     } catch {
       update(i, { failure: T.noServer });
     } finally {
@@ -309,8 +337,14 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
   }, [garment, fabric, steps, baseSize, measuresKey]);
   // Pockets belong to a garment: another garment's pieces have other names.
   const [pocketsBy, setPocketsBy] = useState<Partial<Record<GarmentKind, Pocket[]>>>({});
-  const pockets = useMemo(() => pocketsBy[garment] ?? [], [pocketsBy, garment]);
-  const setPockets: Dispatch<SetStateAction<Pocket[]>> = (f) => setPocketsBy((all) => ({ ...all, [garment]: typeof f === "function" ? f(all[garment] ?? []) : f }));
+  // Pockets measured on the photos go on the pattern until the pockets are changed by hand.
+  const foundKey = JSON.stringify(okRuns.flatMap((r) => r.pockets ?? []));
+  const photoPockets = useMemo(
+    () => (base ? (JSON.parse(foundKey) as FoundPocket[]).flatMap((f, i) => pocketFromPhoto(base, f, `p${i + 1}`) ?? []) : []),
+    [base, foundKey],
+  );
+  const pockets = useMemo(() => pocketsBy[garment] ?? photoPockets, [pocketsBy, garment, photoPockets]);
+  const setPockets: Dispatch<SetStateAction<Pocket[]>> = (f) => setPocketsBy((all) => ({ ...all, [garment]: typeof f === "function" ? f(all[garment] ?? photoPockets) : f }));
   const pattern = useMemo(() => (base ? withPockets(base, pockets) : null), [base, pockets]);
   const sheet = useMemo(() => (pattern ? layOut(pattern) : null), [pattern]);
 
@@ -340,6 +374,9 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
   );
 
   const shot = shots[Math.min(active, shots.length - 1)];
+  // The photo to show in another fabric: the one in view if it was measured as this garment, else the first that was.
+  const measuredShot = [shot, ...shots].find((s) => s?.file && s.run?.garment === garment);
+  const garmentPhoto = measuredShot?.file && measuredShot.run ? { file: measuredShot.file, word: measuredShot.run.concepts[0] } : undefined;
   const activeIndex = Math.min(active, shots.length - 1);
   const top = isTop(garment);
   const tabs = [
@@ -409,12 +446,25 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
         <Card className="space-y-4">
           {garmentPicker && (
             <div className="flex flex-wrap gap-1.5">
+              {live && (
+                <button
+                  type="button"
+                  onClick={() => setAuto(true)}
+                  className={`press rounded-full px-3 py-1.5 text-sm ${auto ? "bg-ink text-sand" : "bg-well text-muted hover:text-ink"}`}
+                >
+                  {T.autoPick[lang]}
+                </button>
+              )}
               {(Object.keys(GARMENT_NAME) as GarmentKind[]).filter((g) => !alter || !NOT_WORN.includes(g)).map((g) => (
                 <button
                   key={g}
                   type="button"
-                  onClick={() => setGarment(g)}
-                  className={`press rounded-full px-3 py-1.5 text-sm ${g === garment ? "bg-ink text-sand" : "bg-well text-muted hover:text-ink"}`}
+                  onClick={() => {
+                    setGarment(g);
+                    setAuto(false);
+                    setPicked(true);
+                  }}
+                  className={`press rounded-full px-3 py-1.5 text-sm ${!auto && g === garment ? "bg-ink text-sand" : "bg-well text-muted hover:text-ink"}`}
                 >
                   {GARMENT_NAME[g][lang]}
                 </button>
@@ -544,6 +594,13 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
 
           {shot?.run?.garment === garment && (
             <div className="space-y-2">
+              {shot.run.identified && shot.run.identified.garment !== "something else" && (
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="text-muted">{T.identified[lang]}</span>
+                  <Badge tone="chalk">{GARMENT_NAME[shot.run.identified.garment][lang]}</Badge>
+                  {shot.run.identified.fabric !== "unclear" && <Badge>{(shot.run.identified.fabric === "knit" ? T.knit : T.woven)[lang]}</Badge>}
+                </div>
+              )}
               {shot.run.layout && (
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   <span className="text-muted">{T.laidOut[lang]}</span>
@@ -660,7 +717,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
         {tab === "cut" && (
           <div>
             <p className="mb-4 text-sm text-muted">{T.cutIntro[lang]}</p>
-            {pattern ? <CuttingPanel pattern={pattern} live={live} /> : <p className="text-sm text-muted">{T.cutNeedsPattern[lang]}</p>}
+            {pattern ? <CuttingPanel pattern={pattern} live={live} garmentPhoto={garmentPhoto} /> : <p className="text-sm text-muted">{T.cutNeedsPattern[lang]}</p>}
           </div>
         )}
 

@@ -1,6 +1,8 @@
 // Flat-lay photos of one garment → measurements, an overlay per photo to check them, and the pattern PDF.
 //   npm run photo -- front.jpg [back.jpg] --garment=t-shirt        uses the caches; prints the cost of anything uncached
 //   add --yes to call SAM (about $0.0025 per word) and the Muse Spark layout check (about $0.01) for what isn't cached
+//   --garment=auto     Muse Spark says what the item is, knit or woven, and the SAM word (about $0.01, cached);
+//                      with a kind given, it says only which way the item lies, and the photo is stood upright
 //   --concept=shorts   another SAM word for the garment     --fabric=knit
 //   --raw              send the file as is (already upright, ≤ 2000 px), e.g. to reuse an existing cache
 //   --ref=chest:54     no A4 in the photo: this tape value sets the scale
@@ -21,14 +23,17 @@ import { draft } from "../src/lib/pattern/draft.ts";
 import { MEASURE_KO, type MeasuresOf } from "../src/lib/pattern/measures.ts";
 import { patternPdf } from "../src/lib/pattern/pdf.ts";
 import type { Fabric, GarmentKind } from "../src/lib/pattern/types.ts";
-import { preparePhoto, runPhoto, type PhotoRun, type Prepared } from "../src/lib/photo/run.ts";
+import { cachedIdentify, identify, standUpright } from "../src/lib/photo/identify.ts";
+import { photoCacheDir, preparePhoto, runPhoto, type PhotoRun, type Prepared } from "../src/lib/photo/run.ts";
 
 const args = process.argv.slice(2);
 const opt = (name: string) => args.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 const sources = args.filter((a) => !a.startsWith("--"));
 if (!sources.length) throw new Error("usage: npm run photo -- photo.jpg [photo2.jpg] --garment=t-shirt [--yes]");
-const garment = (opt("garment") ?? "t-shirt") as GarmentKind;
-const fabric = (opt("fabric") as Fabric) ?? "woven";
+let garment = (opt("garment") ?? "t-shirt") as GarmentKind | "auto";
+const auto = garment === "auto";
+let fabric = (opt("fabric") as Fabric) ?? "woven";
+const concept = opt("concept");
 const tape = Object.fromEntries((opt("tape") ?? "").split(",").filter(Boolean).map((kv) => [kv.split(":")[0], Number(kv.split(":")[1])]));
 const outDir = path.resolve(".cache", "out");
 const pairsOf = (csv: string) => {
@@ -52,13 +57,30 @@ for (const source of sources) {
     const meta = await sharp(input).metadata();
     photo = { bytes: input, width: meta.width!, height: meta.height!, sha256: createHash("sha256").update(input).digest("hex") };
   } else photo = await preparePhoto(input);
+  const cacheRoot = path.resolve(".cache", "photos");
+  // Muse Spark first: what the item is (with --garment=auto) and which way it lies, so the photo is
+  // stood upright before SAM sees it. Without --yes and nothing cached, the photo is used as it lies.
+  const given = auto ? undefined : (garment as GarmentKind);
+  const dir = photoCacheDir(cacheRoot, photo);
+  const id = (await cachedIdentify(dir, given)) ?? (args.includes("--yes") ? await identify(photo, dir, given) : null);
+  if (auto && !id) throw new Error("Telling the garment needs Muse Spark once (about $0.01). Rerun with --yes.");
+  if (id) {
+    console.log(`Spark: ${id.garment}, ${id.fabric}, SAM word "${id.word}", top of the item toward the photo's ${id.neck ?? "top"}`);
+    if (id.garment === "something else") process.exit(0);
+    const turned = await standUpright(photo, id, cacheRoot, given);
+    if (turned) photo = turned.photo;
+    if (auto) {
+      garment = id.garment;
+      if (id.fabric !== "unclear") fabric = id.fabric;
+    }
+  }
   const run = await runPhoto({
     photo,
-    garment,
+    garment: garment as GarmentKind,
     fabric,
-    cacheRoot: path.resolve(".cache", "photos"),
+    cacheRoot,
     allowApi: args.includes("--yes"),
-    garmentConcept: opt("concept"),
+    garmentConcept: concept ?? id?.word,
     reference: opt("ref") ? { key: opt("ref")!.split(":")[0], cm: Number(opt("ref")!.split(":")[1]) } : undefined,
     shoulders: source === sources[0] && opt("shoulders") ? pairsOf(opt("shoulders")!) : undefined,
   });
@@ -73,6 +95,7 @@ for (const source of sources) {
   for (const [k, v] of Object.entries(run.measured.values)) if (v) line(k, v);
   for (const r of run.measured.refused) console.log(`  refused ${r.key}: ${r.cm.toFixed(1)} cm is outside ${r.range[0]}–${r.range[1]}`);
   for (const n of run.measured.notes) console.log(`  note: ${n.en}`);
+  for (const p of run.pockets ?? []) console.log(`  pocket: ${p.kind} on the ${p.host}, ${p.width.toFixed(1)} × ${p.height.toFixed(1)} cm ± ${p.plusMinusCm}, top centre ${p.fromCentre.toFixed(1)} cm from the centre line, ${p.belowNeck.toFixed(1)} cm below the shoulder`);
 
   // Overlay: outline, parts, measured segments with their cm.
   const o = run.overlay;
@@ -80,6 +103,7 @@ for (const source of sources) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${photo.width}" height="${photo.height}">
   <path d="${svgPath(o.outlinePx, true)}" fill="none" stroke="#00e0ff" stroke-width="4"/>
   ${o.partsPx.map((p) => `<path d="${svgPath(p, true)}" fill="rgba(255,200,0,0.25)" stroke="#ffc800" stroke-width="3"/>`).join("")}
+  ${(o.pocketsPx ?? []).map((p) => `<path d="${svgPath(p, true)}" fill="rgba(0,180,255,0.25)" stroke="#00b4ff" stroke-width="4"/>`).join("")}
   ${run.scale.source === "a4" ? `<path d="${svgPath(run.scale.cornersPx, true)}" fill="none" stroke="#ff3070" stroke-width="4"/>` : ""}
   ${o.segmentsPx
     .map(
@@ -127,7 +151,7 @@ if (runs.length > 1) {
 
 const measures = Object.fromEntries(Object.entries(combined.values).map(([k, v]) => [k, v.cm])) as Partial<MeasuresOf[GarmentKind]>;
 try {
-  const pattern = draft({ garment, measures, fabric });
+  const pattern = draft({ garment: garment as GarmentKind, measures, fabric });
   const { bytes, pages } = await patternPdf(pattern, { createdFor: names.join(" + ") });
   await writeFile(path.join(outDir, `${names[0]}-pattern.pdf`), bytes);
   console.log(`\nwrote .cache/out/${names[0]}-pattern.pdf (${pages[0] * pages[1] + 1} pages)`);
