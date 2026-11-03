@@ -75,3 +75,10 @@ test("a nearby length is still a size question", () => {
   assert.equal(d.unlike.length, 0);
   assert.ok(d.best.checks.some((c) => c.key === "sleeve"));
 });
+
+test("when every shared length is too far off, the reasons are said rather than 'nothing in common'", () => {
+  const short: SizeTable = { unit: "cm", basis: "flat", sizes: [{ label: "S", values: { sleeve: 59 } }, { label: "M", values: { sleeve: 61 } }] };
+  const d = decideSize({ sleeve: { cm: 23 } }, short, "woven", "same");
+  assert.ok(!d.ok && d.reason === "nothing-to-compare");
+  assert.ok(/59\.0–61\.0 cm/.test(d.detail.en) && /folded sleeve/.test(d.detail.en), d.detail.en);
+});

@@ -23,7 +23,7 @@ import { draft } from "../src/lib/pattern/draft.ts";
 import { MEASURE_KO, type MeasuresOf } from "../src/lib/pattern/measures.ts";
 import { patternPdf } from "../src/lib/pattern/pdf.ts";
 import type { Fabric, GarmentKind } from "../src/lib/pattern/types.ts";
-import { cachedIdentify, identify, standUpright } from "../src/lib/photo/identify.ts";
+import { cachedIdentify, identify, lookAgain, standUpright, turnFraction, type Identified } from "../src/lib/photo/identify.ts";
 import { photoCacheDir, preparePhoto, runPhoto, type PhotoRun, type Prepared } from "../src/lib/photo/run.ts";
 
 const args = process.argv.slice(2);
@@ -67,25 +67,40 @@ for (const source of sources) {
   if (id) {
     console.log(`Spark: ${id.garment}, ${id.fabric}, SAM word "${id.word}", top of the item toward the photo's ${id.neck ?? "top"}`);
     if (id.garment === "something else") process.exit(0);
-    const turned = await standUpright(photo, id, cacheRoot, given);
-    if (turned) photo = turned.photo;
-    if (auto) {
-      garment = id.garment;
-      if (id.fabric !== "unclear") fabric = id.fabric;
+  }
+  const original = photo;
+  const taps = source === sources[0] && opt("shoulders") ? pairsOf(opt("shoulders")!) : undefined;
+  // Stood upright as told, then SAM and the geometry check the kind; told wrong, Spark looks again.
+  const measureAs = async (told: Identified | null) => {
+    const turned = told ? await standUpright(original, told, cacheRoot, given) : null;
+    photo = turned?.photo ?? original;
+    if (auto && told) {
+      garment = told.garment as GarmentKind;
+      if (told.fabric !== "unclear") fabric = told.fabric;
+    }
+    return runPhoto({
+      photo,
+      garment: garment as GarmentKind,
+      fabric,
+      cacheRoot,
+      allowApi: args.includes("--yes"),
+      garmentConcept: concept ?? told?.word,
+      reference: opt("ref") ? { key: opt("ref")!.split(":")[0], cm: Number(opt("ref")!.split(":")[1]) } : undefined,
+      shoulders: turned ? taps?.map((p) => [...turnFraction(p, turned.from)] as [number, number]) : taps,
+    });
+  };
+  let run = await measureAs(id);
+  if (auto && id && !run.ok && (run.stage === "segment" || run.stage === "measure")) {
+    const again = await lookAgain(original, id, cacheRoot, () => args.includes("--yes"));
+    if (again) {
+      console.log(`first guess stopped at ${run.stage}; Spark looked again the other way up: ${again.garment}, top toward the photo's ${again.neck}`);
+      const next = await measureAs(again);
+      if (next.ok) run = next;
+      else photo = (await standUpright(original, id, cacheRoot, given))?.photo ?? original;
     }
   }
-  const run = await runPhoto({
-    photo,
-    garment: garment as GarmentKind,
-    fabric,
-    cacheRoot,
-    allowApi: args.includes("--yes"),
-    garmentConcept: concept ?? id?.word,
-    reference: opt("ref") ? { key: opt("ref")!.split(":")[0], cm: Number(opt("ref")!.split(":")[1]) } : undefined,
-    shoulders: source === sources[0] && opt("shoulders") ? pairsOf(opt("shoulders")!) : undefined,
-  });
   const name = path.basename(source).replace(/\.[^.]+$/, "");
-  console.log(`\n== ${name}`);
+  console.log(`\n== ${name}${run.ok ? ` (SAM word "${run.concepts[0]}")` : ""}`);
   if (!run.ok) {
     if (run.stage === "cost") console.log(`SAM would run ${run.pendingConcepts!.length} word(s) [${run.pendingConcepts!.join(", ")}] plus a layout check, about $${run.usd!.toFixed(4)}. Rerun with --yes.`);
     else console.log(`stopped at ${run.stage}: ${run.detail.en}`);

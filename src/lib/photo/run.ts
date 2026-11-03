@@ -224,7 +224,12 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
   // Pockets on a top: SAM's masks, Spark's word on what each is, the size and place from the masks.
   let pockets: FoundPocket[] | undefined;
   let pocketsPx: Pt[][] = [];
-  const pocketGrids = masksOfWord("pocket").slice(0, MAX_REGIONS).map((m) => rasterize(m, photo.width, photo.height));
+  // Like the sleeves, a "pocket" mostly off the garment is on something else lying about.
+  const onGarment = toGrid(garmentMasks);
+  const pocketGrids = masksOfWord("pocket")
+    .map((m) => rasterize(m, photo.width, photo.height))
+    .filter((g) => area(intersect(g, onGarment)) >= 0.5 * area(g))
+    .slice(0, MAX_REGIONS);
   if (isTop(garment) && pocketGrids.length) {
     const px = pocketGrids.map((g) => simplifyClosed(traceOuter(largestComponent(g)), 2));
     let check = await cachedPocketCheck(cacheDir, px.length);
@@ -238,7 +243,13 @@ export async function runPhoto(input: PhotoRunInput): Promise<PhotoRun> {
     const { snpL, snpR, hemL, hemR } = m0.landmarks;
     if (check && snpL && snpR && hemL && hemR) {
       const polys = pocketGrids.map((g) => partPolygon(g, shape.plane).map((p) => applyAffine(m0.frame, p)));
-      const found = pocketsFromMasks(polys, check, { centreX: (hemL[0] + hemR[0]) / 2, neckY: (snpL[1] + snpR[1]) / 2, side: layout?.side === "back" ? "back" : "front", rel: shape.plane.rel });
+      const found = pocketsFromMasks(polys, check, {
+        centreX: (hemL[0] + hemR[0]) / 2,
+        neckY: (snpL[1] + snpR[1]) / 2,
+        neckSpread: Math.abs(snpL[1] - snpR[1]) / 2,
+        side: layout?.side === "back" ? "back" : "front",
+        rel: shape.plane.rel,
+      });
       pockets = found.pockets;
       pocketsPx = found.pockets.flatMap((p) => p.regions.map((i) => px[i]));
       notes.push(...found.notes);

@@ -52,6 +52,8 @@ const T = {
 
 const PREVIEW_ERRORS = {
   ...ERRORS,
+  visitor_limit: L("오늘 만들 수 있는 미리보기를 모두 썼습니다. 내일 다시 해 주십시오.", "You've used today's previews. Try again tomorrow.", "Ya usaste las vistas previas de hoy. Inténtalo mañana."),
+  daily_limit: L("오늘은 더 이상 미리보기를 만들 수 없습니다. 내일 다시 해 주십시오.", "No more previews can be made today. Try again tomorrow.", "Hoy ya no se pueden hacer más vistas previas. Inténtalo mañana."),
   measure_first: L("옷 사진을 먼저 재 주십시오.", "Measure the garment photo first.", "Mide primero la foto de la prenda."),
   failed: L("그림을 만들지 못했습니다. 잠시 후 다시 해 주십시오.", "Couldn't draw it. Try again in a moment.", "No se pudo dibujar. Inténtalo de nuevo en un momento."),
   live_disabled: L("지금은 미리보기를 만들 수 없습니다.", "The preview isn't available right now.", "Ahora no se puede hacer la vista previa."),
@@ -82,7 +84,7 @@ const f2 = (n: number) => n.toFixed(2);
 // sizes; the layout is deterministic and runs here in the browser.
 // garmentPhoto: the garment photo already measured, and the word its outline was found with, for
 // showing the garment in the fabric (Muse Image, kept to the garment's own outline).
-export function CuttingPanel({ pattern, live, garmentPhoto }: { pattern: Pattern; live: boolean; garmentPhoto?: { file: Blob; word: string } }) {
+export function CuttingPanel({ pattern, live, garmentPhoto }: { pattern: Pattern; live: boolean; garmentPhoto?: { file: Blob; src: string; word: string } }) {
   const lang = useLang();
   const [sizes, setSizes] = useState("110x100");
   const [photo, setPhoto] = useState<FabricPhoto | null>(null);
@@ -125,6 +127,8 @@ export function CuttingPanel({ pattern, live, garmentPhoto }: { pattern: Pattern
     }
   }
 
+  // A preview is of this fabric on this garment photo; another of either hides it.
+  const previewKey = `${photo?.src}|${garmentPhoto?.src}`;
   async function drawPreview() {
     if (!photo || !garmentPhoto) return;
     setDrawing(true);
@@ -138,7 +142,13 @@ export function CuttingPanel({ pattern, live, garmentPhoto }: { pattern: Pattern
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         setError((PREVIEW_ERRORS[body.error as keyof typeof PREVIEW_ERRORS] ?? PREVIEW_ERRORS.failed)[lang]);
-      } else setPreview({ src: URL.createObjectURL(await res.blob()), for: photo.src });
+      } else {
+        const src = URL.createObjectURL(await res.blob());
+        setPreview((old) => {
+          if (old) URL.revokeObjectURL(old.src);
+          return { src, for: previewKey };
+        });
+      }
     } catch {
       setError(PREVIEW_ERRORS.failed[lang]);
     } finally {
@@ -166,12 +176,12 @@ export function CuttingPanel({ pattern, live, garmentPhoto }: { pattern: Pattern
       </div>
       <p className="text-sm text-muted">{T.grainNote[lang]}</p>
       {error && <p className="rounded-xl bg-mark-soft p-3 text-sm">{error}</p>}
-      {live && photo && garmentPhoto && preview?.for !== photo.src && (
+      {live && photo && garmentPhoto && preview?.for !== previewKey && (
         <button type="button" onClick={drawPreview} disabled={drawing} className={buttonGhost}>
           {drawing ? T.drawing[lang] : T.seeIt[lang]}
         </button>
       )}
-      {photo && preview?.for === photo.src && (
+      {photo && preview?.for === previewKey && (
         <figure className="space-y-2">
           {/* eslint-disable-next-line @next/next/no-img-element -- a picture made from the user's own photos */}
           <img src={preview.src} alt={T.previewAlt[lang]} className="block h-auto w-full rounded-xl" />

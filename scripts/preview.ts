@@ -1,11 +1,14 @@
 // The garment in another fabric, from a garment photo already measured and a fabric photo.
-//   npm run preview -- garment.jpg fabric.jpg --word=t-shirt          prints the cost if not cached
+//   npm run preview -- garment.jpg fabric.jpg --word=t-shirt [--garment=hoodie]   prints the cost if not cached
+//   --word: the SAM word the photo was measured with (npm run photo prints it); --garment: the kind
+//   it was measured as, when it was chosen rather than told, so the photo is turned the same way
 //   add --yes to call Muse Image once (about $0.01). Writes .cache/out/<garment>-in-<fabric>.jpg.
 // The garment's mask comes from the SAM cache of `npm run photo`, so measure the photo first.
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fabricPreview, previewIsFree, PREVIEW_USD } from "../src/lib/photo/preview.ts";
+import type { GarmentKind } from "../src/lib/pattern/types.ts";
 import { cachedIdentify, standUpright } from "../src/lib/photo/identify.ts";
 import { cachedGarmentMask, photoCacheDir, preparePhoto } from "../src/lib/photo/run.ts";
 
@@ -17,7 +20,8 @@ const fabric = await preparePhoto(await readFile(fabricFile));
 let garment = await preparePhoto(await readFile(garmentFile));
 const cacheRoot = path.resolve(".cache", "photos");
 // A photo that `npm run photo --garment=auto` stood upright is measured, and previewed, turned.
-const id = await cachedIdentify(photoCacheDir(cacheRoot, garment));
+const kind = args.find((a) => a.startsWith("--garment="))?.slice(10) as GarmentKind | undefined;
+const id = await cachedIdentify(photoCacheDir(cacheRoot, garment), kind);
 if (id) garment = (await standUpright(garment, id, cacheRoot))?.photo ?? garment;
 const mask = await cachedGarmentMask(garment, cacheRoot, word);
 if (!mask) throw new Error(`No "${word}" mask cached for this photo. Run npm run photo on it first.`);

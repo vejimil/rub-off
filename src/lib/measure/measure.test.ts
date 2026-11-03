@@ -4,7 +4,7 @@ import type { Pt } from "../geom/point.ts";
 import { applyAffine, rotation } from "../geom/polygon.ts";
 import type { Shape } from "./shape.ts";
 import { measureApron, measureBag, measureRect, measureSkirt } from "./simple.ts";
-import { measureTop } from "./top.ts";
+import { cuffCorners, measureTop } from "./top.ts";
 
 // Pure geometry: outlines drawn in cm with known measurements (SAM is only tested on real photos).
 const shapeOf = (outline: Pt[]): Shape => ({
@@ -142,4 +142,11 @@ test("tapped shoulder points replace the masks' and narrow the ±", () => {
   close(fromTaps.values.shoulder?.cm, 47);
   close(fromTaps.values.sleeve?.cm, Math.hypot(36 - 23.5, 15 - 4));
   assert.ok(fromTaps.values.shoulder!.plusMinusCm < fromMasks.values.shoulder!.plusMinusCm);
+});
+
+test("the cuff is the edge at the sleeve's far end, not a bend near the armpit", () => {
+  // Shoulder point, along the top of the sleeve to the cuff, back along the underarm with a bend
+  // 8 cm short of the armpit (the owner's denim hoodie, 11/3: read as a 40 cm opening).
+  const rest: Pt[] = [[0, 0], [50, 20], [46, 30], [10, 22], [5, 15]];
+  assert.deepEqual(cuffCorners(rest), [[50, 20], [46, 30]]);
 });

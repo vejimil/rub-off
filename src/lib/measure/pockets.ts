@@ -16,19 +16,24 @@ export interface FoundPocket {
   belowNeck: number; // its top, cm down from the high point of the shoulder
   width: number; // finished, cm; a kangaroo's whole width
   height: number;
-  plusMinusCm: number;
+  plusMinusCm: number; // of the size
+  placePlusMinusCm: number; // of fromCentre and belowNeck
   regions: number[]; // which masks it came from (0-based)
 }
 
 const MIN_CM = 6, MAX_CM = 50;
 const SAME_CM = 3; // two patch pockets this close in place are the same pocket
 const COVERED_REL = 0.1; // a partly covered half of a kangaroo: its other half sets the width
+// The centre line runs up from the middle of the hem, about a centimetre either way; a kangaroo's
+// width is twice its reach from that line, so the error counts twice there.
+const CENTRE_CM = 1;
 
 export function pocketsFromMasks(
   polys: readonly Pt[][], // in the top's frame
   check: PocketCheck,
-  // neckY: the two side neck points' mean height, which the length is measured from too.
-  at: { centreX: number; neckY: number; side: "front" | "back"; rel: number },
+  // neckY: the two side neck points' mean height, which the length is measured from too;
+  // neckSpread: half their difference (7.6 cm apart on the owner's hoodie, 11/3), which the place carries.
+  at: { centreX: number; neckY: number; neckSpread?: number; side: "front" | "back"; rel: number },
 ): { pockets: FoundPocket[]; notes: Local[] } {
   const notes: Local[] = [];
   const answer = (i: number) => check.pockets.find((p) => p.number === i + 1);
@@ -36,7 +41,9 @@ export function pocketsFromMasks(
     const xs = poly.map((p) => p[0]), ys = poly.map((p) => p[1]);
     return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) };
   };
-  const pm = (w: number, h: number, extra = 0) => Math.round((0.5 + (at.rel + extra) * Math.max(w, h)) * 10) / 10;
+  const round = (x: number) => Math.round(x * 10) / 10;
+  const pm = (w: number, h: number, extra = 0, centre = 0) => round(0.5 + (at.rel + extra) * Math.max(w, h) + centre);
+  const place = (fromCentre: number, belowNeck: number) => round(Math.hypot(0.5 + at.rel * Math.max(fromCentre, belowNeck), CENTRE_CM, at.neckSpread ?? 0));
   const found: FoundPocket[] = [];
   let seamed = 0, covered = 0, outside = 0;
 
@@ -59,8 +66,10 @@ export function pocketsFromMasks(
       width,
       height,
       plusMinusCm: pm(width, height),
+      placePlusMinusCm: 0,
       regions: [i],
     };
+    p.placePlusMinusCm = place(p.fromCentre, p.belowNeck);
     // The same pocket twice (two masks on one pocket): keep the first.
     if (!found.some((q) => q.kind === p.kind && Math.abs(q.fromCentre - p.fromCentre) < SAME_CM && Math.abs(q.belowNeck - p.belowNeck) < SAME_CM)) found.push(p);
   });
@@ -77,17 +86,19 @@ export function pocketsFromMasks(
     const width = 2 * reach, height = bottom - top;
     if (width < MIN_CM || height < MIN_CM || width > MAX_CM || height > MAX_CM) outside++;
     else {
-      found.push({ kind: "kangaroo", host: at.side, fromCentre: 0, belowNeck: top - at.neckY, width, height, plusMinusCm: pm(width, height, whole.length ? 0 : COVERED_REL), regions: use.map((x) => x.i) });
+      const belowNeck = top - at.neckY;
+      found.push({ kind: "kangaroo", host: at.side, fromCentre: 0, belowNeck, width, height, plusMinusCm: pm(width, height, whole.length ? 0 : COVERED_REL, 2 * CENTRE_CM), placePlusMinusCm: place(0, belowNeck), regions: use.map((x) => x.i) });
       if (!whole.length) notes.push(L("캥거루 주머니가 일부 가려져 있어 크기의 ±를 키웠습니다.", "The kangaroo pocket is partly covered, so its size carries a larger ±.", "El bolsillo canguro está en parte tapado, así que su tamaño lleva un ± mayor."));
     }
   }
 
+  // Where each one went on the pattern (moved, made smaller or left off) is said with the pattern.
   if (found.length)
     notes.push(
       L(
-        `사진에서 주머니 ${found.length}개를 찾아 크기와 위치를 패턴에 옮겼습니다. 주머니 달기에서 고칠 수 있습니다.`,
-        `${found.length} pocket${found.length > 1 ? "s were" : " was"} found in the photo and put on the pattern at the size and place measured. You can change ${found.length > 1 ? "them" : "it"} under Add pockets.`,
-        `Se ${found.length > 1 ? "encontraron" : "encontró"} ${found.length} bolsillo${found.length > 1 ? "s" : ""} en la foto y se ${found.length > 1 ? "pusieron" : "puso"} en el patrón con el tamaño y la posición medidos. Puedes cambiarlo en Añadir bolsillos.`,
+        `사진에서 주머니 ${found.length}개를 찾았습니다. 패턴에 넣은 크기와 자리는 주머니 달기에서 확인하고 고칠 수 있습니다.`,
+        `${found.length} pocket${found.length > 1 ? "s were" : " was"} found in the photo. Check where ${found.length > 1 ? "they went" : "it went"} on the pattern, and change ${found.length > 1 ? "them" : "it"}, under Add pockets.`,
+        `Se ${found.length > 1 ? "encontraron" : "encontró"} ${found.length} bolsillo${found.length > 1 ? "s" : ""} en la foto. Revisa en Añadir bolsillos dónde ${found.length > 1 ? "quedaron" : "quedó"} en el patrón y cámbialo si hace falta.`,
       ),
     );
   if (seamed) notes.push(L("솔기에 끼운 주머니나 입술 주머니는 옷의 솔기를 바꾸므로 패턴에 넣지 않았습니다.", "A pocket set into a seam, or a welt pocket, changes the garment's own seams, so it isn't on the pattern.", "Un bolsillo metido en una costura, o de ojal, cambia las costuras de la prenda, así que no está en el patrón."));

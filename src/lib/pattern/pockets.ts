@@ -21,7 +21,9 @@ export interface Pocket {
   v: number; // and of its height (0 top, 1 bottom)
   width: number; // finished, cm
   height: number;
-  fromPhoto?: boolean; // measured on the photo, not placed by hand
+  // Measured on a photo, not placed by hand: its ± (size, place), and how far it was moved up and
+  // made smaller to fit the drafted piece.
+  photo?: { plusMinusCm: number; placeCm: number; up: number; scale: number };
 }
 
 export const POCKET_NAME: Record<PocketKind, Local> = {
@@ -85,19 +87,35 @@ export function defaultPocket(pattern: Pick<Pattern, "garment" | "pieces">, kind
 // shrinks a little; past that it is left for the hand.
 export function pocketFromPhoto(
   pattern: Pick<Pattern, "garment" | "pieces">,
-  f: { kind: PocketKind; host: string; fromCentre: number; belowNeck: number; width: number; height: number },
+  f: { kind: PocketKind; host: string; fromCentre: number; belowNeck: number; width: number; height: number; plusMinusCm?: number; placePlusMinusCm?: number },
   id: string,
 ): Pocket | null {
   const host = f.kind === "kangaroo" ? kangarooHost(pattern) : pocketHosts(pattern).find((h) => h.id === f.host);
   if (!host) return null;
-  for (const k of [1, 0.95, 0.9])
+  for (const scale of [1, 0.95, 0.9])
     for (const up of [0, 1, 2, 3, 4]) {
       const at = shareOf(host, [f.kind === "kangaroo" ? 0 : f.fromCentre, f.belowNeck - up]);
-      const p: Pocket = { id, kind: f.kind, host: host.id, ...at, width: clampSize(k * f.width), height: clampSize(k * f.height), fromPhoto: true };
+      const photo = { plusMinusCm: f.plusMinusCm ?? 0, placeCm: f.placePlusMinusCm ?? 0, up, scale };
+      const p: Pocket = { id, kind: f.kind, host: host.id, ...at, width: clampSize(scale * f.width), height: clampSize(scale * f.height), photo };
       if (placed(host, p).fits) return p;
     }
   return null;
 }
+
+// The pockets of every photo of the garment: one pocket seen on two photos is one (the surer kept),
+// and how many couldn't be set on the pattern at all.
+export function pocketsFromPhotos(
+  pattern: Pick<Pattern, "garment" | "pieces">,
+  found: readonly (Parameters<typeof pocketFromPhoto>[1] & { plusMinusCm: number })[],
+): { pockets: Pocket[]; left: number } {
+  const same = (a: (typeof found)[number], b: (typeof found)[number]) =>
+    a.kind === b.kind && a.host === b.host && Math.abs(a.fromCentre - b.fromCentre) < SAME_POCKET_CM && Math.abs(a.belowNeck - b.belowNeck) < SAME_POCKET_CM;
+  const unique: (typeof found)[number][] = [];
+  for (const f of [...found].sort((a, b) => a.plusMinusCm - b.plusMinusCm)) if (!unique.some((u) => same(u, f))) unique.push(f);
+  const pockets = unique.flatMap((f, i) => pocketFromPhoto(pattern, f, `p${i + 1}`) ?? []);
+  return { pockets, left: unique.length - pockets.length };
+}
+const SAME_POCKET_CM = 5;
 
 export const clampSize = (cm: number) => Math.min(MAX_SIZE, Math.max(MIN_SIZE, Math.round(cm * 2) / 2));
 
@@ -191,8 +209,8 @@ const MARK_LABEL = L("주머니 위치", "POCKET PLACEMENT", "POSICIÓN DEL BOLS
 // The pattern with its pockets: each one a piece of its own and an outline on its host. A pocket
 // that no longer fits its host (the pattern was graded smaller, or the host is gone) is left out,
 // and a note says so.
-export function withPockets(pattern: Pattern, pockets: readonly Pocket[]): Pattern {
-  if (!pockets.length) return pattern;
+export function withPockets(pattern: Pattern, pockets: readonly Pocket[], leftFromPhoto = 0): Pattern {
+  if (!pockets.length && !leftFromPhoto) return pattern;
   const pieces = pattern.pieces.map((p) => ({ ...p, marks: [...(p.marks ?? [])] }));
   const notes = [...pattern.notes];
   const added: Piece[] = [];
@@ -217,6 +235,31 @@ export function withPockets(pattern: Pattern, pockets: readonly Pocket[]): Patte
       ),
     );
   }
+  // Pockets from the photo: their ± and what was changed to fit, numbered as the pieces are.
+  pockets.forEach((p, i) => {
+    if (!p.photo || left.includes(i + 1)) return;
+    const n = pockets.slice(0, i + 1).filter((q, j) => !left.includes(j + 1)).length;
+    const { plusMinusCm: pm, placeCm, up, scale } = p.photo;
+    const pct = Math.round((1 - scale) * 100);
+    const ko = [up ? `${up} cm 올려` : "", pct ? `${pct}% 줄여` : ""].filter(Boolean).join(" ");
+    const en = [up ? `moved up ${up} cm` : "", pct ? `made ${pct}% smaller` : ""].filter(Boolean).join(" and ");
+    const es = [up ? `se subió ${up} cm` : "", pct ? `se hizo un ${pct}% más pequeño` : ""].filter(Boolean).join(" y ");
+    notes.push(
+      L(
+        `주머니 ${n}은 사진에서 잰 크기(±${pm} cm)와 자리(±${placeCm} cm)입니다.${ko ? ` 몸판에 들어가도록 ${ko} 넣었습니다.` : ""} 재단 전에 옷에서 재 확인하십시오.`,
+        `Pocket ${n} has the size (±${pm} cm) and place (±${placeCm} cm) measured on the photo.${en ? ` To fit the panel it was ${en}.` : ""} Check it on the garment before cutting.`,
+        `El bolsillo ${n} tiene el tamaño (±${pm} cm) y la posición (±${placeCm} cm) medidos en la foto.${es ? ` Para que cupiera en el panel ${es}.` : ""} Compruébalo en la prenda antes de cortar.`,
+      ),
+    );
+  });
+  if (leftFromPhoto)
+    notes.push(
+      L(
+        `사진에서 찾은 주머니 ${leftFromPhoto}개는 이 패턴의 몸판에 들어가지 않아 넣지 않았습니다. 주머니 달기에서 직접 넣을 수 있습니다.`,
+        `${leftFromPhoto} pocket${leftFromPhoto > 1 ? "s" : ""} found on the photo didn't fit this pattern's panels, so ${leftFromPhoto > 1 ? "they weren't" : "it wasn't"} added. You can add pockets under Add pockets.`,
+        `${leftFromPhoto} bolsillo${leftFromPhoto > 1 ? "s" : ""} de la foto no ${leftFromPhoto > 1 ? "cabían" : "cabía"} en los paneles de este patrón, así que no se ${leftFromPhoto > 1 ? "añadieron" : "añadió"}. Puedes añadirlos en Añadir bolsillos.`,
+      ),
+    );
   if (left.length)
     notes.push(
       L(

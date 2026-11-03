@@ -13,6 +13,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { image, sparkJson, text } from "../meta/spark.ts";
 import type { GarmentKind } from "../pattern/types.ts";
+import type { Pt } from "../geom/point.ts";
 import { photoCacheDir, preparePhoto, type Prepared } from "./run.ts";
 
 // What each kind means, for Spark. The app drafts these and nothing else; categories, not exact
@@ -44,14 +45,21 @@ const TOP_OF: Record<GarmentKind, string> = {
 export const SAM_WORDS = ["t-shirt", "shirt", "top", "sweatshirt", "hoodie", "dress", "pants", "shorts", "trousers", "skirt", "bag", "tote bag", "apron", "cushion", "pillow", "pouch"] as const;
 
 const NECK = ["top", "right", "bottom", "left"] as const;
+type Neck = (typeof NECK)[number];
 // Clockwise quarter turns that bring each edge to the top.
-const TURN: Record<(typeof NECK)[number], number> = { top: 0, right: 270, bottom: 180, left: 90 };
+export const TURN: Record<Neck, number> = { top: 0, right: 270, bottom: 180, left: 90 };
+
+// A point given as fractions of the photo's width and height (a tapped shoulder point), where it
+// lands once the photo is turned so that `neck` is up.
+export function turnFraction([u, v]: Pt, neck: Neck): Pt {
+  return neck === "left" ? [1 - v, u] : neck === "right" ? [v, 1 - u] : neck === "bottom" ? [1 - u, 1 - v] : [u, v];
+}
 
 export interface Identified {
   garment: GarmentKind | typeof OTHER;
   fabric: "knit" | "woven" | "unclear";
   word: (typeof SAM_WORDS)[number];
-  neck?: (typeof NECK)[number]; // missing in answers kept from before 11/3: taken as top
+  neck?: Neck; // missing in answers kept from before 11/3: taken as top
   seen?: (typeof PARTS)[number][];
 }
 
@@ -76,22 +84,24 @@ const SCHEMA = {
 };
 
 const LONG_SIDE = 1024;
-const cacheFile = (cacheDir: string, kind?: GarmentKind) => path.join(cacheDir, kind ? `identify-${kind}.json` : "identify.json");
+export const cacheFile = (cacheDir: string, kind?: GarmentKind | "again") => path.join(cacheDir, kind ? `identify-${kind}.json` : "identify.json");
 
+// With a kind, the answer given for that kind, else an answer that told the photo as that kind:
+// after "tell from the photo", the browser asks again with the kind it was told (a shoulder tap,
+// a tape value), and that costs nothing.
 export async function cachedIdentify(cacheDir: string, kind?: GarmentKind): Promise<Identified | null> {
-  try {
-    return JSON.parse(await readFile(cacheFile(cacheDir, kind), "utf8")) as Identified;
-  } catch {
-    return null;
-  }
+  const read = (file: string) => readFile(file, "utf8").then((t) => JSON.parse(t) as Identified, () => null);
+  if (!kind) return read(cacheFile(cacheDir));
+  const told = await read(cacheFile(cacheDir));
+  return (await read(cacheFile(cacheDir, kind))) ?? (told?.garment === kind ? told : null);
 }
 
 // With `kind` (chosen by the user, or already told), Spark only says which way the item lies, the
 // cloth and the SAM word. Lying on its side, the owner's denim hoodie was told as trousers in half
 // the tries and as a hoodie in every try once turned neck-up (11/3); told it is a hoodie, Spark
 // only has to find the hood.
-export async function identify(photo: { bytes: Buffer }, cacheDir: string, kind?: GarmentKind): Promise<Identified> {
-  const cached = await cachedIdentify(cacheDir, kind);
+export async function identify(photo: { bytes: Buffer }, cacheDir: string, kind?: GarmentKind, again = false): Promise<Identified> {
+  const cached = again ? await readFile(cacheFile(cacheDir, "again"), "utf8").then((t) => JSON.parse(t) as Identified, () => null) : await cachedIdentify(cacheDir, kind);
   if (cached) return cached;
   const jpeg = await sharp(photo.bytes).resize(LONG_SIDE, LONG_SIDE, { fit: "inside" }).jpeg({ quality: 85 }).toBuffer();
   const kinds = Object.entries(KINDS).map(([k, d]) => `- ${k}: ${d}`).join("\n");
@@ -107,24 +117,53 @@ ${kinds}
 Also say whether its cloth is knit or woven, and which single everyday noun from the list best names it. Choose only from the given options.`;
   const schema = kind ? { ...SCHEMA, schema: { ...SCHEMA.schema, properties: { ...SCHEMA.schema.properties, garment: { type: "string", enum: [kind] } } } } : SCHEMA;
   const result = await sparkJson<Identified>([text(prompt), image(jpeg)], schema, 3000);
-  await saveIdentified(cacheDir, result, kind);
+  await saveIdentified(cacheDir, result, again ? "again" : kind);
   return result;
 }
 
-async function saveIdentified(cacheDir: string, id: Identified, kind?: GarmentKind) {
+export async function saveIdentified(cacheDir: string, id: Identified, kind?: GarmentKind | "again") {
   await mkdir(cacheDir, { recursive: true });
   await writeFile(cacheFile(cacheDir, kind), JSON.stringify(id, null, 2));
+}
+
+// Told wrong, the photo is shown to Spark again turned the other way up from its first answer.
+// Lying on its side, the owner's denim hoodie was trousers with the waist at one edge; turned so
+// that edge is at the bottom, it is neck-up, and neck-up Spark told it as a hoodie in 3 of 3 (11/3).
+const EDGES: readonly Neck[] = ["top", "right", "bottom", "left"];
+const OPPOSITE: Record<Neck, Neck> = { top: "bottom", right: "left", bottom: "top", left: "right" };
+// An edge of a photo turned so that `up` went to the top, as an edge of the photo before the turn.
+export function edgeBefore(edge: Neck, up: Neck): Neck {
+  return EDGES[(EDGES.indexOf(edge) - TURN[up] / 90 + 4) % 4];
+}
+
+// Spark's second look, as an answer about the photo as it was sent; null when there is nothing new
+// to try (the same kind again, or "something else"). Costs one Spark answer unless kept.
+export async function lookAgain(photo: Prepared, first: Identified, cacheRoot: string, mayPay: () => boolean): Promise<Identified | null> {
+  const up = OPPOSITE[first.neck ?? "top"];
+  const turned = (await turnPhoto(photo, up))?.photo ?? photo;
+  const dir = photoCacheDir(cacheRoot, turned);
+  const kept = await readFile(cacheFile(dir, "again"), "utf8").then((t) => JSON.parse(t) as Identified, () => null);
+  if (!kept && !mayPay()) return null;
+  const next = kept ?? (await identify(turned, dir, undefined, true));
+  if (next.garment === OTHER || next.garment === first.garment) return null;
+  return { ...next, neck: edgeBefore(next.neck ?? "top", up) };
+}
+
+// The photo turned so that edge is up, or null if it already is.
+async function turnPhoto(photo: Prepared, up: Neck): Promise<{ jpeg: Buffer; photo: Prepared; from: Neck } | null> {
+  const deg = TURN[up];
+  if (!deg) return null;
+  const jpeg = await sharp(photo.bytes).rotate(deg).jpeg({ quality: 90 }).toBuffer();
+  return { jpeg, photo: await preparePhoto(jpeg), from: up };
 }
 
 // The photo turned so the item's top is up, or null if it already is. The turned JPEG is what the
 // browser shows and sends from then on; the photo prepared from it (the one measured) gets the
 // same answer kept, turned to "top", so sending it again costs nothing.
-export async function standUpright(photo: Prepared, id: Identified, cacheRoot: string, kind?: GarmentKind): Promise<{ jpeg: Buffer; photo: Prepared; id: Identified } | null> {
-  const deg = TURN[id.neck ?? "top"];
-  if (!deg) return null;
-  const jpeg = await sharp(photo.bytes).rotate(deg).jpeg({ quality: 90 }).toBuffer();
-  const turned = await preparePhoto(jpeg);
+export async function standUpright(photo: Prepared, id: Identified, cacheRoot: string, kind?: GarmentKind): Promise<{ jpeg: Buffer; photo: Prepared; id: Identified; from: Neck } | null> {
+  const turned = await turnPhoto(photo, id.neck ?? "top");
+  if (!turned) return null;
   const upright: Identified = { ...id, neck: "top" };
-  await saveIdentified(photoCacheDir(cacheRoot, turned), upright, kind);
-  return { jpeg, photo: turned, id: upright };
+  await saveIdentified(photoCacheDir(cacheRoot, turned.photo), upright, kind);
+  return { ...turned, id: upright };
 }

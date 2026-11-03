@@ -321,7 +321,7 @@ function seamShoulderPoint(mask: readonly Pt[], outline: readonly Pt[], sleeveAr
 // A kink in the mask edge right at the shoulder point or the armpit is not a cuff corner.
 const CUFF_CLEAR_CM = 3;
 
-function cuffCorners(rest: readonly Pt[]): [Pt, Pt] | null {
+export function cuffCorners(rest: readonly Pt[]): [Pt, Pt] | null {
   const s = simplify(rest, 1);
   if (s.length < 4) return null;
   const start = s[0], end = s[s.length - 1];

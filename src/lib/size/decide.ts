@@ -105,7 +105,13 @@ export function decideSize(mine: Partial<Record<SizeKey, Mine>>, table: SizeTabl
     }
     return { label: s.label, checks, fits: checks.filter((c) => c.verdict === "fits").length };
   });
-  if (all.every((r) => r.checks.length === 0)) return { ok: false, reason: "nothing-to-compare", detail: L("표와 내 옷에 같은 측정 항목이 없습니다.", "The table and your garment have no measurement in common.", "La tabla y tu prenda no tienen ninguna medida en común.") };
+  if (all.every((r) => r.checks.length === 0)) {
+    // Every shared measurement too far apart to be a size: say each, not just "nothing in common".
+    const why = unlike.flatMap(unlikeSentence);
+    const none = L("표와 내 옷에 같은 측정 항목이 없습니다.", "The table and your garment have no measurement in common.", "La tabla y tu prenda no tienen ninguna medida en común.");
+    const detail = why.length ? L(why.map((w) => w.ko).join(" "), why.map((w) => w.en).join(" "), why.map((w) => w.es).join(" ")) : none;
+    return { ok: false, reason: "nothing-to-compare", detail };
+  }
 
   // Most points that fit; then the one whose most important point is closest to its window.
   const miss = (c: Check) => (c.verdict === "fits" ? 0 : c.verdict === "small" ? c.window[0] - c.diff : c.diff - c.window[1]);
@@ -126,9 +132,9 @@ function unlikeSentence(u: Unlike): Local[] {
   const m = u.mine.toFixed(1);
   const longer = u.table[0] > u.mine;
   const s = L(
-    `${SIZE_KEY_NAME[u.key].ko}: 표는 ${range} cm, 내 옷은 ${m} cm. 사이즈가 아니라 옷의 종류가 달라 보여(${longer ? "표의 옷이 훨씬 김" : "표의 옷이 훨씬 짧음"}) 비교하지 않았습니다.`,
-    `${SIZE_KEY_NAME[u.key].en}: the table says ${range} cm, your garment ${m} cm. That's a different style of garment (${longer ? "much longer" : "much shorter"}), not a different size, so it wasn't compared.`,
-    `${SIZE_KEY_NAME[u.key].es}: la tabla dice ${range} cm y tu prenda ${m} cm. Es otro estilo de prenda (${longer ? "mucho más larga" : "mucho más corta"}), no otra talla, así que no se comparó.`,
+    `${SIZE_KEY_NAME[u.key].ko}: 표는 ${range} cm, 내 옷은 ${m} cm(${longer ? "표의 옷이 훨씬 김" : "표의 옷이 훨씬 짧음"}). 사이즈 차이로 보기엔 너무 커서 비교하지 않았습니다. 옷의 종류가 다르거나, 내 옷을 잘못 쟀을 수 있으니(접힌 소매 등) 확인해 주십시오.`,
+    `${SIZE_KEY_NAME[u.key].en}: the table says ${range} cm, your garment ${m} cm (${longer ? "the table's is much longer" : "the table's is much shorter"}). That's too far apart to be a size, so it wasn't compared. Either the garments are different styles, or yours was measured wrong (a folded sleeve, say): check it.`,
+    `${SIZE_KEY_NAME[u.key].es}: la tabla dice ${range} cm y tu prenda ${m} cm (${longer ? "la de la tabla es mucho más larga" : "la de la tabla es mucho más corta"}). Está demasiado lejos para ser otra talla, así que no se comparó. O son estilos distintos, o tu prenda se midió mal (una manga doblada, por ejemplo): compruébalo.`,
   );
   const allowed = [...u.table.map((x) => Number(x.toFixed(1))), Number(m)];
   return LANGS.every((l) => guardNumbers(s[l], allowed)) ? [s] : [];

@@ -18,7 +18,7 @@ import { layOut } from "@/lib/pattern/layout";
 import { DEFAULTS, MEASURE_NAME, type MeasuresOf } from "@/lib/pattern/measures";
 import { EXAMPLES } from "@/lib/pattern/examples";
 import { patternPdf } from "@/lib/pattern/pdf";
-import { pocketFromPhoto, pocketKinds, withPockets, type Pocket } from "@/lib/pattern/pockets";
+import { pocketKinds, pocketsFromPhotos, withPockets, type Pocket } from "@/lib/pattern/pockets";
 import type { FoundPocket } from "@/lib/measure/pockets";
 import { loadPdfFont } from "@/lib/pattern/pdf-font";
 import { isTop, NOT_WORN, type Fabric, type GarmentKind } from "@/lib/pattern/types";
@@ -68,6 +68,7 @@ const STAGE: Record<FailedRun["stage"], Local> = {
 const T = {
   autoPick: L("사진 보고 고르기", "Tell from the photo", "Según la foto"),
   identified: L("사진에서 알아본 옷", "Recognised as", "Reconocida como"),
+  notWorn: L("사진 속 물건은 입는 옷이 아니어서 고칠 수 없습니다. 입는 옷이면 위에서 종류를 골라 주십시오.", "The item in the photo isn't something you wear, so there's nothing to alter. If it is, choose its kind above.", "Lo de la foto no es una prenda que se lleve puesta, así que no hay nada que arreglar. Si lo es, elige su tipo arriba."),
   fillTypical: L("사진 없이 보통 치수로 채우기", "No photo? Fill in typical measurements", "¿Sin foto? Rellena con medidas típicas"),
   failedRun: L("이 사진으로 재지 못했습니다.", "Couldn't measure this photo.", "No se pudo medir esta foto."),
   noServer: L("서버에 연결하지 못했습니다.", "Couldn't reach the server.", "No se pudo conectar con el servidor."),
@@ -283,6 +284,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
       if (body.upright) {
         const { jpeg, width, height } = body.upright as { jpeg: string; width: number; height: number };
         const blob = new Blob([Uint8Array.from(atob(jpeg), (c) => c.charCodeAt(0))], { type: "image/jpeg" });
+        if (shot.photo.src.startsWith("blob:")) URL.revokeObjectURL(shot.photo.src);
         update(i, { photo: { src: URL.createObjectURL(blob), width, height }, file: blob, taps: undefined });
       }
       if (!res.ok) update(i, { failure: RUN_ERRORS[body.error] ?? T.failedRun });
@@ -294,10 +296,17 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
         // Taken for the wrong kind: the chips show what it was taken for, ready to be changed.
         else if (body.identified && body.identified.garment !== "something else") {
           setGarment(body.identified.garment);
+          if (body.identified.fabric !== "unclear") setFabric(body.identified.fabric);
           setAuto(false);
         }
       } else {
         const run = body.run as OkRun;
+        if (run.identified && alter && NOT_WORN.includes(run.garment)) {
+          // Told as a bag, a cushion or a pouch: nothing to wear, so nothing to alter here.
+          update(i, { failure: T.notWorn, run: undefined });
+          setAuto(false);
+          return;
+        }
         if (run.identified) {
           setGarment(run.garment);
           if (run.identified.fabric !== "unclear") setFabric(run.identified.fabric);
@@ -344,13 +353,19 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
   const [pocketsBy, setPocketsBy] = useState<Partial<Record<GarmentKind, Pocket[]>>>({});
   // Pockets measured on the photos go on the pattern until the pockets are changed by hand.
   const foundKey = JSON.stringify(okRuns.flatMap((r) => r.pockets ?? []));
-  const photoPockets = useMemo(
-    () => (base ? (JSON.parse(foundKey) as FoundPocket[]).flatMap((f, i) => pocketFromPhoto(base, f, `p${i + 1}`) ?? []) : []),
-    [base, foundKey],
-  );
+  const fromPhotos = useMemo(() => (base ? pocketsFromPhotos(base, JSON.parse(foundKey) as FoundPocket[]) : { pockets: [], left: 0 }), [base, foundKey]);
+  const photoPockets = fromPhotos.pockets;
   const pockets = useMemo(() => pocketsBy[garment] ?? photoPockets, [pocketsBy, garment, photoPockets]);
-  const setPockets: Dispatch<SetStateAction<Pocket[]>> = (f) => setPocketsBy((all) => ({ ...all, [garment]: typeof f === "function" ? f(all[garment] ?? photoPockets) : f }));
-  const pattern = useMemo(() => (base ? withPockets(base, pockets) : null), [base, pockets]);
+  // A photo pocket moved or resized by hand is the hand's: its photo ± no longer applies.
+  const setPockets: Dispatch<SetStateAction<Pocket[]>> = (f) =>
+    setPocketsBy((all) => {
+      const prev = all[garment] ?? photoPockets;
+      const next = typeof f === "function" ? f(prev) : f;
+      const same = (p: Pocket, o?: Pocket) => !!o && o.u === p.u && o.v === p.v && o.width === p.width && o.height === p.height;
+      return { ...all, [garment]: next.map((p) => (p.photo && !same(p, prev.find((o) => o.id === p.id)) ? { ...p, photo: undefined } : p)) };
+    });
+  const leftFromPhoto = pocketsBy[garment] ? 0 : fromPhotos.left;
+  const pattern = useMemo(() => (base ? withPockets(base, pockets, leftFromPhoto) : null), [base, pockets, leftFromPhoto]);
   const sheet = useMemo(() => (pattern ? layOut(pattern) : null), [pattern]);
 
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -381,7 +396,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
   const shot = shots[Math.min(active, shots.length - 1)];
   // The photo to show in another fabric: the one in view if it was measured as this garment, else the first that was.
   const measuredShot = [shot, ...shots].find((s) => s?.file && s.run?.garment === garment);
-  const garmentPhoto = measuredShot?.file && measuredShot.run ? { file: measuredShot.file, word: measuredShot.run.concepts[0] } : undefined;
+  const garmentPhoto = measuredShot?.file && measuredShot.run ? { file: measuredShot.file, src: measuredShot.photo.src, word: measuredShot.run.concepts[0] } : undefined;
   const activeIndex = Math.min(active, shots.length - 1);
   const top = isTop(garment);
   const tabs = [

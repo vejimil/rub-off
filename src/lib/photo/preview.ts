@@ -11,6 +11,8 @@ import { dilate, type Grid } from "../geom/grid.ts";
 import { META_BASE_URL, MODELS } from "../meta/client.ts";
 
 export const PREVIEW_USD = 0.01;
+// Inside the preview route's 60 s; an edit took 17–27 s on the owner's photos (11/3).
+const EDIT_TIMEOUT_MS = 55_000;
 // bump when the prompt changes, so a cached preview isn't reused. v3 asks for every edge to stay:
 // v2 drew the owner's denim hoodie's sleeves a little thinner, leaving floor and a faint old
 // outline inside the mask; v3 still did (the floor lines up exactly, only the sleeves move; 11/3).
@@ -77,7 +79,7 @@ async function edit(garment: { bytes: Buffer; width: number; height: number }, f
   form.set("image[1]", new Blob([new Uint8Array(fabric.bytes)], { type: "image/jpeg" }), "fabric.jpg");
   const apiKey = process.env.MODEL_API_KEY;
   if (!apiKey) throw new Error("MODEL_API_KEY is not set. Copy .env.example to .env.local.");
-  const http = await fetch(`${META_BASE_URL}/images/edits`, { method: "POST", headers: { authorization: `Bearer ${apiKey}` }, body: form, signal: AbortSignal.timeout(120_000) });
+  const http = await fetch(`${META_BASE_URL}/images/edits`, { method: "POST", headers: { authorization: `Bearer ${apiKey}` }, body: form, signal: AbortSignal.timeout(EDIT_TIMEOUT_MS) });
   if (!http.ok) throw new Error(`Muse Image ${http.status}: ${(await http.text()).slice(0, 300)}`);
   const res = (await http.json()) as { data?: { b64_json?: string }[] };
   const b64 = res.data?.[0]?.b64_json;

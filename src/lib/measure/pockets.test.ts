@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { Pt } from "../geom/point.ts";
 import { draft } from "../pattern/draft.ts";
 import { EXAMPLES } from "../pattern/examples.ts";
-import { placed, pocketFromPhoto, withPockets } from "../pattern/pockets.ts";
+import { placed, pocketFromPhoto, pocketsFromPhotos, withPockets } from "../pattern/pockets.ts";
 import type { GarmentKind } from "../pattern/types.ts";
 import type { PocketCheck } from "../photo/pocket-check.ts";
 import { pocketsFromMasks } from "./pockets.ts";
@@ -68,4 +68,26 @@ test("a measured pocket lands on the drafted front where it was, and a hoodie's 
   // Its bottom read right on the rib seam: moved up a little rather than dropped.
   const low = pocketFromPhoto(hoodie, { kind: "kangaroo", host: "front", fromCentre: 0, belowNeck: 44, width: 30, height: 20 }, "k2");
   assert.ok(low);
+});
+
+test("a photo pocket that has to move or shrink to fit says so, one that can't fit is counted, and one seen twice is one", () => {
+  const hoodie = ex("hoodie");
+  const seen = { kind: "kangaroo" as const, host: "front", fromCentre: 0, belowNeck: 44, width: 30, height: 20, plusMinusCm: 2.1, placePlusMinusCm: 1.4 };
+  const { pockets, left } = pocketsFromPhotos(hoodie, [seen, { ...seen, belowNeck: 45, plusMinusCm: 3 }, { ...seen, kind: "patch", fromCentre: 12, belowNeck: 200, width: 12, height: 14 }]);
+  assert.equal(pockets.length, 1, "the same kangaroo on two photos is one pocket");
+  assert.equal(left, 1, "a pocket below the hem can't be placed");
+  const p = pockets[0];
+  assert.ok(p.photo && (p.photo.up > 0 || p.photo.scale < 1), "moved up or made smaller to clear the rib");
+  assert.equal(p.photo!.plusMinusCm, 2.1, "the surer of the two is kept");
+  const notes = withPockets(hoodie, pockets, left).notes.map((n) => n.en).join("\n");
+  assert.ok(/±2\.1 cm/.test(notes) && /before cutting/.test(notes), notes);
+  assert.ok(p.photo!.up ? new RegExp(`moved up ${p.photo!.up} cm`).test(notes) : /smaller/.test(notes), notes);
+  assert.ok(/1 pocket found on the photo didn't fit/.test(notes), notes);
+});
+
+test("the pocket's ± counts the centre line twice in a kangaroo's width, and the two neck points in its place", () => {
+  const check: PocketCheck = { pockets: [{ number: 1, kind: "kangaroo pocket across the centre front", view: "whole pocket in view" }] };
+  const { pockets } = pocketsFromMasks([rect(-15, -25, 15, -5)], check, { ...AT, neckSpread: 3.8 });
+  assert.ok(pockets[0].plusMinusCm >= 2.5, `size ± ${pockets[0].plusMinusCm}`);
+  assert.ok(pockets[0].placePlusMinusCm >= 3.8, `place ± ${pockets[0].placePlusMinusCm}`);
 });
