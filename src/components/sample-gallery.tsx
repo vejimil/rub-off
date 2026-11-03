@@ -16,7 +16,7 @@ import { isTop, type GarmentKind } from "@/lib/pattern/types";
 import shorts from "@/lib/sample/shorts-run.json";
 import tablesBottoms from "@/lib/sample/size-table-bottoms-read.json";
 import tablesTops from "@/lib/sample/size-table-read.json";
-import { COMPLAINT_EXAMPLE, SHORTS_COMPLAINT, TEE_COMPLAINT } from "@/lib/sample/complaints";
+import { COMPLAINT_EXAMPLE, TEE_COMPLAINT } from "@/lib/sample/complaints";
 import tee from "@/lib/sample/tee-run.json";
 import { L, type Local } from "@/lib/i18n/lang";
 import { GARMENT_NAME } from "@/lib/i18n/names";
@@ -25,8 +25,10 @@ import { fromComplaint, guarded } from "@/lib/fit/alter";
 import { flatFor } from "@/lib/fit/flat";
 import { parse, type ReadComplaints } from "@/lib/fit/read-complaint";
 
-// The sample page: two garments the owner photographed (replayed runs, no API call), the same two
+// The sample page: two garments the owner photographed (replayed runs, no API call), the T-shirt
 // altered from an example text, and the wheelchair trousers altered from typical measurements.
+// (The shorts photo hides the crotch, so hip and thigh are unmeasured and no flat can be drawn:
+// no alteration example for them.)
 
 interface Sample {
   id: string;
@@ -70,14 +72,6 @@ const SAMPLES: Sample[] = [
     tape: TEE_TAPE,
     alter: TEE_COMPLAINT,
     sub: withBoth(L("직접 찍은 사진과 '소매와 길이가 길고 품이 크다'는 예시 글로", "From the photo and an example text saying the sleeves and body are too long and it's baggy", "A partir de la foto y de un texto de ejemplo que dice que mangas y largo sobran y que queda holgada")),
-  },
-  {
-    id: "shorts-alter",
-    label: L("반바지", "Shorts", "Pantalón corto"),
-    garment: "pants",
-    run: SHORTS_RUN,
-    alter: SHORTS_COMPLAINT,
-    sub: withBoth(L("직접 찍은 사진과 '허리가 헐렁하고 통이 넓고 길이가 짧다'는 예시 글로", "From the photo and an example text saying the waist is loose, the legs wide and the length short", "A partir de la foto y de un texto de ejemplo que dice que la cintura está floja, las perneras anchas y el largo corto")),
   },
   {
     id: "pants",
@@ -194,7 +188,7 @@ function measuresOf(sample: Sample): Record<string, number> {
   return { ...Object.fromEntries(Object.entries(measured).map(([k, v]) => [k, v.cm])), ...Object.fromEntries(Object.entries(sample.tape ?? {}).map(([k, v]) => [k, Number(v)])) };
 }
 const fabricOf = (sample: Sample) => (sample.run === TEE_RUN ? "knit" : EXAMPLES[sample.garment].fabric);
-// The photo can't measure everything (the shorts' hip): without it there is no flat to draw.
+// A photo may not measure everything a flat needs: without it, the card shows the photo.
 const hasFlat = (sample: Sample) => flatFor(sample.garment, measuresOf(sample), fabricOf(sample), []) !== null;
 
 // An alteration example's card: the garment's technical flat with the order's marks.
