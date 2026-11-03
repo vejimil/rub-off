@@ -46,11 +46,11 @@ const FABRIC: [number, number] = [150, 100];
 // The page's words. Headlines stay short in every language: two lines at most.
 const T = {
   heroLeft: L("내 옷을", "Your garment", "Tu prenda"),
-  heroRight: L("1:1 패턴으로", "1:1 pattern", "patrón 1:1"),
+  heroRight: L("패턴과 수선으로", "pattern and alterations", "patrón y arreglos"),
   heroSentence: L(
-    "옷을 A4 용지와 함께 바닥에 펴고 위에서 한 장 찍으면, 인쇄해 바로 자를 수 있는 패턴이 나옵니다.",
-    "Lay a garment flat with an A4 sheet and take one photo from above: you get a pattern you can print and cut.",
-    "Extiende una prenda con una hoja A4 y hazle una foto desde arriba: obtienes un patrón para imprimir y cortar.",
+    "옷을 A4 용지와 함께 바닥에 펴고 위에서 한 장 찍으면, 인쇄해 바로 자를 수 있는 패턴과 수선집에 보여 줄 의뢰서가 나옵니다.",
+    "Lay a garment flat with an A4 sheet and take one photo from above. You get a pattern you can print and cut, and an alteration order to hand to a tailor.",
+    "Extiende una prenda con una hoja A4 y hazle una foto desde arriba. Obtienes un patrón para imprimir y cortar, y una orden de arreglos para llevar al taller.",
   ),
   photoAlt: L("A4 용지를 올려 바닥에 편 티셔츠", "A T-shirt laid flat with an A4 sheet on it", "Una camiseta extendida con una hoja A4 encima"),
   framePhoto: L("A4 용지를 올리고 위에서 찍은 티셔츠", "The T-shirt with an A4 sheet, shot from above", "La camiseta con una hoja A4, fotografiada desde arriba"),
@@ -73,18 +73,18 @@ const T = {
   ),
   garmentsRow: L("옷과 소품 열세 가지, 옆으로 넘기기", "Thirteen things to sew, scroll sideways", "Trece cosas para coser, desliza hacia el lado"),
   startWith: L("이 옷으로 시작", "Start with this", "Empezar con esta"),
-  outputsTitle: L("사진 한 장에서 네 가지", "Four things from one photo", "Cuatro cosas de una foto"),
+  outputsTitle: L("사진 한 장에서 나오는 것", "What one photo gives you", "Lo que sale de una foto"),
   outputsSub: L(
-    "AI는 사진에서 옷과 A4 용지를 찾는 데만 쓰고, 치수는 그 윤곽을 재서 구합니다. 사진으로 잴 수 없는 곳은 숫자를 지어내지 않고 줄자로 재 달라고 알려 드립니다.",
-    "AI only finds the garment and the A4 sheet in the photo; the measurements come from measuring that outline. Where a photo can't measure, no number is made up: you're asked to use a tape.",
-    "La IA solo encuentra la prenda y la hoja A4 en la foto; las medidas salen de medir ese contorno. Donde la foto no puede medir, no se inventa ningún número: te pedimos usar la cinta.",
+    "AI는 사진에서 옷과 A4 용지를 찾는 데만 쓰고, 치수는 그 윤곽을 재서 구합니다. 사진으로 잴 수 없는 곳은 줄자로 잴 곳으로 표시합니다.",
+    "AI only finds the garment and the A4 sheet in the photo; the measurements come from measuring that outline. Where a photo can't measure, the value is marked for the tape.",
+    "La IA solo encuentra la prenda y la hoja A4 en la foto; las medidas salen de medir ese contorno. Donde la foto no puede medir, el valor queda marcado para la cinta.",
   ),
   sizeTableAlt: L("직접 만든 예시 실측표", "A sample size chart, self-made", "Una tabla de medidas de ejemplo, hecha a mano"),
   alterTitle: L("불편한 점을 수선으로", "Complaints into alterations", "De la molestia al arreglo"),
   alterP1: L(
-    "입을 사람이 불편한 점을 고르거나 말하듯 적으면, 어디를 몇 cm 고칠지 도식화에 표시해 드립니다. 수선집에 그대로 보여 주면 되고, 직접 고친다면 순서와 실제 크기 수선 패턴도 받을 수 있습니다.",
-    "The person who wears it picks what bothers them, or writes it the way they'd say it, and you get where to alter and by how many centimetres, marked on a technical drawing. Show it to a tailor as it is, or, to do it yourself, get the steps and an actual-size alteration pattern.",
-    "Quien lleva la prenda elige lo que le molesta, o lo escribe como lo diría, y obtienes dónde arreglar y cuántos centímetros, marcado en un dibujo técnico. Llévaselo así a la modista o, si lo haces tú, obtén los pasos y un patrón de arreglos a tamaño real.",
+    "입을 사람이 불편한 점을 고르거나 적으면, 어디를 몇 cm 고칠지 도식화에 표시합니다. 수선집에 그대로 보여 주면 되고, 직접 고친다면 순서와 실제 크기 수선 패턴도 받을 수 있습니다.",
+    "The person who wears it picks or writes what bothers them. Where to alter, and by how many centimetres, is marked on a technical drawing. Show it to a tailor as it is, or do it yourself with the steps and an actual-size alteration pattern.",
+    "Quien lleva la prenda elige o escribe lo que le molesta. Dónde arreglar, y cuántos centímetros, queda marcado en un dibujo técnico. Llévaselo así a la modista, o hazlo tú con los pasos y un patrón de arreglos a tamaño real.",
   ),
   alterP2: L(
     "줄자로 잰 몸 치수를 넣으면 옷과 비교해 줄이거나 늘릴 곳도 찾아 줍니다.",
@@ -134,6 +134,7 @@ const T = {
 };
 
 const OUTPUTS = {
+  alter: { name: L("수선 의뢰서", "Alteration order", "Orden de arreglos"), text: L("불편한 점을 적으면 어디를 몇 cm 고칠지 도식화에 표시합니다. 직접 고칠 순서와 패턴도 나옵니다.", "Write what bothers you and where to alter, by how much, is marked on a drawing. Steps and a pattern for doing it yourself too.", "Escribe lo que te molesta y dónde arreglar, y cuánto, queda marcado en un dibujo. También los pasos y un patrón para hacerlo tú.") },
   pdf: { name: L("패턴 PDF", "Pattern PDF", "Patrón en PDF"), text: L("솔기마다 길이를 적어 A4로 나눠 인쇄합니다. 10 cm 사각형으로 배율을 확인합니다.", "Every seam labelled with its length, printed across A4 pages. A 10 cm square checks the scale.", "Cada costura con su largo, impreso en hojas A4. Un cuadrado de 10 cm comprueba la escala.") },
   grade: { name: L("그레이딩", "Grading", "Escalado"), text: L("한두 치수 크게, 또는 작게. 아래에서 바로 바꿔 볼 수 있습니다.", "One or two sizes up or down. Try it right below.", "Una o dos tallas más o menos. Pruébalo justo abajo.") },
   size: { name: L("사이즈", "Size", "Talla"), text: L("쇼핑몰 실측표 스크린샷을 읽어, 내 옷과 핏이 같은 사이즈를 골라 줍니다.", "Reads a shop's size chart from a screenshot and picks the size that fits like your garment.", "Lee la tabla de medidas de una tienda desde una captura y elige la talla que queda como tu prenda.") },
@@ -272,7 +273,15 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
     })),
   ];
 
+  // A wheelchair user's words about elastic-waist trousers (an example text, read once by Spark and
+  // saved), and the work order the alteration rules make from it.
+  const example = COMPLAINT_EXAMPLE[lang];
+  const words = example.text;
+  const order = parse(example.read, words, "pants").map((c) => guarded(fromComplaint("pants", c)));
+  const orderFlat = flatFor("pants", EXAMPLES.pants.m as unknown as Record<string, number>, EXAMPLES.pants.fabric, order);
+
   const outputs = [
+    { name: OUTPUTS.alter.name[lang], text: OUTPUTS.alter.text[lang], bg: "bg-field text-ink", pic: <div className="absolute inset-0 p-3 [&_svg]:h-full [&_svg]:w-full">{orderFlat && <GarmentFlat views={orderFlat} />}</div> },
     { name: OUTPUTS.pdf.name[lang], text: OUTPUTS.pdf.text[lang], bg: "bg-paper text-ink", pic: <PatternPreview sheet={sheet} className="absolute inset-0 h-full w-full" /> },
     { name: OUTPUTS.grade.name[lang], text: OUTPUTS.grade.text[lang], bg: "bg-sand-3 text-ink", pic: <PiecesOutline sheet={sheet} className="absolute inset-0 h-full w-full" /> },
     {
@@ -284,13 +293,6 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
     },
     { name: OUTPUTS.cut.name[lang], text: OUTPUTS.cut.text[lang], bg: "bg-muted text-sand", pic: <CutLayout fabric={fabric} placed={cut.placed} label={T.cutAlt[lang]} light className="absolute inset-0 h-full w-full" /> },
   ];
-
-  // A wheelchair user's words about elastic-waist trousers (an example text, read once by Spark and
-  // saved), and the work order the alteration rules make from it.
-  const example = COMPLAINT_EXAMPLE[lang];
-  const words = example.text;
-  const order = parse(example.read, words, "pants").map((c) => guarded(fromComplaint("pants", c)));
-  const orderFlat = flatFor("pants", EXAMPLES.pants.m as unknown as Record<string, number>, EXAMPLES.pants.fabric, order);
 
   const steps = [
     { ...STEPS[0], pic: cover(shortsRun.photo.src, STEPS[0].alt![lang]) },
@@ -426,7 +428,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
 
       <GarmentRow heading={T.garmentsTitle[lang]} sub={T.garmentsSub[lang]} rowLabel={T.garmentsRow[lang]} cta={T.startWith[lang]} cards={cards} />
 
-      {/* What comes out: four results. */}
+      {/* What comes out: five results. */}
       <section aria-labelledby="outputs-title" className="bg-sand-2 px-5 py-32 sm:px-10 lg:px-16 lg:py-48">
         <div className="grid gap-6 lg:grid-cols-12 lg:gap-x-12 lg:gap-y-8">
           <h2 id="outputs-title" className="font-display text-[9vw] leading-[1.05] tracking-[-0.02em] sm:text-[8vw] lg:col-span-6 lg:text-[clamp(32px,3.2vw,50px)]" data-reveal>
@@ -436,7 +438,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
             {T.outputsSub[lang]}
           </p>
         </div>
-        <div className="mt-24 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+        <div className="mt-24 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8 xl:grid-cols-5">
           {outputs.map((c, i) => (
             <article key={c.name} data-reveal style={{ ["--d" as string]: i }} className={`flex flex-col rounded-[4px] p-7 ${c.bg}`}>
               <h3 className={`font-display leading-none ${big ? "text-[32px]" : "text-[22px]"}`}>{c.name}</h3>

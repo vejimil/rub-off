@@ -1,30 +1,30 @@
 {
   "garment": "pants",
-  "text": "I use a wheelchair, and when I sit the back of my trousers slides down and my back shows. Fabric bunches up at the front, and the hem rides up about 3 cm when I sit. My left leg is in a cast, and the trouser leg won't go over it up to 24 cm.",
+  "text": "I use a wheelchair. When I sit, the back of my trousers slides down and my back shows, and the fabric bunches up at the front. The hem rides up maybe 3 cm when I'm sitting. Also my left leg is in a cast and the trouser leg won't go over it.",
   "read": {
     "items": [
       {
         "amount": null,
         "complaint": "seat-back-drops",
-        "quote": "the back of my trousers slides down",
+        "quote": "the back of my trousers slides down and my back shows",
         "side": "none"
       },
       {
         "amount": null,
         "complaint": "seat-front-bunches",
-        "quote": "Fabric bunches up at the front",
+        "quote": "the fabric bunches up at the front",
         "side": "none"
       },
       {
         "amount": "3",
         "complaint": "seat-hem-short",
-        "quote": "the hem rides up about 3 cm when I sit",
+        "quote": "The hem rides up maybe 3 cm when I'm sitting",
         "side": "none"
       },
       {
-        "amount": "24",
+        "amount": null,
         "complaint": "cast-leg",
-        "quote": "the trouser leg won't go over it up to 24 cm",
+        "quote": "the trouser leg won't go over it",
         "side": "left"
       }
     ]

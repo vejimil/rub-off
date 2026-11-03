@@ -1,24 +1,24 @@
 {
   "garment": "pants",
-  "text": "The waist elastic is loose; I'd like it 4 cm shorter. The legs are wide, so I want the hem 2 cm narrower, and I'd like them 5 cm longer.",
+  "text": "The waist elastic has gone slack and they keep slipping down; maybe 4 cm needs to come out. The legs are a bit wide too, and I'd like them about 5 cm longer.",
   "read": {
     "items": [
       {
         "amount": "4 cm",
         "complaint": "waist-loose",
-        "quote": "The waist elastic is loose",
+        "quote": "The waist elastic has gone slack and they keep slipping down",
         "side": "none"
       },
       {
-        "amount": "2 cm",
+        "amount": null,
         "complaint": "leg-wide",
-        "quote": "The legs are wide",
+        "quote": "The legs are a bit wide too",
         "side": "none"
       },
       {
         "amount": "5 cm",
         "complaint": "pants-short",
-        "quote": "I'd like them 5 cm longer",
+        "quote": "I'd like them about 5 cm longer.",
         "side": "none"
       }
     ]

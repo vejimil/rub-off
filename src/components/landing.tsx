@@ -45,8 +45,8 @@ export function HeroReel({ left, right, sentence, frames }: { left: string; righ
             id="hero-title"
             className={`pointer-events-auto font-display leading-[1.02] tracking-[-0.02em] lg:absolute lg:inset-x-16 lg:top-1/2 lg:flex lg:-translate-y-1/2 lg:justify-between ${lang === "ko" ? "text-[11vw] sm:text-[8vw] lg:text-[clamp(32px,3.2vw,50px)]" : "text-[9vw] sm:text-[6.5vw] lg:text-[clamp(26px,2.4vw,38px)]"}`}
           >
-            <span className="block">{left}</span>
-            <span className="block text-right">{right}</span>
+            <span className="block lg:max-w-[min(22vw,340px)]">{left}</span>
+            <span className="block text-right lg:max-w-[min(22vw,340px)]">{right}</span>
           </h1>
           <div className="pointer-events-auto mt-8 max-w-md lg:absolute lg:bottom-12 lg:left-16 lg:mt-0 lg:max-w-[min(22vw,340px)]">
             <p className="text-lg leading-relaxed">{sentence}</p>

@@ -13,7 +13,6 @@ import { MAX_TEXT, parse, type ReadComplaints } from "@/lib/fit/read-complaint";
 import { L } from "@/lib/i18n/lang";
 import { GARMENT_NAME } from "@/lib/i18n/names";
 import { cutText } from "@/lib/pattern/dims";
-import { REQUIRED } from "@/lib/pattern/draft";
 import { layOut } from "@/lib/pattern/layout";
 import { patternPdf } from "@/lib/pattern/pdf";
 import { loadPdfFont } from "@/lib/pattern/pdf-font";
@@ -30,11 +29,6 @@ const ERRORS = {
 
 const T = {
   bag: L("몸에 맞춰 입는 옷이 아니어서 고칠 치수가 없습니다.", "This isn't fitted to a body, so there are no fit measurements to change.", "Esto no se ajusta al cuerpo, así que no hay medidas de ajuste que cambiar."),
-  needMeasures: L(
-    "먼저 이 옷의 치수가 필요합니다. 옷 사진을 올리거나, 치수 탭에 줄자로 잰 값을 넣어 주십시오. 불편한 점은 지금 골라도 됩니다.",
-    "This garment's measurements come first: upload a photo of it, or type tape measurements in the measurements tab. You can already pick what bothers you.",
-    "Primero hacen falta las medidas de esta prenda: sube una foto suya o escribe las medidas en la pestaña de medidas. Ya puedes elegir qué te molesta.",
-  ),
   bodyTitle: L("입을 사람의 몸 치수", "The wearer's body measurements", "Medidas del cuerpo de quien la lleva"),
   bodySub: L(
     "줄자로 잰 값을 넣으면 이 옷과 비교해 줄이거나 늘릴 곳을 찾습니다.",
@@ -57,8 +51,6 @@ const T = {
   small: L("작음", "Too small", "Pequeño"),
   long: L("김", "Too long", "Largo"),
   short: L("짧음", "Too short", "Corto"),
-  sayTitle: L("입었을 때 불편한 점", "What bothers you when you wear it", "Qué te molesta al llevarla"),
-  saySub: L("맞는 것을 고르거나, 아래에 말하듯 적어 주십시오.", "Pick what applies, or write it below the way you'd say it.", "Elige lo que corresponda o escríbelo abajo con tus palabras."),
   seated: L("앉아서 입을 때", "When seated", "En posición sentada"),
   general: L("길이와 품", "Length and fit", "Largo y holgura"),
   askNote: L(
@@ -67,32 +59,16 @@ const T = {
     "Si lo has medido, escribe la medida. Si lo dejas vacío, lo mide el taller.",
   ),
   write: L("직접 적기", "Write it yourself", "Escríbelo tú"),
-  placeholder: L(
-    "예: 휠체어에 앉으면 바지 뒤가 내려가고, 밑단이 3 cm쯤 짧아져요.",
-    "e.g. In my wheelchair the back of my trousers drops, and the hem rides up about 3 cm.",
-    "p. ej.: En la silla de ruedas se me baja la parte de atrás del pantalón y el bajo se sube unos 3 cm.",
-  ),
   reading: L("읽는 중…", "Reading…", "Leyendo…"),
-  find: L("이 글에서 고칠 곳 찾기", "Find what to alter in this text", "Buscar qué arreglar en el texto"),
   found: L("글에서 찾은 것", "Found in your text", "Encontrado en tu texto"),
   notListed: L("목록에 없는 불편함", "Something not on the list", "Algo que no está en la lista"),
   order: L("수선 의뢰서", "Alteration order", "Orden de arreglos"),
   empty: L("아직 비어 있습니다", "Empty so far", "Vacía por ahora"),
-  emptyText: L(
-    "몸 치수를 넣거나 불편한 점을 고르면, 수선집에 그대로 보여 줄 의뢰서가 여기에 나옵니다.",
-    "Enter body measurements or pick what bothers you, and an order you can hand to a tailor as it is appears here.",
-    "Escribe las medidas del cuerpo o elige qué te molesta, y aquí aparecerá una orden que puedes llevar tal cual al taller.",
-  ),
   flat: L("도식화", "Technical flat", "Dibujo técnico"),
   toMeasure: L("재서 정함", "to measure", "a medir"),
   toMeasureAria: L("수선집에서 재서 정함", "The tailor measures it", "Lo mide el taller"),
   reversible: L("되돌릴 수 있음", "Reversible", "Reversible"),
   checkFirst: L("고치기 전에 옷을 입고 한 번 더 확인하십시오.", "Try the garment on and check once more before altering it.", "Pruébate la prenda y compruébalo otra vez antes de arreglarla."),
-  leadNeedMeasures: L(
-    "고칠 옷의 사진을 올리면 그 옷의 치수로 길이를 계산합니다. 사진 없이 불편한 점만 적어도 의뢰서는 나오고, 길이는 수선집에서 잽니다.",
-    "Upload a photo of the garment and the lengths are worked out from its own measurements. Without one, write what bothers you and you still get the order; the tailor measures the lengths.",
-    "Sube una foto de la prenda y los largos se calculan con sus propias medidas. Sin foto, escribe lo que te molesta y tendrás igualmente la orden; el taller toma las medidas.",
-  ),
   leadEmpty: L(
     "불편한 점을 적거나 목록에서 고르면, 수선집에 그대로 보여 줄 의뢰서가 여기에 나옵니다.",
     "Write or pick what bothers you, and an order you can hand to a tailor as it is appears here.",
@@ -149,13 +125,13 @@ export interface AlterPanelProps {
   fabric: Fabric;
   measures: Record<string, number>; // the garment as measured (and corrected)
   sampleText?: { text: string; read: ReadComplaints };
-  lead?: boolean; // the alteration screen: the wearer's words first, body measurements folded away
 }
 
-// Mode 4: fit this garment to its wearer. Tape-measured body sizes become target garment sizes;
-// what the wearer says is wrong (picked, or written and sorted by Muse Spark) goes through the
-// alteration rules; the result is a work order with a technical flat of the garment, marked.
-export function AlterPanel({ garment, fabric, measures, sampleText, lead = false }: AlterPanelProps) {
+// Mode 4: fit this garment to its wearer. What the wearer says is wrong (written and sorted by
+// Muse Spark, or picked from the list) goes through the alteration rules; tape-measured body sizes,
+// folded away, become target garment sizes; the result is a work order with a technical flat of
+// the garment, marked.
+export function AlterPanel({ garment, fabric, measures, sampleText }: AlterPanelProps) {
   const lang = useLang();
   const [body, setBody] = useState<Partial<Record<BodyKey, string>>>({});
   const [fit, setFit] = useState<BodyFit>("regular");
@@ -171,7 +147,6 @@ export function AlterPanel({ garment, fabric, measures, sampleText, lead = false
   const targets = targetsFromBody(garment, bodyNums, fit, fabric, measures);
   const comparisons = compare(targets, measures, fabric);
   const options = complaintsFor(garment);
-  const missing = REQUIRED[garment].filter((k) => !(Number.isFinite(measures[k]) && measures[k] > 0));
 
   const fromText: Complaint[] = read ? parse(read.read, read.text, garment) : [];
   const alterations: Alteration[] = [
@@ -371,7 +346,7 @@ export function AlterPanel({ garment, fabric, measures, sampleText, lead = false
 
   const writing = (
       <div>
-        <label htmlFor="say-text" className={lead ? "sr-only" : "mb-2 block text-[13px] text-muted"}>
+        <label htmlFor="say-text" className="sr-only">
           {T.write[lang]}
         </label>
         <textarea
@@ -379,13 +354,13 @@ export function AlterPanel({ garment, fabric, measures, sampleText, lead = false
           value={text}
           maxLength={MAX_TEXT}
           onChange={(e) => setText(e.target.value)}
-          rows={lead ? 5 : 4}
-          placeholder={(lead ? T.leadPlaceholder : T.placeholder)[lang]}
-          className={`w-full rounded-xl border border-line bg-field p-4 leading-relaxed ${lead ? "text-base" : "text-[15px]"}`}
+          rows={5}
+          placeholder={T.leadPlaceholder[lang]}
+          className="w-full rounded-xl border border-line bg-field p-4 text-base leading-relaxed"
         />
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button type="button" className={buttonPrimary} disabled={busy || !text.trim()} onClick={analyse}>
-            {busy ? T.reading[lang] : (lead ? T.makeOrder : T.find)[lang]}
+            {busy ? T.reading[lang] : T.makeOrder[lang]}
           </button>
           {error && <span className="text-[15px] text-mark">{ERRORS[error][lang]}</span>}
         </div>
@@ -464,7 +439,7 @@ export function AlterPanel({ garment, fabric, measures, sampleText, lead = false
         <span className="text-[15px]">{alterations.length > 0 ? count(alterations.length)[lang] : T.empty[lang]}</span>
       </div>
       {alterations.length === 0 ? (
-        <p className="px-5 py-8 text-[15px] text-muted">{(diy ? T.emptyDiy : lead ? T.leadEmpty : T.emptyText)[lang]}</p>
+        <p className="px-5 py-8 text-[15px] text-muted">{(diy ? T.emptyDiy : T.leadEmpty)[lang]}</p>
       ) : (
         <ol className="space-y-1 p-1">
           {views && (
@@ -526,51 +501,25 @@ export function AlterPanel({ garment, fabric, measures, sampleText, lead = false
     </div>
   );
 
-  if (lead)
-    return (
-      <div className="space-y-10">
-        {missing.length > 0 && <p className="rounded-xl bg-chalk-soft p-4 text-[15px]">{T.leadNeedMeasures[lang]}</p>}
-        <section aria-labelledby="lead-title" className="space-y-4">
-          <div>
-            <h3 id="lead-title" className="text-xl font-semibold">
-              {T.leadTitle[lang]}
-            </h3>
-            <p className="mt-1 text-[15px] text-muted">{T.leadSub[lang]}</p>
-          </div>
-          {writing}
-          <details className="group rounded-xl bg-field p-4">
-            <summary className="cursor-pointer select-none text-[15px] font-medium">{T.orPick[lang]}</summary>
-            <div className="mt-4 space-y-5">{chips}</div>
-          </details>
-          <details className="group rounded-xl bg-field p-4">
-            <summary className="cursor-pointer select-none text-[15px] font-medium">{T.bodyMore[lang]}</summary>
-            <div className="mt-4">{bodySection}</div>
-          </details>
-        </section>
-        {orderSection}
-      </div>
-    );
-
   return (
-    <div className="space-y-12">
-      {missing.length > 0 && <p className="rounded-xl bg-mark-soft p-4 text-[15px]">{T.needMeasures[lang]}</p>}
-
-      {/* The body, against this garment. */}
-      {bodySection}
-
-      {/* What the wearer says. */}
-      <section aria-labelledby="say-title" className="space-y-5">
+    <div className="space-y-10">
+      <section aria-labelledby="lead-title" className="space-y-4">
         <div>
-          <h3 id="say-title" className="text-lg font-semibold">
-            {T.sayTitle[lang]}
+          <h3 id="lead-title" className="text-xl font-semibold">
+            {T.leadTitle[lang]}
           </h3>
-          <p className="mt-1 text-[15px] text-muted">{T.saySub[lang]}</p>
+          <p className="mt-1 text-[15px] text-muted">{T.leadSub[lang]}</p>
         </div>
-        {chips}
         {writing}
+        <details className="group rounded-xl bg-field p-4">
+          <summary className="cursor-pointer select-none text-[15px] font-medium">{T.orPick[lang]}</summary>
+          <div className="mt-4 space-y-5">{chips}</div>
+        </details>
+        <details className="group rounded-xl bg-field p-4">
+          <summary className="cursor-pointer select-none text-[15px] font-medium">{T.bodyMore[lang]}</summary>
+          <div className="mt-4">{bodySection}</div>
+        </details>
       </section>
-
-      {/* The work order. */}
       {orderSection}
     </div>
   );

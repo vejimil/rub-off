@@ -1,24 +1,24 @@
 {
   "garment": "pants",
-  "text": "El elástico de la cintura me queda flojo; lo quiero 4 cm más corto. Las perneras son anchas: quiero el bajo 2 cm más estrecho y que sean 5 cm más largas.",
+  "text": "El elástico de la cintura se ha dado de sí y se me baja todo el rato; creo que sobran unos 4 cm. Las perneras también son un poco anchas, y me gustaría que fueran unos 5 cm más largas.",
   "read": {
     "items": [
       {
         "amount": "4",
         "complaint": "waist-loose",
-        "quote": "El elástico de la cintura me queda flojo",
+        "quote": "se me baja todo el rato",
         "side": "none"
       },
       {
-        "amount": "2",
+        "amount": null,
         "complaint": "leg-wide",
-        "quote": "Las perneras son anchas",
+        "quote": "Las perneras también son un poco anchas",
         "side": "none"
       },
       {
         "amount": "5",
         "complaint": "pants-short",
-        "quote": "que sean 5 cm más largas",
+        "quote": "me gustaría que fueran unos 5 cm más largas",
         "side": "none"
       }
     ]

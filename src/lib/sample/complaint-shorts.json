@@ -1,24 +1,24 @@
 {
   "garment": "pants",
-  "text": "허리 고무줄이 헐렁해서 4 cm 줄이고 싶어요. 바지통이 넓어서 밑단을 2 cm 좁히고, 길이는 5 cm 더 길었으면 좋겠어요.",
+  "text": "허리 고무줄이 늘어났는지 자꾸 흘러내려요. 4 cm쯤 줄이면 될 것 같아요. 통도 좀 넓은 편이고, 길이는 5 cm 정도 더 길었으면 좋겠어요.",
   "read": {
     "items": [
       {
         "amount": "4 cm",
         "complaint": "waist-loose",
-        "quote": "허리 고무줄이 헐렁해서",
+        "quote": "허리 고무줄이 늘어났는지 자꾸 흘러내려요",
         "side": "none"
       },
       {
-        "amount": "2 cm",
+        "amount": null,
         "complaint": "leg-wide",
-        "quote": "바지통이 넓어서",
+        "quote": "통도 좀 넓은 편이고",
         "side": "none"
       },
       {
         "amount": "5 cm",
         "complaint": "pants-short",
-        "quote": "길이는 5 cm 더 길었으면 좋겠어요.",
+        "quote": "길이는 5 cm 정도 더 길었으면 좋겠어요",
         "side": "none"
       }
     ]

@@ -1,30 +1,30 @@
 {
   "garment": "pants",
-  "text": "Uso silla de ruedas y, al sentarme, la cintura del pantalón se baja por detrás y se me ve la espalda. Delante se me amontona la tela, y el bajo se queda unos 3 cm corto cuando estoy sentado. Llevo una escayola en la pierna izquierda y la pernera no entra hasta los 24 cm.",
+  "text": "Voy en silla de ruedas. Al sentarme se me baja la parte de atrás del pantalón y se me ve la espalda, y por delante la tela se amontona. Sentada, el bajo me sube unos 3 cm. Además llevo escayola en la pierna izquierda y la pernera no pasa por encima.",
   "read": {
     "items": [
       {
         "amount": null,
         "complaint": "seat-back-drops",
-        "quote": "la cintura del pantalón se baja por detrás",
+        "quote": "se me baja la parte de atrás del pantalón",
         "side": "none"
       },
       {
         "amount": null,
         "complaint": "seat-front-bunches",
-        "quote": "Delante se me amontona la tela",
+        "quote": "por delante la tela se amontona",
         "side": "none"
       },
       {
         "amount": "3",
         "complaint": "seat-hem-short",
-        "quote": "el bajo se queda unos 3 cm corto cuando estoy sentado",
+        "quote": "el bajo me sube unos 3 cm",
         "side": "none"
       },
       {
-        "amount": "24",
+        "amount": null,
         "complaint": "cast-leg",
-        "quote": "la pernera no entra hasta los 24 cm",
+        "quote": "la pernera no pasa por encima",
         "side": "left"
       }
     ]

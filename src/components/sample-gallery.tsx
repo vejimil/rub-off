@@ -46,9 +46,9 @@ const BOTTOMS_TABLE = { read: tablesBottoms as ReadTable, src: "/samples/size-ta
 const TEE_TAPE = { frontNeckDrop: "12", backNeckDrop: "2.5" };
 const TEE_RUN = tee as unknown as SampleRun, SHORTS_RUN = shorts as unknown as SampleRun;
 const BOTH = L(
-  "만든 수선 의뢰서와, 직접 고칠 때의 가이드·실제 크기 수선 패턴",
-  "an order to take to a tailor, and a guide with an actual-size alteration pattern for doing it yourself",
-  "una orden para llevar al taller, y una guía con un patrón de arreglos a tamaño real para hacerlo tú",
+  "만든 수선 의뢰서와 직접 고치는 가이드",
+  "an order for a tailor and a guide to do it yourself",
+  "una orden para el taller y una guía para hacerlo tú",
 );
 const withBoth = (head: Local) => L(`${head.ko} ${BOTH.ko}`, `${head.en}: ${BOTH.en}`, `${head.es}: ${BOTH.es}`);
 

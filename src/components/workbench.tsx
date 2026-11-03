@@ -111,6 +111,7 @@ const T = {
     L("앞면과 뒷면을 한 장씩 찍으면 서로 모자란 값을 채웁니다", "A photo of the front and one of the back fill each other's gaps", "Una foto del delantero y otra de la espalda se completan entre sí"),
   ],
   measureIntro: L("사진에서 잰 단면입니다(cm). 줄자로 잰 값이 있으면 고쳐 쓰십시오.", "Flat measurements taken from the photo (cm). If you have tape values, type them in.", "Medidas en plano tomadas de la foto (cm). Si tienes medidas con cinta, escríbelas."),
+  measureIntroNoPhoto: L("이 옷의 단면 치수입니다(cm). 사진을 올려 재거나, 줄자로 잰 값을 넣으십시오.", "This garment's flat measurements (cm). Upload a photo to measure them, or type tape values.", "Medidas en plano de esta prenda (cm). Sube una foto para medirlas o escribe las medidas con cinta."),
   photo: L("사진", "Photo", "Foto"),
   typed: L("직접", "Typed", "Escrito"),
   typical: L("보통 값", "Typical value", "Valor típico"),
@@ -204,8 +205,9 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
   const alter = mode === "alter";
   const lang: Lang = useLang();
   const [garment, setGarment] = useState<GarmentKind>(initial?.garment ?? "t-shirt");
-  // With a new photo and no kind picked by hand, the photo tells the kind (and knit or woven).
-  const [auto, setAuto] = useState(false);
+  // Until a kind is picked by hand, the photo tells the kind (and knit or woven). A page that
+  // arrives with a garment (a landing card, a sample) has it picked already.
+  const [auto, setAuto] = useState(live && !initial);
   const [picked, setPicked] = useState(!!initial);
   const [fabric, setFabric] = useState<Fabric>(initial?.fabric ?? "woven");
   const [shots, setShots] = useState<Shot[]>(initial?.photo ? [{ photo: initial.photo, run: initial.run }] : []);
@@ -222,6 +224,9 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
   // Typical ready-to-wear measurements for this garment, to draft a pattern without a photo.
   function fillTypical() {
     const ex = EXAMPLES[garment];
+    // The values are one garment's: that garment shows as picked.
+    setAuto(false);
+    setPicked(true);
     const vals = Object.fromEntries(Object.entries(ex.m).map(([k, v]) => [k, String(v)]));
     setEdits((all) => ({ ...all, ...vals }));
     setFilled(vals);
@@ -643,13 +648,13 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
       {/* Right: the steps; on the alteration screen, the wearer's words and the work order */}
       {alter ? (
         <Card className="space-y-6">
-          <AlterPanel lead garment={garment} fabric={fabric} measures={measures as Record<string, number>} sampleText={sampleText?.garment === garment ? sampleText : undefined} />
+          <AlterPanel garment={garment} fabric={fabric} measures={measures as Record<string, number>} sampleText={sampleText?.garment === garment ? sampleText : undefined} />
           <details className="no-print rounded-xl border border-line p-4">
             <summary className="cursor-pointer select-none text-[15px] font-medium">
               {T.garmentMeasures[lang]}
               {missing.length > 0 && <span className="ml-2 rounded-full bg-mark px-1.5 text-xs text-white">{lang === "ko" ? `${T.toMeasure.ko} ${missing.length}` : `${missing.length} ${T.toMeasure[lang]}`}</span>}
             </summary>
-            <p className="mb-2 mt-3 text-sm text-muted">{T.measureIntro[lang]}</p>
+            <p className="mb-2 mt-3 text-sm text-muted">{(okRuns.length ? T.measureIntro : T.measureIntroNoPhoto)[lang]}</p>
             {measureList}
           </details>
         </Card>
@@ -659,7 +664,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
 
         {tab === "measure" && (
           <div>
-            <p className="mb-4 text-sm text-muted">{T.measureIntro[lang]}</p>
+            <p className="mb-4 text-sm text-muted">{(okRuns.length ? T.measureIntro : T.measureIntroNoPhoto)[lang]}</p>
             {measureList}
           </div>
         )}

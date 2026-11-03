@@ -8,9 +8,9 @@ import { liveAllowed } from "@/lib/limits";
 const T = {
   title: L("수선하기", "Alterations", "Arreglos"),
   intro: L(
-    "고칠 옷을 A4 용지와 함께 펴서 찍고 입었을 때 불편한 점을 적으면, 어디를 몇 cm 고칠지 도식화에 표시한 수선 의뢰서가 나옵니다. 직접 고친다면 순서와 실제 크기 수선 패턴도 받을 수 있습니다.",
-    "Photograph the garment lying flat with an A4 sheet and write what bothers you when you wear it. You get an alteration order with where to alter and by how many centimetres, marked on a technical drawing. If you do it yourself, you also get the steps and an actual-size alteration pattern.",
-    "Fotografía la prenda extendida con una hoja A4 y escribe lo que te molesta al llevarla. Obtienes una orden de arreglos con dónde arreglar y cuántos centímetros, marcado en un dibujo técnico. Si lo haces tú, también tienes los pasos y un patrón de arreglos a tamaño real.",
+    "고칠 옷을 A4 용지와 함께 펴서 찍고 입었을 때 불편한 점을 적으면, 어디를 몇 cm 고칠지 도식화에 표시한 수선 의뢰서가 나옵니다. 사진이 없어도 의뢰서는 나오고, 그때 길이는 수선집에서 잽니다. 직접 고친다면 순서와 수선 패턴도 받을 수 있습니다.",
+    "Photograph the garment lying flat with an A4 sheet and write what bothers you when you wear it. You get an alteration order with where to alter and by how many centimetres, marked on a technical drawing. Without a photo you still get the order, and the tailor measures the lengths. If you do it yourself, you also get the steps and an alteration pattern.",
+    "Fotografía la prenda extendida con una hoja A4 y escribe lo que te molesta al llevarla. Obtienes una orden de arreglos con dónde arreglar y cuántos centímetros, marcado en un dibujo técnico. Sin foto también sale la orden, y el taller toma las medidas. Si lo haces tú, también tienes los pasos y un patrón de arreglos.",
   ),
 };
 
