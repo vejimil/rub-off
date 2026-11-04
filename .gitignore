@@ -13,3 +13,7 @@ coverage
 
 # taste skill working files and screenshots
 .taste-skill/
+
+# internal planning docs, kept local only
+docs/HACKATHON.md
+docs/VIDEO.md
