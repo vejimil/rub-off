@@ -98,7 +98,7 @@ API 비용: SAM 약 22회 + Spark 확인 4회 ≈ $0.10.
 | Spark에게 주머니 마스크를 색칠·번호로 보여 주고 종류를 고르게 하니 두 쪽 모두 "지퍼로 나뉜 캥거루 주머니의 반쪽", 가려진 쪽은 "일부 가려짐"으로 정확히 답함 | `.cache/photos/*/pocket-check.json` | 크기·위치는 마스크에서: 보이는 쪽의 중심선 거리 × 2 = 폭 33.6 cm, 높이 22.0 cm, 어깨에서 51.5 cm(사진 눈대중 약 52 cm). 주머니 바닥이 밑단 시보리 바로 위 |
 | 처음엔 위치를 옆목점 중 높은 쪽 기준으로 재서 55.3 cm. 모자를 빼면 양쪽 옆목점 높이가 7.6 cm 다름 | 좌표 출력 | 총장과 같은 기준(두 옆목점 평균 높이)으로 바꿈 |
 | 캥거루 주머니는 골선 앞판에만 달 수 있었음 | 코드 | 후드 집업 지퍼 앞판에도: 반쪽씩 두 장(대칭), 중심 쪽 변은 지퍼 솔기에 박음. 셔츠는 단추 여밈이 중심선 밖이라 제외 |
-| Spark 옷 종류 판별: 티셔츠 2장 → t-shirt·니트, 후드 → hoodie·니트, SAM 단어도 각각 `t-shirt`, `hoodie` | `npm run photo -- … --garment=auto --yes` | 화면에 "사진 보고 고르기". 단어로 SAM이 못 찾으면 앱 기본 단어로 한 번 더 |
+| Spark 옷 종류 판별: 티셔츠 2장 → t-shirt·니트, 후드 → hoodie·니트, SAM 단어도 각각 `t-shirt`, `hoodie` | `npm run photo -- … --garment=auto --yes` | 화면에 "자동". 단어로 SAM이 못 찾으면 앱 기본 단어로 한 번 더 |
 | 반바지는 처음 "something else". 설명이 "elastic-waist trousers or shorts"로 좁았음 | 같은 명령, `.cache/shorts.jpg` | 설명을 "trousers or shorts, any waist" 같은 범주로 넓히고 "가장 가까운 것"을 고르게 함 → pants·우븐, SAM 단어 `shorts`. 10/31에 시행착오로 찾은 단어와 같음 |
 | Muse Image 여러 장 편집: OpenAI SDK는 `image[]`로 보내 400("use image[N]") | `npm run preview` | `image[0]`(옷), `image[1]`(원단) multipart를 직접 보냄 |
 | 첫 프롬프트("재질만 바꾸고 나머지는 그대로")는 몸판 아래쪽만 바꿈. "옷의 모든 부분을 이 원단으로, 원래 색·프린트는 지움"으로 바꾸자 옷 전체가 바뀌고 윤곽·A4·바닥이 그대로, 출력 1344 × 1792(같은 3:4) | `.cache/photos/*/preview-v2-*.raw` | 프롬프트 v2. 모델 원본을 캐시해 합성만 다시 할 땐 비용 0 |

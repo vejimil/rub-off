@@ -66,7 +66,7 @@ const STAGE: Record<FailedRun["stage"], Local> = {
 
 // Everything else the workbench says, in each language.
 const T = {
-  autoPick: L("사진 보고 고르기", "Tell from the photo", "Según la foto"),
+  autoPick: L("자동", "Auto", "Automático"),
   identified: L("사진에서 알아본 옷", "Recognised as", "Reconocida como"),
   notWorn: L("사진 속 물건은 입는 옷이 아니어서 고칠 수 없습니다. 입는 옷이면 위에서 종류를 골라 주십시오.", "The item in the photo isn't something you wear, so there's nothing to alter. If it is, choose its kind above.", "Lo de la foto no es una prenda que se lleve puesta, así que no hay nada que arreglar. Si lo es, elige su tipo arriba."),
   fillTypical: L("사진 없이 보통 치수로 채우기", "No photo? Fill in typical measurements", "¿Sin foto? Rellena con medidas típicas"),
