@@ -12,7 +12,7 @@ const T = {
   title: L("사진으로 패턴 만들기", "Make a pattern from a photo", "Crea un patrón con una foto"),
   intro: L(
     "사진을 올리면 바로 잽니다. 앞뒤 두 장이면 더 정확합니다.",
-    "Upload a photo and it's measured right away. Front and back is more accurate.",
+    "Upload a photo and it's measured right away. A front and a back photo are more accurate.",
     "Sube una foto y se mide al momento. Con delantero y espalda es más exacto.",
   ),
 };

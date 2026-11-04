@@ -132,7 +132,7 @@ function unlikeSentence(u: Unlike): Local[] {
   const m = u.mine.toFixed(1);
   const longer = u.table[0] > u.mine;
   const s = L(
-    `${SIZE_KEY_NAME[u.key].ko}: 표는 ${range} cm, 내 옷은 ${m} cm(${longer ? "표의 옷이 훨씬 김" : "표의 옷이 훨씬 짧음"}). 사이즈 차이로 보기엔 너무 커서 비교하지 않았습니다. 옷의 종류가 다르거나, 내 옷을 잘못 쟀을 수 있으니(접힌 소매 등) 확인해 주십시오.`,
+    `${SIZE_KEY_NAME[u.key].ko}: 표는 ${range} cm, 내 옷은 ${m} cm(${longer ? "표의 옷이 훨씬 김" : "표의 옷이 훨씬 짧음"}). 사이즈 차이로 보기엔 너무 커서 비교하지 않았습니다. 옷의 종류가 다르거나, 접힌 소매처럼 내 옷을 잘못 쟀을 수 있으니 확인해 주십시오.`,
     `${SIZE_KEY_NAME[u.key].en}: the table says ${range} cm, your garment ${m} cm (${longer ? "the table's is much longer" : "the table's is much shorter"}). That's too far apart to be a size, so it wasn't compared. Either the garments are different styles, or yours was measured wrong (a folded sleeve, say): check it.`,
     `${SIZE_KEY_NAME[u.key].es}: la tabla dice ${range} cm y tu prenda ${m} cm (${longer ? "la de la tabla es mucho más larga" : "la de la tabla es mucho más corta"}). Está demasiado lejos para ser otra talla, así que no se comparó. O son estilos distintos, o tu prenda se midió mal (una manga doblada, por ejemplo): compruébalo.`,
   );

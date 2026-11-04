@@ -74,7 +74,7 @@ const T = {
   failedRun: L("이 사진으로 재지 못했습니다.", "Couldn't measure this photo.", "No se pudo medir esta foto."),
   noServer: L("서버에 연결하지 못했습니다.", "Couldn't reach the server.", "No se pudo conectar con el servidor."),
   tabMeasure: L("치수", "Measurements", "Medidas"),
-  toMeasure: L("재기", "to measure", "por medir"),
+  toMeasure: L("잴 것", "to measure", "por medir"),
   tabPattern: L("패턴", "Pattern", "Patrón"),
   pockets: L("주머니 달기", "Add pockets", "Añadir bolsillos"),
   garmentMeasures: L("이 옷의 치수", "This garment's measurements", "Medidas de esta prenda"),
@@ -122,7 +122,9 @@ const T = {
   max: L("최댓값", "at most", "como máximo"),
   min: L("최솟값", "at least", "como mínimo"),
   fromPhoto: L("사진", "photo", "foto"),
-  notMeasured: L("사진으로 못 잼", "Not measurable from a photo", "No se puede medir en la foto"),
+  notMeasured: L("사진에 안 보이는 곳", "Not visible in a photo", "No se ve en la foto"),
+  uploadToMeasure: L("사진을 올리면 잽니다", "Measured once you upload a photo", "Se mide al subir una foto"),
+  bothSleeves: L("소매 둘 다", "both sleeves", "las dos mangas"),
   outOfRange: L(" cm는 옷에서 나올 수 없는 값", "is outside what a garment can measure", "está fuera de lo posible para una prenda"),
   cantMeasure: L("사진으로 잴 수 없음", "Can't be measured from a photo", "No se puede medir en la foto"),
   patternIntro: L("시접·식서·맞춤점·골선이 들어간 1:1 패턴입니다. A4에 나눠 인쇄합니다.", "A 1:1 pattern with seam allowance, grainlines, notches and fold lines, printed on A4 pages.", "Un patrón 1:1 con margen de costura, hilo, piquetes y doblez, impreso en hojas A4."),
@@ -190,6 +192,14 @@ const SLEEVE_STATE: Record<string, Local> = {
   "bent or twisted": L("굽음", "bent", "torcida"),
   "not a sleeve": L("소매 아님", "not a sleeve", "no es una manga"),
 };
+
+// Sleeves in words: "both sleeves spread flat" when they agree, one each otherwise (Spanish keeps
+// one each, its adjectives being singular).
+function sleeveWords(sleeves: { number: number; state: string }[], lang: Lang): string[] {
+  const states = sleeves.map((sl) => sl.state);
+  if (sleeves.length >= 2 && lang !== "es" && states.every((st) => st === states[0])) return [`${T.bothSleeves[lang]} ${SLEEVE_STATE[states[0]][lang]}`];
+  return sleeves.map((sl) => `${T.sleeve[lang]} ${sl.number} ${SLEEVE_STATE[sl.state][lang]}`);
+}
 
 // The page passes its language in: a part of the page rendered after the layout (it waits for the
 // URL) doesn't reliably see the layout's language on the server, so the workbench sets it again
@@ -442,7 +452,9 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
                   ? lang === "ko"
                     ? `사진 값 ${r.refused.cm.toFixed(1)}${T.outOfRange.ko}`
                     : `${T.fromPhoto[lang]} ${r.refused.cm.toFixed(1)} ${T.outOfRange[lang]}`
-                  : T.cantMeasure[lang])}
+                  : okRuns.length
+                    ? T.cantMeasure[lang]
+                    : T.uploadToMeasure[lang])}
             </p>
           </div>
           <label className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 ${r.source === "missing" ? "border-mark bg-mark-soft" : "border-line bg-field"}`}>
@@ -631,7 +643,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
                 <p className="text-xs text-muted">
                   {T.laidOut[lang]}{" "}
                   <span className="text-ink">
-                    {[SIDE[shot.run.layout.side][lang], WRINKLE[shot.run.layout.wrinkles][lang], ...shot.run.layout.sleeves.map((sl) => `${T.sleeve[lang]} ${sl.number} ${SLEEVE_STATE[sl.state][lang]}`)].join(", ")}
+                    {[SIDE[shot.run.layout.side][lang], WRINKLE[shot.run.layout.wrinkles][lang], ...sleeveWords(shot.run.layout.sleeves, lang)].join(" · ")}
                   </span>
                 </p>
               )}

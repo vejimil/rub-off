@@ -70,14 +70,14 @@ const SAMPLES: Sample[] = [
     run: TEE_RUN,
     tape: TEE_TAPE,
     alter: TEE_COMPLAINT,
-    sub: withBoth(L("직접 찍은 사진과 '소매와 길이가 길고 품이 크다'는 예시 글로", "From the photo and an example text saying the sleeves and body are too long and it's baggy", "A partir de la foto y de un texto de ejemplo que dice que mangas y largo sobran y que queda holgada")),
+    sub: withBoth(L("사진과 예시 글('소매와 기장이 길고 품이 크다')로", "From the photo and an example text (sleeves and body too long, too baggy)", "A partir de la foto y de un texto de ejemplo (mangas y largo sobran, queda holgada)")),
   },
   {
     id: "pants",
     label: L("휠체어 바지", "Wheelchair trousers", "Pantalón para silla de ruedas"),
     garment: "pants",
     alter: COMPLAINT_EXAMPLE,
-    sub: withBoth(L("휠체어를 타는 사람이 고무줄 바지의 불편한 점을 적은 예시 글로", "From what a wheelchair user wrote about their elastic-waist trousers (an example)", "A partir de lo que una persona en silla de ruedas escribió sobre su pantalón de cintura elástica (un ejemplo)")),
+    sub: withBoth(L("휠체어 사용자가 적은 예시 글로", "From a wheelchair user's example text", "A partir del texto de ejemplo de una persona en silla de ruedas")),
   },
 ];
 

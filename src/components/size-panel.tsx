@@ -22,7 +22,7 @@ const T = {
   reading: L("표를 읽는 중…", "Reading the table…", "Leyendo la tabla…"),
   showOriginal: L("원본 표 보기", "Show the original table", "Ver la tabla original"),
   originalAlt: L("쇼핑몰 실측표", "The shop's size table", "Tabla de medidas de la tienda"),
-  copied: L("표를 옮겨 적었습니다. 원본과 다른 칸이 있으면 고쳐 주십시오.", "Here is the table as read. Fix any cell that differs from the original.", "Esta es la tabla tal como la leímos. Corrige cualquier celda que no coincida con el original."),
+  copied: L("표를 옮겨 적었습니다. 원본과 다른 칸이 있으면 고쳐 주십시오.", "The table as read. Fix any cell that differs from the original.", "Esta es la tabla tal como la leímos. Corrige cualquier celda que no coincida con el original."),
   size: L("사이즈", "Size", "Talla"),
   skip: L("비교 안 함", "Don't compare", "No comparar"),
   unit: L("단위", "Unit", "Unidad"),

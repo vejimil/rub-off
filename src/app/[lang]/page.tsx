@@ -45,8 +45,8 @@ const FABRIC: [number, number] = [150, 100];
 
 // The page's words. Headlines stay short in every language: two lines at most.
 const T = {
-  heroLeft: L("내 옷을", "Your garment", "Tu prenda"),
-  heroRight: L("패턴과 수선으로", "pattern and alterations", "patrón y arreglos"),
+  heroLeft: L("내 옷을", "Your garment,", "Tu prenda,"),
+  heroRight: L("패턴과 수선으로", "into pattern and alterations", "en patrón y arreglos"),
   heroSentence: L(
     "옷을 A4 용지와 함께 바닥에 펴고 위에서 한 장 찍으면, 인쇄해 바로 자를 수 있는 패턴과 수선집에 보여 줄 의뢰서가 나옵니다.",
     "Lay a garment flat with an A4 sheet and take one photo from above. You get a pattern you can print and cut, and an alteration order to hand to a tailor.",
@@ -62,8 +62,8 @@ const T = {
   ),
   tapeCaption: L("티셔츠 단면: 자로 잰 값과 사진으로 잰 값", "T-shirt, flat: measured by hand and from the photo", "Camiseta, en plano: medida a mano y en la foto"),
   colFlat: L("단면", "Flat", "En plano"),
-  colHand: L("자로 잼", "By hand", "A mano"),
-  colPhoto: L("사진으로 잼", "From photo", "En la foto"),
+  colHand: L("자로", "By hand", "A mano"),
+  colPhoto: L("사진으로", "From the photo", "En la foto"),
   colDiff: L("차이", "Difference", "Diferencia"),
   garmentsTitle: L("옷과 소품 열세 가지", "Thirteen things to sew", "Trece cosas para coser"),
   garmentsSub: L(
@@ -75,9 +75,9 @@ const T = {
   startWith: L("이 옷으로 시작", "Start with this", "Empezar con esta"),
   outputsTitle: L("사진 한 장에서 나오는 것", "What one photo gives you", "Lo que sale de una foto"),
   outputsSub: L(
-    "옷을 펴 놓고 옆에 A4 용지 한 장만 두고 찍으면 됩니다. 사진으로 잴 수 없는 곳은 줄자로 잴 곳으로 표시합니다.",
-    "Lay the garment flat with an A4 sheet beside it and take one photo. Where a photo can't measure, the value is marked for the tape.",
-    "Extiende la prenda con una hoja A4 al lado y haz una foto. Donde la foto no puede medir, el valor queda marcado para la cinta.",
+    "사진에 안 보이는 곳은 줄자로 잴 곳으로 표시합니다.",
+    "Where the photo can't see, the value is marked for the tape.",
+    "Donde la foto no llega, el valor queda marcado para la cinta.",
   ),
   sizeTableAlt: L("직접 만든 예시 실측표", "A sample size chart, self-made", "Una tabla de medidas de ejemplo, hecha a mano"),
   alterTitle: L("불편한 점을 수선으로", "Complaints into alterations", "De la molestia al arreglo"),
@@ -113,7 +113,7 @@ const T = {
     "La misma camiseta medida en la foto de arriba. Elige una talla: las medidas cambian y el patrón se vuelve a trazar desde cero.",
   ),
   howTitle: L("찍는 법", "How to shoot", "Cómo hacer la foto"),
-  ctaLine: L("옷 사진 한 장과 A4 용지 한 장이면 됩니다. 사진을 올리면 바로 잽니다.", "One photo of the garment and one A4 sheet. Upload it and it's measured right away.", "Una foto de la prenda y una hoja A4. Súbela y se mide al momento."),
+  ctaLine: L("옷 사진 한 장과 A4 용지 한 장이면 됩니다.", "One photo of the garment and one A4 sheet.", "Una foto de la prenda y una hoja A4."),
   ctaWord: L("만들기", "Make", "Crear"),
   footMake: L("패턴 만들기", "Make a pattern", "Crear patrón"),
   footExamples: L("예시 보기", "Examples", "Ejemplos"),
@@ -127,13 +127,13 @@ const T = {
   ),
   beforeCutTitle: L("재단 전에", "Before you cut", "Antes de cortar"),
   beforeCut: L("인쇄한 10 cm 사각형을 자로 재고, ±가 큰 값은 줄자로 확인하십시오.", "Measure the printed 10 cm square with a ruler, and check any value with a large ± with a tape.", "Mide con una regla el cuadrado de 10 cm impreso y comprueba con cinta los valores con un ± grande."),
-  owner: L("사진 속 옷은 만든 사람이 직접 찍은 자기 옷이고, 실측표는 직접 만든 예시입니다.", "The garments in the photos are the maker's own, photographed by the maker; the size chart is a self-made example.", "Las prendas de las fotos son de quien hizo esto, fotografiadas por esa persona; la tabla de medidas es un ejemplo hecho a mano."),
+  owner: L("사진 속 옷은 제 옷이고, 실측표는 제가 만든 예시입니다.", "The garments are my own; the size chart is one I made.", "Las prendas son mías; la tabla de medidas la hice yo."),
   top: L("맨 위로", "Back to top", "Volver arriba"),
   cutAlt: L("원단 위 재단 배치", "Pattern pieces placed on the fabric", "Piezas del patrón colocadas en la tela"),
 };
 
 const OUTPUTS = {
-  alter: { name: L("수선 의뢰서", "Alteration order", "Orden de arreglos"), text: L("불편한 점을 적으면 어디를 몇 cm 고칠지 도식화에 표시합니다. 직접 고칠 순서와 패턴도 나옵니다.", "Write what bothers you and where to alter, by how much, is marked on a drawing. Steps and a pattern for doing it yourself too.", "Escribe lo que te molesta y dónde arreglar, y cuánto, queda marcado en un dibujo. También los pasos y un patrón para hacerlo tú.") },
+  alter: { name: L("수선 의뢰서", "Alteration order", "Orden de arreglos"), text: L("불편한 점을 적으면 어디를 몇 cm 고칠지 도식화에 표시합니다. 직접 고칠 순서와 패턴도 나옵니다.", "Write what bothers you; where to alter and by how much is marked on a drawing, with steps and a pattern if you do it yourself.", "Escribe lo que te molesta; dónde arreglar y cuánto queda marcado en un dibujo, con los pasos y un patrón si lo haces tú.") },
   pdf: { name: L("패턴 PDF", "Pattern PDF", "Patrón en PDF"), text: L("솔기마다 길이를 적어 A4로 나눠 인쇄합니다. 10 cm 사각형으로 배율을 확인합니다.", "Every seam labelled with its length, printed across A4 pages. A 10 cm square checks the scale.", "Cada costura con su largo, impreso en hojas A4. Un cuadrado de 10 cm comprueba la escala.") },
   grade: { name: L("그레이딩", "Grading", "Escalado"), text: L("한두 치수 크게, 또는 작게. 아래에서 바로 바꿔 볼 수 있습니다.", "One or two sizes up or down. Try it right below.", "Una o dos tallas más o menos. Pruébalo justo abajo.") },
   size: { name: L("사이즈", "Size", "Talla"), text: L("쇼핑몰 실측표 스크린샷을 읽어, 내 옷과 핏이 같은 사이즈를 골라 줍니다.", "Reads a shop's size chart from a screenshot and picks the size that fits like your garment.", "Lee la tabla de medidas de una tienda desde una captura y elige la talla que queda como tu prenda.") },
@@ -151,7 +151,7 @@ const CARDS: Record<string, Local> = {
   sweatshirt: L("앞판·뒤판 골선, 소매 2장, 밑단·소매·목 시보리.", "Front and back on the fold, two sleeves, rib at the hem, cuffs and neck.", "Delantero y espalda al doblez, dos mangas, canalé en el bajo, los puños y el cuello."),
   dress: L("티셔츠 몸판을 무릎까지. 목둘레 바이어스 길이도 계산합니다.", "A T-shirt body down to the knee; works out the neck binding's length too.", "Un cuerpo de camiseta hasta la rodilla; calcula también el largo del bies del escote."),
   "a-line-skirt": L("허리단과 옆 지퍼. 허리·총장·밑단 세 값이면 그립니다.", "A waistband and a side zip. Three values: waist, length and hem.", "Cinturilla y cremallera lateral. Tres valores: cintura, largo y bajo."),
-  apron: L("몸판 골선 1장, 목끈과 허리끈. 가슴판 너비까지 사진에서 잽니다.", "One body on the fold, a neck strap and ties. Even the bib width comes from the photo.", "Un cuerpo al doblez, tira del cuello y cintas. Hasta el ancho del peto sale de la foto."),
+  apron: L("몸판 골선 1장, 목끈과 허리끈. 가슴판 너비까지 사진에서 잽니다.", "One body on the fold, a neck strap and ties. The bib width comes from the photo too.", "Un cuerpo al doblez, tira del cuello y cintas. Hasta el ancho del peto sale de la foto."),
   cushion: L("앞판 1장, 겹쳐 여미는 뒤판 2장. 가로·세로만 잽니다.", "One front and two overlapping backs. Only width and height.", "Un delantero y dos espaldas solapadas. Solo ancho y alto."),
   pouch: L("겉감·안감 2장씩. 맞는 지퍼 길이를 알려 줍니다.", "Two outer and two lining pieces; tells you what zip length to buy.", "Dos piezas de exterior y dos de forro; te dice qué largo de cremallera comprar."),
 };
@@ -205,17 +205,12 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
     }));
   const inside = compare.filter((c) => Math.abs(c.photo - c.tape) <= c.pm + 0.05).length;
   const widest = [...compare].sort((a, b) => Math.abs(b.photo - b.tape) - Math.abs(a.photo - a.tape))[0];
-  const pct = (k: string) => {
-    const c = compare.find((x) => x.key === k)!;
-    const v = ((c.photo - c.tape) / c.tape) * 100;
-    return `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`;
-  };
   const off = Math.abs(widest.photo - widest.tape).toFixed(1);
   const all = inside === compare.length;
   const tapeText = L(
-    `같은 티셔츠를 사진 한 장으로 잰 값과 자로 잰 값을 비교했습니다. 가슴단면 ${pct("chest")}, 밑단단면 ${pct("hem")}, 소매단면 ${pct("sleeveOpening")}. ${all ? `${compare.length}곳 모두` : `${compare.length}곳 중 ${inside}곳이`} 사진으로 잰 값의 오차(±) 안에 들었고, 가장 많이 차이 난 곳은 ${MEASURE_NAME[widest.key].ko}로 ${off} cm입니다.`,
-    `A T-shirt measured from one photo, compared with the same shirt measured by hand. Chest ${pct("chest")}, hem ${pct("hem")}, sleeve opening ${pct("sleeveOpening")}. ${all ? `All ${compare.length}` : `${inside} of ${compare.length}`} measurements fell within the ± the photo gave them; the furthest off was the ${MEASURE_NAME[widest.key].en.toLowerCase()}, by ${off} cm.`,
-    `Una camiseta medida con una foto, comparada con la misma camiseta medida a mano. Pecho ${pct("chest")}, bajo ${pct("hem")}, boca de manga ${pct("sleeveOpening")}. ${all ? `Las ${compare.length}` : `${inside} de ${compare.length}`} medidas quedaron dentro del ± que dio la foto; la que más se alejó fue ${MEASURE_NAME[widest.key].es.toLowerCase()}, por ${off} cm.`,
+    `같은 티셔츠를 사진 한 장으로 잰 값과 자로 잰 값입니다. ${all ? `${compare.length}곳 모두` : `${compare.length}곳 중 ${inside}곳이`} 사진으로 잰 값의 오차(±) 안에 들었고, 가장 큰 차이는 ${MEASURE_NAME[widest.key].ko} ${off} cm입니다.`,
+    `The same T-shirt, measured from one photo and by hand. ${all ? `All ${compare.length}` : `${inside} of ${compare.length}`} values fell within the ± the photo gave them; the largest gap was the ${MEASURE_NAME[widest.key].en.toLowerCase()}, ${off} cm.`,
+    `La misma camiseta, medida con una foto y a mano. ${all ? `Las ${compare.length}` : `${inside} de ${compare.length}`} medidas quedaron dentro del ± que dio la foto; la mayor diferencia fue ${MEASURE_NAME[widest.key].es.toLowerCase()}, ${off} cm.`,
   );
   const inc = GRADE_STEP["t-shirt"] as Record<string, number>;
   const gradeNote = L(

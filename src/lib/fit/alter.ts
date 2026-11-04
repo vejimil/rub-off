@@ -425,7 +425,8 @@ export function fromComplaint(garment: GarmentKind, c: Complaint): Alteration {
   const def = COMPLAINTS.find((d) => d.id === c.id);
   const a = c.amountCm !== undefined && c.amountCm > 0 ? c.amountCm : undefined;
   const label = def?.label ?? OTHER;
-  const from = c.quote ? L(`적은 글 "${c.quote}"`, `Your words "${c.quote}"`, `Lo que escribiste "${c.quote}"`) : L(`고른 것 "${label.ko}"`, `You picked "${label.en}"`, `Elegiste "${label.es}"`);
+  const quote = c.quote?.replace(/[,，.。]+$/, "");
+  const from = quote ? L(`적은 글 "${quote}"`, `Your words "${quote}"`, `Lo que escribiste "${quote}"`) : L(`고른 것 "${label.ko}"`, `You picked "${label.en}"`, `Elegiste "${label.es}"`);
   const id = `say-${c.id}`;
   const measureFirst = (what: Local) =>
     L(`${jo(what.ko, "을")} 재서 적어 주시면 그 길이로 계산합니다. 비워 두면 수선집에서 잽니다.`, `Measure ${what.en} and enter it to get the amount; otherwise the tailor measures it.`, `Mide ${what.es} y anótalo para tener la medida; si no, la toma el taller.`);

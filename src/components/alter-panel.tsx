@@ -76,7 +76,7 @@ const T = {
   leadTitle: L("어디가 불편한가요?", "What bothers you?", "¿Qué te molesta?"),
   leadSub: L(
     "입었을 때 불편한 점을 말하듯 적어 주십시오. 길이를 재 봤다면 숫자도 함께 적으면 그 값으로 계산합니다.",
-    "Write what bothers you when you wear it, the way you'd say it. If you've measured how much, include the number and it's used.",
+    "Write what bothers you when you wear it, the way you'd say it. If you measured it, include the number.",
     "Escribe lo que te molesta al llevarla, como lo dirías. Si has medido cuánto, pon también el número y se usará.",
   ),
   leadPlaceholder: L(
@@ -471,7 +471,7 @@ export function AlterPanel({ garment, fabric, measures, sampleText }: AlterPanel
                     {i + 1}
                   </span>
                   <span className="text-lg font-semibold">{a.action[lang]}</span>
-                  <span className="text-[15px] text-muted">{a.part[lang]}</span>
+                  {!a.action[lang].includes(a.part[lang]) && <span className="text-[15px] text-muted">{a.part[lang]}</span>}
                 </p>
                 <p className="num shrink-0 text-right font-display text-3xl leading-none" aria-label={a.amountCm !== undefined ? `${a.amountCm} cm` : T.toMeasureAria[lang]}>
                   {a.amountCm !== undefined ? (
