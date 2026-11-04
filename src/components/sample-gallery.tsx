@@ -6,7 +6,6 @@ import { GarmentFlat } from "@/components/garment-flat";
 import { PiecesOutline } from "@/components/pattern-preview";
 import { LangProvider, useLang } from "@/components/lang";
 import type { Lang } from "@/lib/i18n/lang";
-import { Badge } from "@/components/ui";
 import { Workbench } from "@/components/workbench";
 import type { SampleRun } from "@/lib/client/types";
 import { draft } from "@/lib/pattern/draft";
@@ -83,10 +82,8 @@ const SAMPLES: Sample[] = [
 ];
 
 const T = {
-  real: L("실제 사진", "Real photo", "Foto real"),
   photoGroup: L("실제 사진으로 잰 예시", "Measured from real photos", "Medido en fotos reales"),
   alterGroup: L("수선하기", "Alterations", "Arreglos"),
-  words: L("적은 글로", "From written words", "De un texto escrito"),
   tape: L("줄자", "Tape", "Cinta"),
   exampleValue: L("예시 값", "Example", "Ejemplo"),
   tryMine: L("내 옷 사진으로 해 보기", "Try it with a photo of your garment", "Pruébalo con una foto de tu prenda"),
@@ -141,9 +138,6 @@ function Gallery({ initial }: { initial?: string }) {
             </div>
             <div className="p-2.5">
               <div className="text-[15px] font-medium">{x.label[lang]}</div>
-              <div className="mt-1">
-                <Badge tone={x.run ? "chalk" : "muted"}>{(x.run ? T.real : T.words)[lang]}</Badge>
-              </div>
             </div>
           </button>
         ))}

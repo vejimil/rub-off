@@ -5,7 +5,7 @@ import { GarmentFlat } from "@/components/garment-flat";
 import { useLang } from "@/components/lang";
 import { PatternPreview } from "@/components/pattern-preview";
 import { Badge, buttonGhost, buttonPrimary, Segmented } from "@/components/ui";
-import { compare, complaintsFor, DIFFICULTY_NAME, fromBody, fromComplaint, guarded, type Alteration, type Complaint } from "@/lib/fit/alter";
+import { compare, complaintsFor, fromBody, fromComplaint, guarded, type Alteration, type Complaint } from "@/lib/fit/alter";
 import { BODY_HOW, BODY_KEYS, BODY_NAME, targetsFromBody, type BodyFit, type BodyKey } from "@/lib/fit/body";
 import { alterationPattern, diyGuide, type Guide } from "@/lib/fit/diy";
 import { flatFor } from "@/lib/fit/flat";
@@ -67,7 +67,6 @@ const T = {
   flat: L("도식화", "Technical flat", "Dibujo técnico"),
   toMeasure: L("재서 정함", "to measure", "a medir"),
   toMeasureAria: L("수선집에서 재서 정함", "The tailor measures it", "Lo mide el taller"),
-  reversible: L("되돌릴 수 있음", "Reversible", "Reversible"),
   checkFirst: L("고치기 전에 옷을 입고 한 번 더 확인하십시오.", "Try the garment on and check once more before altering it.", "Pruébate la prenda y compruébalo otra vez antes de arreglarla."),
   leadEmpty: L(
     "불편한 점을 적거나 목록에서 고르면, 수선집에 그대로 보여 줄 의뢰서가 여기에 나옵니다.",
@@ -486,11 +485,9 @@ export function AlterPanel({ garment, fabric, measures, sampleText }: AlterPanel
                 </p>
               </div>
               {diy ? guideBody(guides[i]) : <p className="mt-1.5 text-[15px] leading-relaxed">{a.instruction[lang]}</p>}
-              <p className="mt-2 flex flex-wrap items-center gap-1.5">
-                <Badge tone={a.difficulty === "hard" ? "mark" : a.difficulty === "medium" ? "warn" : "ok"}>{DIFFICULTY_NAME[a.difficulty][lang]}</Badge>
-                {a.reversible && <Badge tone="chalk">{T.reversible[lang]}</Badge>}
-                {diy && guides[i].tailor && <Badge tone="mark">{T.tailorBetter[lang]}</Badge>}
-                <span className="text-[13px] text-muted">{a.from[lang]}</span>
+              <p className="mt-2 text-[13px] text-muted">
+                {diy && guides[i].tailor && <span className="mr-2 font-medium text-mark">{T.tailorBetter[lang]}</span>}
+                {a.from[lang]}
               </p>
             </li>
           ))}

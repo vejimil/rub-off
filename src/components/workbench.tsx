@@ -615,23 +615,17 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
           {shot?.run?.garment === garment && (
             <div className="space-y-2">
               {shot.run.identified && shot.run.identified.garment !== "something else" && (
-                <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                  <span className="text-muted">{T.identified[lang]}</span>
-                  <Badge tone="chalk">{GARMENT_NAME[shot.run.identified.garment][lang]}</Badge>
-                  {shot.run.identified.fabric !== "unclear" && <Badge>{(shot.run.identified.fabric === "knit" ? T.knit : T.woven)[lang]}</Badge>}
-                </div>
+                <p className="text-xs text-muted">
+                  {T.identified[lang]} <span className="text-ink">{[GARMENT_NAME[shot.run.identified.garment][lang], shot.run.identified.fabric !== "unclear" && (shot.run.identified.fabric === "knit" ? T.knit : T.woven)[lang]].filter(Boolean).join(", ")}</span>
+                </p>
               )}
               {shot.run.layout && (
-                <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                  <span className="text-muted">{T.laidOut[lang]}</span>
-                  <Badge>{SIDE[shot.run.layout.side][lang]}</Badge>
-                  <Badge tone={shot.run.layout.wrinkles === "flat" ? "ok" : "warn"}>{WRINKLE[shot.run.layout.wrinkles][lang]}</Badge>
-                  {shot.run.layout.sleeves.map((sl) => (
-                    <Badge key={sl.number} tone={sl.state === "spread flat" ? "ok" : "mark"}>
-                      {T.sleeve[lang]} {sl.number} · {SLEEVE_STATE[sl.state][lang]}
-                    </Badge>
-                  ))}
-                </div>
+                <p className="text-xs text-muted">
+                  {T.laidOut[lang]}{" "}
+                  <span className="text-ink">
+                    {[SIDE[shot.run.layout.side][lang], WRINKLE[shot.run.layout.wrinkles][lang], ...shot.run.layout.sleeves.map((sl) => `${T.sleeve[lang]} ${sl.number} ${SLEEVE_STATE[sl.state][lang]}`)].join(", ")}
+                  </span>
+                </p>
               )}
               {shot.run.measured.notes.length > 0 && (
                 <details className="text-sm text-muted">

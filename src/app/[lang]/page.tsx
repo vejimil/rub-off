@@ -15,7 +15,7 @@ import { EXAMPLES } from "@/lib/pattern/examples";
 import { layOut, pagesFor } from "@/lib/pattern/layout";
 import { MEASURE_NAME } from "@/lib/pattern/measures";
 import type { GarmentKind } from "@/lib/pattern/types";
-import { DIFFICULTY_NAME, fromComplaint, guarded } from "@/lib/fit/alter";
+import { fromComplaint, guarded } from "@/lib/fit/alter";
 import { flatFor } from "@/lib/fit/flat";
 import { parse } from "@/lib/fit/read-complaint";
 import { isLang, L, type Lang, type Local } from "@/lib/i18n/lang";
@@ -97,7 +97,6 @@ const T = {
     "Lo que escribió una persona en silla de ruedas sobre su pantalón de cintura elástica (un ejemplo)",
   ),
   order: L("수선 의뢰서", "Alteration order", "Orden de arreglos"),
-  reversible: L("되돌릴 수 있음", "can be undone", "se puede deshacer"),
   measureLater: L("재서 정함", "to be measured", "por medir"),
   orderFoot: (n: number) =>
     L(
@@ -357,10 +356,6 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
                           {i + 1}
                         </span>
                         <span className="text-lg font-semibold">{a.action[lang]}</span>
-                        <span className="text-[15px] text-muted">
-                          {DIFFICULTY_NAME[a.difficulty][lang]}
-                          {a.reversible ? ` · ${T.reversible[lang]}` : ""}
-                        </span>
                       </p>
                       <p className="num shrink-0 font-display text-[32px] leading-none">{a.amountCm !== undefined ? `${a.amountCm} cm` : <span className="font-sans text-[15px] text-muted">{T.measureLater[lang]}</span>}</p>
                     </div>
