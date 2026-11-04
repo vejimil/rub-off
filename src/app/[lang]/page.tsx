@@ -75,9 +75,9 @@ const T = {
   startWith: L("이 옷으로 시작", "Start with this", "Empezar con esta"),
   outputsTitle: L("사진 한 장에서 나오는 것", "What one photo gives you", "Lo que sale de una foto"),
   outputsSub: L(
-    "AI는 사진에서 옷과 A4 용지를 찾는 데만 쓰고, 치수는 그 윤곽을 재서 구합니다. 사진으로 잴 수 없는 곳은 줄자로 잴 곳으로 표시합니다.",
-    "AI only finds the garment and the A4 sheet in the photo; the measurements come from measuring that outline. Where a photo can't measure, the value is marked for the tape.",
-    "La IA solo encuentra la prenda y la hoja A4 en la foto; las medidas salen de medir ese contorno. Donde la foto no puede medir, el valor queda marcado para la cinta.",
+    "옷을 펴 놓고 옆에 A4 용지 한 장만 두고 찍으면 됩니다. 사진으로 잴 수 없는 곳은 줄자로 잴 곳으로 표시합니다.",
+    "Lay the garment flat with an A4 sheet beside it and take one photo. Where a photo can't measure, the value is marked for the tape.",
+    "Extiende la prenda con una hoja A4 al lado y haz una foto. Donde la foto no puede medir, el valor queda marcado para la cinta.",
   ),
   sizeTableAlt: L("직접 만든 예시 실측표", "A sample size chart, self-made", "Una tabla de medidas de ejemplo, hecha a mano"),
   alterTitle: L("불편한 점을 수선으로", "Complaints into alterations", "De la molestia al arreglo"),
