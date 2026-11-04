@@ -121,9 +121,9 @@ const T = {
   footHow: L("찍는 법", "How to shoot", "Cómo hacer la foto"),
   builtTitle: L("만든 방법", "How it's made", "Cómo está hecho"),
   built: L(
-    "Meta의 SAM 3.1이 사진에서 옷과 A4 용지를 찾고, Muse Spark가 소매가 접혔는지 보고 실측표와 불편한 점을 적은 글을 읽습니다. 치수와 고칠 길이는 사진에서 잰 값과 의류학 규칙으로만 계산합니다.",
-    "Meta's SAM 3.1 finds the garment and the A4 sheet in the photo; Muse Spark checks whether a sleeve is folded and reads a shop's size chart and what the wearer wrote. Measurements and alteration lengths come only from the photo's outline and clothing-construction rules.",
-    "SAM 3.1 de Meta encuentra la prenda y la hoja A4 en la foto; Muse Spark mira si una manga está doblada y lee la tabla de medidas de una tienda y lo que escribió quien la lleva. Las medidas y los largos de arreglo salen solo del contorno de la foto y de reglas de confección.",
+    "Meta의 SAM 3.1이 사진에서 옷과 A4 용지를 찾고, Muse Spark가 소매가 접혔는지 보고 실측표와 불편한 점을 적은 글을 읽습니다.",
+    "Meta's SAM 3.1 finds the garment and the A4 sheet in the photo; Muse Spark checks whether a sleeve is folded and reads a shop's size chart and what the wearer wrote.",
+    "SAM 3.1 de Meta encuentra la prenda y la hoja A4 en la foto; Muse Spark mira si una manga está doblada y lee la tabla de medidas de una tienda y lo que escribió quien la lleva.",
   ),
   beforeCutTitle: L("재단 전에", "Before you cut", "Antes de cortar"),
   beforeCut: L("인쇄한 10 cm 사각형을 자로 재고, ±가 큰 값은 줄자로 확인하십시오.", "Measure the printed 10 cm square with a ruler, and check any value with a large ± with a tape.", "Mide con una regla el cuadrado de 10 cm impreso y comprueba con cinta los valores con un ± grande."),
