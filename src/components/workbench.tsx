@@ -67,6 +67,7 @@ const STAGE: Record<FailedRun["stage"], Local> = {
 // Everything else the workbench says, in each language.
 const T = {
   autoPick: L("자동", "Auto", "Automático"),
+  byHand: L("직접 선택", "Choose myself", "Elegir yo"),
   identified: L("사진에서 알아본 옷", "Recognised as", "Reconocida como"),
   notWorn: L("사진 속 물건은 입는 옷이 아니어서 고칠 수 없습니다. 입는 옷이면 위에서 종류를 골라 주십시오.", "The item in the photo isn't something you wear, so there's nothing to alter. If it is, choose its kind above.", "Lo de la foto no es una prenda que se lleve puesta, así que no hay nada que arreglar. Si lo es, elige su tipo arriba."),
   fillTypical: L("사진 없이 보통 치수로 채우기", "No photo? Fill in typical measurements", "¿Sin foto? Rellena con medidas típicas"),
@@ -465,30 +466,37 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
       <div className="space-y-4 lg:sticky lg:top-16">
         <Card className="space-y-4">
           {garmentPicker && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="space-y-2">
+              {/* Auto, or by hand: the kinds unfold under "by hand". Without live runs there is no auto, so the kinds show as they are. */}
               {live && (
-                <button
-                  type="button"
-                  onClick={() => setAuto(true)}
-                  className={`press rounded-full px-3 py-1.5 text-sm ${auto ? "bg-ink text-sand" : "bg-well text-muted hover:text-ink"}`}
-                >
-                  {T.autoPick[lang]}
-                </button>
+                <div className="flex flex-wrap gap-1.5">
+                  <button type="button" aria-pressed={auto} onClick={() => setAuto(true)} className={`press rounded-full px-3 py-1.5 text-sm ${auto ? "bg-ink text-sand" : "bg-well text-muted hover:text-ink"}`}>
+                    {T.autoPick[lang]}
+                  </button>
+                  <button type="button" aria-pressed={!auto} aria-expanded={!auto} onClick={() => setAuto(false)} className={`press rounded-full px-3 py-1.5 text-sm ${!auto ? "bg-ink text-sand" : "bg-well text-muted hover:text-ink"}`}>
+                    {T.byHand[lang]}
+                    {!auto && picked && <span className="ml-1.5 font-normal opacity-80">· {GARMENT_NAME[garment][lang]}</span>}
+                  </button>
+                </div>
               )}
-              {(Object.keys(GARMENT_NAME) as GarmentKind[]).filter((g) => !alter || !NOT_WORN.includes(g)).map((g) => (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => {
-                    setGarment(g);
-                    setAuto(false);
-                    setPicked(true);
-                  }}
-                  className={`press rounded-full px-3 py-1.5 text-sm ${!auto && g === garment ? "bg-ink text-sand" : "bg-well text-muted hover:text-ink"}`}
-                >
-                  {GARMENT_NAME[g][lang]}
-                </button>
-              ))}
+              {!auto && (
+                <div className={`flex flex-wrap gap-1.5 ${live ? "rounded-xl bg-field p-2" : ""}`}>
+                  {(Object.keys(GARMENT_NAME) as GarmentKind[]).filter((g) => !alter || !NOT_WORN.includes(g)).map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      aria-pressed={picked && g === garment}
+                      onClick={() => {
+                        setGarment(g);
+                        setPicked(true);
+                      }}
+                      className={`press rounded-full px-3 py-1.5 text-sm ${picked && g === garment ? "bg-ink text-sand" : "bg-paper text-muted hover:text-ink"}`}
+                    >
+                      {GARMENT_NAME[g][lang]}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           <div className="flex items-center justify-between gap-3">
