@@ -1,6 +1,8 @@
 # Rub-Off (working title)
 
-Turn a photo of a garment lying flat next to an A4 sheet into things you can act on: a printable sewing pattern (optionally graded to another size), a cutting layout on your own fabric scraps, and a size decision against an online shop's measurement table.
+Turn a photo of a garment lying flat next to an A4 sheet into things you can act on: a printable sewing pattern (optionally graded to another size), a cutting layout on your own fabric scraps, a size decision against an online shop's measurement table, and an alteration order for a tailor written from your own complaint.
+
+Live: https://rub-off.vercel.app/en (upload a photo, or open the sample runs). Demo video: https://youtu.be/S322D-vkXv4
 
 "Rub-off" is the sewing term for copying a finished garment into a pattern. People do it by hand in one to two hours. Online shoppers in Korea compare a shop's measurement table against a garment they own, with a tape measure. Both start from the same thing: a garment you already have.
 
@@ -31,11 +33,11 @@ Everything in this repository was written during the hackathon. The commit histo
 | Measurements from a flat-lay photo for tops, pants, skirts and bags: outline on the floor plane, points of measure, ± per value, refusal outside physical ranges (pants outline ported from Seated Tailor, the rest new) | Done (Oct 31), not yet checked against a tape measure |
 | Pattern drafting from flat measurements for five garments, per-edge seam allowance, grainline, notches, fold, sleeve cap solved to the armhole | Done (Oct 31) |
 | Thirteen garments and items on the same piece model: long-sleeve T-shirt, sweatshirt (neck, hem and cuff ribs), T-shirt dress, A-line skirt (waistband, side zip), bib apron, envelope cushion cover and zip pouch added; their photo measurement reuses the top, skirt and rectangle measures | Done (Nov 2), not yet tried on real photos |
-| A4-tiled 1:1 PDF with a 10 cm test square, page map, overlaps and alignment lines | Done (Oct 31), not yet printed |
+| A4-tiled 1:1 PDF with a 10 cm test square, page map, overlaps and alignment lines | Done (Oct 31); printed, taped and laid on the T-shirt for the demo video (Nov 4) |
 | Grading by size steps (re-drafts from graded measurements) | Done (Oct 31), increments to be confirmed |
 | Size decision: Muse Spark copies a size table, code compares it with your garment | Done (Oct 31) |
 | Cutting layout on your own fabric (raster bottom-left fill along the grain) | Done (Oct 31) |
-| Web app with sample mode (no API calls) and live-run limits. Samples: my T-shirt and shorts from real photos, and an alteration order from a written example; any garment can be drafted without a photo from typical measurements on the pattern screen | Done (Oct 31; samples Nov 2), not deployed |
+| Web app with sample mode (no API calls) and live-run limits. Samples: my T-shirt and shorts from real photos, and an alteration order from a written example; any garment can be drafted without a photo from typical measurements on the pattern screen | Done (Oct 31; samples Nov 2), live on Vercel since Nov 4 |
 | Real-photo robustness: Muse Spark layout check (folded or hidden sleeves, wrinkles, hem), sleeves folded over the body left out and the other side mirrored, hood removed from the outline, photos turned 90°, garments cut off by the frame refused | Done (Oct 31), on the owner's T-shirt and hoodie |
 | Zip hoodie (two-piece hood, rib bands); front and back photos combined | Done (Oct 31) |
 | Checked against the owner's tape measurements of one T-shirt (body within 3%); shoulder point from the fitted armhole seam, or tapped on the photo (sleeve length −1%) | Done (Nov 1) |
@@ -79,4 +81,4 @@ npm run preview -- shirt.jpg fabric.jpg --word=t-shirt   # the measured garment 
 
 ## Privacy
 
-Requests use Standard mode, so photos and prompts are not used to train Meta models. Uploads are resized and stripped of metadata before anything is stored, and files sent to the Meta API expire after a day. Sample photos in this repository show my own garments and fabric; the T-shirt photo is cut out to the garment and the A4 sheet (`npm run photo -- --json --cutout`). The sample measurement table is one I made; no shop's content is included.
+Requests use Standard mode, so photos and prompts are not used to train Meta models. Uploads are resized and stripped of metadata before anything is stored, photos go inline with each request rather than through file storage, and Spark requests are sent with store: false. Sample photos in this repository show my own garments and fabric; the T-shirt photo is cut out to the garment and the A4 sheet (`npm run photo -- --json --cutout`). The sample measurement table is one I made; no shop's content is included.
