@@ -30,7 +30,7 @@ Everything in this repository was written during the hackathon. The commit histo
 | --- | --- |
 | Project setup, Meta Model API client, SAM image calls, Spark structured output (ported) | Done (Oct 31) |
 | A4 scale: corner fitting, perspective correction, refusal when the sheet is cut off, covered or not A4 (ported, adapted) | Done (Oct 31) |
-| Measurements from a flat-lay photo for tops, pants, skirts and bags: outline on the floor plane, points of measure, ± per value, refusal outside physical ranges (pants outline ported from Seated Tailor, the rest new) | Done (Oct 31), not yet checked against a tape measure |
+| Measurements from a flat-lay photo for tops, pants, skirts and bags: outline on the floor plane, points of measure, ± per value, refusal outside physical ranges (pants outline ported from Seated Tailor, the rest new) | Done (Oct 31); checked against a tape on Nov 1, see below |
 | Pattern drafting from flat measurements for five garments, per-edge seam allowance, grainline, notches, fold, sleeve cap solved to the armhole | Done (Oct 31) |
 | Thirteen garments and items on the same piece model: long-sleeve T-shirt, sweatshirt (neck, hem and cuff ribs), T-shirt dress, A-line skirt (waistband, side zip), bib apron, envelope cushion cover and zip pouch added; their photo measurement reuses the top, skirt and rectangle measures | Done (Nov 2), not yet tried on real photos |
 | A4-tiled 1:1 PDF with a 10 cm test square, page map, overlaps and alignment lines | Done (Oct 31); printed, the 10 cm square checked with a ruler, taped and laid on the T-shirt for the demo video (Nov 4) |
@@ -52,7 +52,7 @@ Everything in this repository was written during the hackathon. The commit histo
 
 ### Not built by me
 
-The code was written with Claude Code as the pair programmer (every commit says so). The photos, the tape measurements, the printed pattern and the checks against them are mine; rule tables it drafted are marked "to confirm" in the table above until I have checked them.
+The code was written with Claude Code as the pair programmer (every commit says so). The photos, the tape measurements, the printed pattern and the checks against them are mine; rule tables it drafted are marked [A] in the code and "to confirm" in the table above until I have checked them.
 
 - [Next.js](https://nextjs.org) app scaffold (`create-next-app`), React, Tailwind CSS
 - [OpenAI Node SDK](https://github.com/openai/openai-node), used as the client for the OpenAI-compatible Meta Model API

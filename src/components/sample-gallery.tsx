@@ -60,7 +60,7 @@ const SAMPLES: Sample[] = [
     garment: "t-shirt",
     run: TEE_RUN,
     tape: TEE_TAPE,
-    sub: L("실제 사진, 어깨점은 사진에서 직접 찍음", "A real photo; the shoulder points were tapped on it", "Una foto real; los puntos del hombro se marcaron a mano"),
+    sub: L("실제 사진, 어깨점은 사진에서 직접 찍음", "a real photo; the shoulder points were tapped on it", "Una foto real; los puntos del hombro se marcaron a mano"),
   },
   { id: "shorts", label: L("반바지", "Shorts", "Pantalón corto"), garment: "pants", run: SHORTS_RUN, sub: L("실제 사진", "A real photo", "Una foto real") },
   {

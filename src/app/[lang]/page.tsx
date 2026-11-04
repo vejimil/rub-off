@@ -68,7 +68,7 @@ const T = {
   garmentsTitle: L("옷과 소품 열세 가지", "Thirteen things to sew", "Trece cosas para coser"),
   garmentsSub: L(
     "고르면 그 옷으로 바로 시작합니다. 내 옷 사진으로 재거나, 사진이 없으면 보통 치수로 먼저 그려 볼 수 있습니다.",
-    "Pick one to start with it: measure your own garment from a photo, or, without one, draft it from typical measurements first.",
+    "Pick one to start: measure your own garment from a photo, or, without one, draft it from typical measurements first.",
     "Elige una para empezar con ella: mide tu prenda con una foto o, sin foto, trázala primero con medidas típicas.",
   ),
   garmentsRow: L("옷과 소품 열세 가지, 옆으로 넘기기", "Thirteen things to sew, scroll sideways", "Trece cosas para coser, desliza hacia el lado"),
