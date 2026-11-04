@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   if (!(file instanceof File) || !/^image\/(jpeg|png|webp)$/.test(file.type)) return Response.json({ error: "bad_type" }, { status: 400 });
   // "auto": Muse Spark says what the item is and which word to hand SAM.
   const auto = garment === "auto";
-  if ((!auto && !(garment in CONCEPTS)) || !FABRICS.includes(fabric as Fabric)) return Response.json({ error: "bad_input" }, { status: 400 });
+  if ((!auto && !Object.hasOwn(CONCEPTS, garment)) || !FABRICS.includes(fabric as Fabric)) return Response.json({ error: "bad_input" }, { status: 400 });
 
   let photo;
   try {

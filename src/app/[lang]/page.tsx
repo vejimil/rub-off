@@ -129,6 +129,8 @@ const T = {
   beforeCut: L("인쇄한 10 cm 사각형을 자로 재고, ±가 큰 값은 줄자로 확인하십시오.", "Measure the printed 10 cm square with a ruler, and check any value with a large ± with a tape.", "Mide con una regla el cuadrado de 10 cm impreso y comprueba con cinta los valores con un ± grande."),
   owner: L("사진 속 옷은 제 옷이고, 실측표는 제가 만든 예시입니다.", "The garments are my own; the size chart is one I made.", "Las prendas son mías; la tabla de medidas la hice yo."),
   top: L("맨 위로", "Back to top", "Volver arriba"),
+  code: L("코드 (GitHub)", "Code (GitHub)", "Código (GitHub)"),
+  video: L("데모 영상", "Demo video", "Video de demostración"),
   cutAlt: L("원단 위 재단 배치", "Pattern pieces placed on the fabric", "Piezas del patrón colocadas en la tela"),
 };
 
@@ -533,9 +535,17 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
         </div>
         <div className="mt-24 flex items-center justify-between gap-6 text-[15px]">
           <span>{T.owner[lang]}</span>
-          <a href="#hero-title" className="link">
-            {T.top[lang]}
-          </a>
+          <span className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <a href="https://github.com/vejimil/rub-off" className="link" target="_blank" rel="noreferrer">
+              {T.code[lang]}
+            </a>
+            <a href="https://youtu.be/S322D-vkXv4" className="link" target="_blank" rel="noreferrer">
+              {T.video[lang]}
+            </a>
+            <a href="#hero-title" className="link">
+              {T.top[lang]}
+            </a>
+          </span>
         </div>
       </footer>
     </main>

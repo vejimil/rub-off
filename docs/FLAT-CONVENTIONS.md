@@ -1,20 +1,20 @@
 # Technical flat (도식화) conventions
 
-What the flats in `src/components/*-flat.tsx` follow, and where each rule comes from. Reviewed 2026-10-29. The owner (Clothing & Textiles) has the final say; this is the written trail.
+What the technical flats (`src/lib/fit/flat.ts`, `src/components/garment-flat.tsx`) follow, and where each rule comes from. Written during the hackathon for the same author's Seated Tailor and carried over on Oct 31; the rules are the same, the code is this repository's. The owner (Clothing & Textiles) has the final say; this is the written trail.
 
 ## Rules we apply
 
-| Rule | Where it comes from | In the code |
-| --- | --- | --- |
-| Three line weights: silhouette heaviest, seams and style lines about half, stitching lightest and dashed. Keep them identical across every flat. | Points of Measure tutorial (outline 2 pt, hems 1 pt, seams 0.75 pt, stitches 0.5 pt dashed 1.5/1.5); LinkedIn Learning *Illustrator for Fashion Design* (outline 2 pt, style lines 1 pt, stitches 0.25 pt); Korean practice calls this 3선 표현 (faddit) | `OUTLINE 0.4`, `SEAM 0.2`, `STITCH 0.12` cm with `STITCH_DASH "0.5 0.35"` in `flat-parts.tsx` (ratio 1 : 0.5 : 0.3) |
-| Draw one half and mirror it; curves meet the centre line at 90°. | Points of Measure part 3; Garmentspec guide | Every template is built as the right half and mirrored (`mirror`, `across`) |
-| Front and back come from the same outline so widths and lengths match; the back is a separate view with its own details. | Garmentspec guide ("derive the back from the same outline") | `TrouserFlat`/`TopFlat` take `view`; the outline is shared, details switch |
-| Close every path. No shading, no movement lines (factories read them as seams). | Garmentspec; Points of Measure part 3; Techpacker (a flat has no shading or movement lines) | Body outlines are closed paths; nothing decorative |
-| True proportion, details at real scale: a pocket drawn as a symbol in the wrong place tells the pattern room nothing. | Garmentspec; Szkutnicka draws over a real-proportion template | Everything is in cm; pockets, fly, loops have real sizes; the fitted flat places pockets where SAM found them |
-| Callouts: short, numbered, parked outside the silhouette, not crossing each other; meaning must survive grayscale print. | Garmentspec | `Tag` sits in the margin with a leader; added fabric is hatched and removed fabric cross-hatched, so the marks read without colour |
-| Points of measure: letters on the flat refer to a measurement chart; flat widths are "on the half". | Tech-pack practice (Onbrand, Techpacker); Flaneurs/Propercloth/Size.ly measuring guides | `Dimension` in `flat-parts.tsx`, `POM_LETTERS` A–D on the fitted flat, letters in the table on `/flat` |
-| Trouser measurement points: waist straight across the band; leg opening across the hem; rise from the crotch seam to the band top; inseam crotch to hem; knee about 2 in above the midpoint of crotch–hem. | NIST CS 166-50 (as summarised by Propercloth) | Template `KNEE_Y 62` with crotch 27 and hem 103 (midpoint 65); the outline step measures waist, hem, outseam, rise, inseam |
-| Length changes on patterns are marked with a double line ("lengthen or shorten here"); amounts are inserted or folded out between them. | Commercial pattern convention (Univ. of Arkansas apparel production workbook; sewing guides) | Our rise marks show the inserted (hatched) or removed (cross-hatched) strip itself, at the measured amount, with the number beside it |
+| Rule | Where it comes from |
+| --- | --- |
+| Three line weights: silhouette heaviest, seams and style lines about half, stitching lightest and dashed. Keep them identical across every flat. | Points of Measure tutorial (outline 2 pt, hems 1 pt, seams 0.75 pt, stitches 0.5 pt dashed 1.5/1.5); LinkedIn Learning *Illustrator for Fashion Design* (outline 2 pt, style lines 1 pt, stitches 0.25 pt); Korean practice calls this 3선 표현 (faddit) |
+| Draw one half and mirror it; curves meet the centre line at 90°. | Points of Measure part 3; Garmentspec guide |
+| Front and back come from the same outline so widths and lengths match; the back is a separate view with its own details. | Garmentspec guide ("derive the back from the same outline") |
+| Close every path. No shading, no movement lines (factories read them as seams). | Garmentspec; Points of Measure part 3; Techpacker (a flat has no shading or movement lines) |
+| True proportion, details at real scale: a pocket drawn as a symbol in the wrong place tells the pattern room nothing. | Garmentspec; Szkutnicka draws over a real-proportion template |
+| Callouts: short, numbered, parked outside the silhouette, not crossing each other; meaning must survive grayscale print. | Garmentspec |
+| Points of measure: letters on the flat refer to a measurement chart; flat widths are "on the half". | Tech-pack practice (Onbrand, Techpacker); Flaneurs/Propercloth/Size.ly measuring guides |
+| Trouser measurement points: waist straight across the band; leg opening across the hem; rise from the crotch seam to the band top; inseam crotch to hem; knee about 2 in above the midpoint of crotch–hem. | NIST CS 166-50 (as summarised by Propercloth) |
+| Length changes on patterns are marked with a double line ("lengthen or shorten here"); amounts are inserted or folded out between them. | Commercial pattern convention (Univ. of Arkansas apparel production workbook; sewing guides) |
 
 ## Still open
 

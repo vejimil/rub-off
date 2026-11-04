@@ -5,8 +5,8 @@ import "server-only";
 // in the instance's memory, so a cold start resets them: the global cap is a brake, not a meter.
 // Set a billing alert on the Meta account as the real backstop.
 
-const PER_VISITOR_PER_DAY = 5;
-const GLOBAL_PER_DAY = 300;
+const PER_VISITOR_PER_DAY = 20;
+const GLOBAL_PER_DAY = 1000;
 
 const counts = new Map<string, number>();
 let day = "";

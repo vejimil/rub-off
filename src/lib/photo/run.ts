@@ -71,7 +71,7 @@ export interface Prepared {
 }
 
 export async function preparePhoto(input: Buffer): Promise<Prepared> {
-  const { data, info } = await sharp(input)
+  const { data, info } = await sharp(input, { limitInputPixels: 50e6 })
     .rotate() // apply EXIF orientation, then drop all metadata
     .resize({ width: LONG_SIDE_PX, height: LONG_SIDE_PX, fit: "inside", withoutEnlargement: true })
     .jpeg({ quality: 90 })
@@ -341,7 +341,7 @@ function tapeScaled(
   if (!first) return { ok: false, detail: NO_GARMENT };
   const m = measure(first);
   if ("ok" in m) return m;
-  const v = (m.values as Record<string, { cm: number }>)[ref.key];
+  const v = Object.hasOwn(m.values, ref.key) ? (m.values as Record<string, { cm: number }>)[ref.key] : undefined;
   if (!v) return { ok: false, detail: L("기준으로 넣은 치수를 사진에서 재지 못했습니다. 다른 치수를 넣어 주십시오.", "The measurement you entered couldn't be found in the photo. Enter a different one.", "No pudimos encontrar en la foto la medida que escribiste. Escribe otra.") };
   const k = (v.cm * k0) / ref.cm;
   const rel = Math.hypot(TAPE_PERSPECTIVE_REL, TAPE_CM / ref.cm);

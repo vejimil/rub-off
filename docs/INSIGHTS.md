@@ -1,6 +1,6 @@
 # Seated Tailor에서 배운 것 (10/26–10/31)
 
-Rub-Off가 처음부터 다시 겪지 않도록 옮겨 적은 것. 원문과 실측 숫자는 `~/Desktop/seated-tailor/docs/EXPERIMENTS.md`, `ARCHITECTURE.md`, `FLAT-CONVENTIONS.md`. 아래 숫자는 모두 실제 실행 결과다.
+Rub-Off가 처음부터 다시 겪지 않도록 옮겨 적은 것. 원문과 실측 숫자는 Seated Tailor 레포의 `docs/EXPERIMENTS.md`, `ARCHITECTURE.md`, `FLAT-CONVENTIONS.md`. 아래 숫자는 모두 실제 실행 결과다.
 
 ## 1. Meta Model API 실측 교훈
 
@@ -75,24 +75,11 @@ Rub-Off가 처음부터 다시 겪지 않도록 옮겨 적은 것. 원문과 실
 
 - **처음부터 실제 사진으로 API를 쳐 본다.** 문서 읽기만으로 세운 가정([A] 표시)이 여럿 틀렸다.
 - **실험 기록을 한국어로 날짜순, 발견/근거/조치 표로.** 데모·README 소재가 여기서 나왔다.
-- **README "Built during the hackathon" 표를 커밋마다 갱신.**
-- **마일스톤마다 커밋.** 커밋 히스토리가 "기간 내 작업" 증거다.
 - Next.js 최신 버전은 학습 데이터와 다르다. `node_modules/next/dist/docs/` 먼저 읽기(AGENTS.md).
-- 보안 리뷰(10/27)에서 나온 배포 전 조건: 방문자별·전역 일일 상한, 업로드 바이트 카운터, 브라우저에는 짧은 에러 코드만, 캐시 TTL 삭제.
+- Seated Tailor의 보안 리뷰(10/27)에서 나온 배포 전 조건: 방문자별·전역 일일 상한, 업로드 바이트 카운터, 브라우저에는 짧은 에러 코드만, 캐시 TTL 삭제.
 
-## 6. seated-tailor에서 옮겨 올 코드 (해커톤 기간에 소유자가 쓴 것)
+## 6. Seated Tailor에서 옮겨 온 코드 (해커톤 기간에 소유자가 쓴 것)
 
-| 파일 | 용도 | 비고 |
-| --- | --- | --- |
-| `src/lib/meta/client.ts`, `sam-image.ts`, `spark.ts`, `files.ts` | API 클라이언트, SAM 이미지 호출, Spark 구조화 출력 | 그대로 |
-| `src/lib/pipeline/masks.ts`, `mask-index.ts` | 마스크 파싱·리샘플·연산 | 그대로 |
-| `src/lib/pipeline/homography.ts` | A4 네 꼭짓점 → 원근 보정 | 조건부 사용 가드 포함 |
-| `src/lib/pipeline/measure.ts` 중 스케일 부분 | 기준 물체 꼭짓점 정밀화, 비율 검사, 가장자리 거부, ± 산출 | 영상 전용 부분은 제외 |
-| `src/lib/flat/outline.ts`, `geometry.ts`, `fit.ts` | 마스크 → 윤곽 폴리곤, 측정점 추출, 템플릿 피팅 | 패턴 생성의 출발점 |
-| `src/components/flat-parts.tsx`, `top-flat.tsx`, `trouser-flat.tsx` | 선 굵기, 치수선, 태그 SVG 부품 | 패턴 도면 표기에 재사용 |
-| `src/lib/rules/numbers.ts`, `engine.ts` 구조 | 숫자 가드, 규칙표 엔진 | 시접·그레이딩 규칙표로 |
-| `src/lib/pipeline/cache.ts` | SHA 키 캐시 | 그대로 |
-| `scripts/ping.mjs` | 키 확인 | 그대로 |
-| `docs/FLAT-CONVENTIONS.md` | 표기 규칙 | 복사 |
+옮긴 것: Meta API 클라이언트, SAM 마스크 파싱, A4 스케일(꼭짓점 정밀화·비율 검사·가장자리 거부·원근 보정), 마스크·다각형 기하, 숫자 가드, SHA 키 캐시, 도식화 표기 규칙. 날짜와 범위는 README의 "Built during the hackathon" 표에 있다.
 
 필요 없는 것: ffmpeg 정규화, Voice Transcribe, 영상 SAM 추적, "여기" 찾기, 얼굴 블러(배경에 사람 있을 때만 선택적). **서버에 ffmpeg가 없어도 되므로 Vercel 같은 서버리스에 바로 배포할 수 있다**: Seated Tailor의 가장 큰 호스팅 난점이 사라진다.

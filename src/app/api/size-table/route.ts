@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
   let png: Buffer;
   try {
-    png = await sharp(Buffer.from(await file.arrayBuffer())).rotate().resize({ width: 2000, height: 2000, fit: "inside", withoutEnlargement: true }).png().toBuffer();
+    png = await sharp(Buffer.from(await file.arrayBuffer()), { limitInputPixels: 50e6 }).rotate().resize({ width: 2000, height: 2000, fit: "inside", withoutEnlargement: true }).png().toBuffer();
   } catch {
     return Response.json({ error: "bad_image" }, { status: 400 });
   }
