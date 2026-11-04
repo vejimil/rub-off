@@ -6,7 +6,7 @@ import "server-only";
 // Set a billing alert on the Meta account as the real backstop.
 
 const PER_VISITOR_PER_DAY = 5;
-const GLOBAL_PER_DAY = 100;
+const GLOBAL_PER_DAY = 300;
 
 const counts = new Map<string, number>();
 let day = "";
