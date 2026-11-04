@@ -20,9 +20,9 @@ import { MEASURE_NAME } from "@/lib/pattern/measures";
 import { NOT_WORN, type Fabric, type GarmentKind } from "@/lib/pattern/types";
 
 const ERRORS = {
-  live_disabled: L("지금은 적은 글을 읽을 수 없습니다. 위 목록에서 골라 주십시오.", "Written text can't be read right now. Please pick from the list above.", "Ahora mismo no se pueden leer textos. Elige de la lista de arriba."),
-  visitor_limit: L("오늘 읽을 수 있는 글을 모두 읽었습니다. 위 목록에서 골라 주십시오.", "You've used today's text readings. Please pick from the list above.", "Ya has usado las lecturas de texto de hoy. Elige de la lista de arriba."),
-  daily_limit: L("오늘은 더 이상 글을 읽을 수 없습니다. 위 목록에서 골라 주십시오.", "Today's text readings are used up. Please pick from the list above.", "Hoy ya no quedan lecturas de texto. Elige de la lista de arriba."),
+  live_disabled: L("지금은 적은 글을 읽을 수 없습니다. 아래 목록에서 골라 주십시오.", "Written text can't be read right now. Please pick from the list below.", "Ahora mismo no se pueden leer textos. Elige de la lista de abajo."),
+  visitor_limit: L("오늘 읽을 수 있는 글을 모두 읽었습니다. 아래 목록에서 골라 주십시오.", "You've used today's text readings. Please pick from the list below.", "Ya has usado las lecturas de texto de hoy. Elige de la lista de abajo."),
+  daily_limit: L("오늘은 더 이상 글을 읽을 수 없습니다. 아래 목록에서 골라 주십시오.", "Today's text readings are used up. Please pick from the list below.", "Hoy ya no quedan lecturas de texto. Elige de la lista de abajo."),
   failed: L("글을 읽지 못했습니다. 잠시 후 다시 해 주십시오.", "Couldn't read the text. Please try again in a moment.", "No se pudo leer el texto. Inténtalo de nuevo en un momento."),
   offline: L("서버에 연결하지 못했습니다.", "Couldn't connect.", "No se pudo conectar."),
 };
@@ -87,6 +87,8 @@ const T = {
   ),
   makeOrder: L("고칠 곳 찾기", "Find what to alter", "Buscar qué arreglar"),
   orPick: L("또는 목록에서 고르기", "Or pick from the list", "O elige de la lista"),
+  inOrder: L("의뢰서에 담겼습니다", "Added to the order", "Añadido a la orden"),
+  seeOrder: L("의뢰서 보기", "See the order", "Ver la orden"),
   bodyMore: L("몸 치수로 더 정확하게 (선택)", "More exact with body measurements (optional)", "Más exacto con medidas del cuerpo (opcional)"),
   print: L("인쇄 · PDF로 저장", "Print · save as PDF", "Imprimir · guardar en PDF"),
   who: L("누가 고치나요", "Who's doing it", "Quién lo arregla"),
@@ -140,6 +142,7 @@ export function AlterPanel({ garment, fabric, measures, sampleText }: AlterPanel
   const [read, setRead] = useState<{ text: string; read: ReadComplaints } | null>(sampleText ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<keyof typeof ERRORS | null>(null);
+  const [listOpen, setListOpen] = useState(false); // the list opens itself when the text can't be read
   const [who, setWho] = useState<"tailor" | "diy">("tailor");
   const [pdfBusy, setPdfBusy] = useState(false);
 
@@ -186,7 +189,11 @@ export function AlterPanel({ garment, fabric, measures, sampleText }: AlterPanel
     try {
       const res = await fetch("/api/complaints", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: t, garment }) });
       const b = await res.json();
-      if (!res.ok) setError(b.error in ERRORS ? (b.error as keyof typeof ERRORS) : "failed");
+      if (!res.ok) {
+        const err = b.error in ERRORS ? (b.error as keyof typeof ERRORS) : "failed";
+        setError(err);
+        if (err !== "failed") setListOpen(true);
+      }
       else setRead({ text: t, read: b.read });
     } catch {
       setError("offline");
@@ -326,6 +333,16 @@ export function AlterPanel({ garment, fabric, measures, sampleText }: AlterPanel
           <p className="mb-2 text-[13px] text-muted">{T.general[lang]}</p>
           <div className="flex flex-wrap gap-2">{general.map(chip)}</div>
         </div>
+      )}
+      {Object.keys(picked).length > 0 && (
+        <p className="flex flex-wrap items-center gap-3 text-[15px]">
+          <span className="text-muted">
+            {count(Object.keys(picked).length)[lang]} {T.inOrder[lang]}
+          </span>
+          <button type="button" className="font-medium underline" onClick={() => document.getElementById("order-title")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+            {T.seeOrder[lang]}
+          </button>
+        </p>
       )}
       {options.some((o) => o.id in picked && o.ask) && (
         <div className="space-y-2 rounded-xl bg-field p-4">
@@ -511,7 +528,7 @@ export function AlterPanel({ garment, fabric, measures, sampleText }: AlterPanel
           <p className="mt-1 text-[15px] text-muted">{T.leadSub[lang]}</p>
         </div>
         {writing}
-        <details className="group rounded-xl bg-field p-4">
+        <details className="group rounded-xl bg-field p-4" open={listOpen} onToggle={(e) => setListOpen(e.currentTarget.open)}>
           <summary className="cursor-pointer select-none text-[15px] font-medium">{T.orPick[lang]}</summary>
           <div className="mt-4 space-y-5">{chips}</div>
         </details>
