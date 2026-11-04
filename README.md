@@ -33,7 +33,7 @@ Everything in this repository was written during the hackathon. The commit histo
 | Measurements from a flat-lay photo for tops, pants, skirts and bags: outline on the floor plane, points of measure, ± per value, refusal outside physical ranges (pants outline ported from Seated Tailor, the rest new) | Done (Oct 31), not yet checked against a tape measure |
 | Pattern drafting from flat measurements for five garments, per-edge seam allowance, grainline, notches, fold, sleeve cap solved to the armhole | Done (Oct 31) |
 | Thirteen garments and items on the same piece model: long-sleeve T-shirt, sweatshirt (neck, hem and cuff ribs), T-shirt dress, A-line skirt (waistband, side zip), bib apron, envelope cushion cover and zip pouch added; their photo measurement reuses the top, skirt and rectangle measures | Done (Nov 2), not yet tried on real photos |
-| A4-tiled 1:1 PDF with a 10 cm test square, page map, overlaps and alignment lines | Done (Oct 31); printed, taped and laid on the T-shirt for the demo video (Nov 4) |
+| A4-tiled 1:1 PDF with a 10 cm test square, page map, overlaps and alignment lines | Done (Oct 31); printed, the 10 cm square checked with a ruler, taped and laid on the T-shirt for the demo video (Nov 4) |
 | Grading by size steps (re-drafts from graded measurements) | Done (Oct 31), increments to be confirmed |
 | Size decision: Muse Spark copies a size table, code compares it with your garment | Done (Oct 31) |
 | Cutting layout on your own fabric (raster bottom-left fill along the grain) | Done (Oct 31) |
