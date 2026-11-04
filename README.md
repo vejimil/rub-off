@@ -8,6 +8,18 @@ Live: https://rub-off.vercel.app/en (upload a photo, or open the sample runs). D
 
 Built for the [Meta Global AI Developer Hackathon](https://cerebralvalley.ai/e/meta-ai-developer-hackathon) (Indie Developer track, theme: Build for Your World) by a Clothing & Textiles student who sews.
 
+## For judges (two minutes)
+
+| | |
+|---|---|
+| **What is new** | Everything in this repository, written Oct 26 to Nov 4 by one person (library code ported on Oct 31 from my other hackathon-period repo, Seated Tailor; see the table below). |
+| **Meta models (3)** | SAM 3.1 cuts out the garment, its sleeves, hood, pockets, the A4 sheet and fabric scraps, one noun per call. Muse Spark says, from fixed options, what the item is and which way it lies, which noun to hand SAM, which sleeves lie flat, what each pocket is; it also copies a shop's size chart from a screenshot and sorts a wearer's complaint into known fit problems. Muse Image draws the garment in another fabric, kept to SAM's mask. |
+| **What code decides, not the model** | Every centimetre: the sheet's corners map the photo onto the floor plane, points of measure come from the outline with a ± each, pieces are drafted by rule tables, pattern pieces are nested along the grain, sizes are compared point by point. No number in any output comes from a language model; a value outside what a garment can measure is refused. |
+| **Measured** | One T-shirt against a tape: all ten values inside the stated ±, chest and hem within 2%, length 2.7 cm long (4%). Size chart read 16 of 16 cells. Denim hoodie lying on its side: read as trousers 5 of 7 times, as a hoodie 3 of 3 once the app turned it neck-up. The pattern was printed, its 10 cm square checked with a ruler, and laid on the shirt (in the video). |
+| **Cost** | About $0.02 to $0.06 per photo (SAM $2.50 per thousand images plus a few Spark calls), cached by the photo's hash. Live runs capped per visitor and per day. |
+| **Try it** | Live: https://rub-off.vercel.app/en (upload a photo, or open the sample runs, which need no API call) · Video (2:51): https://youtu.be/S322D-vkXv4 · Locally: `npm install && cp .env.example .env.local && npm run dev`, then `/en/sample` needs no key. |
+| **Where to look** | `src/lib/photo/run.ts` (photo to measurements), `src/lib/measure/` (points of measure), `src/lib/pattern/` (drafting, seam allowance, PDF), `src/lib/size/decide.ts` (size decision), `src/lib/nest/` (cutting layout), `src/lib/fit/` (alterations), `src/lib/meta/` (SAM and Spark calls), `src/lib/rules/numbers.ts` (number guard). Tests: `npm test` (78). |
+
 ## How it works
 
 1. Photograph. Lay the garment flat on a plain background next to an A4 sheet, all four corners in frame, and shoot from directly above.
