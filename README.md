@@ -82,3 +82,7 @@ npm run preview -- shirt.jpg fabric.jpg --word=t-shirt   # the measured garment 
 ## Privacy
 
 Requests use Standard mode, so photos and prompts are not used to train Meta models. Uploads are resized and stripped of metadata before anything is stored, photos go inline with each request rather than through file storage, and Spark requests are sent with store: false. Sample photos in this repository show my own garments and fabric; the T-shirt photo is cut out to the garment and the A4 sheet (`npm run photo -- --json --cutout`). The sample measurement table is one I made; no shop's content is included.
+
+## License
+
+MIT. See `LICENSE`. The Noto Sans KR font in `public/fonts/` keeps its own SIL Open Font License.
