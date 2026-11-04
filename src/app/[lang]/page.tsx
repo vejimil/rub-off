@@ -75,7 +75,7 @@ const T = {
   startWith: L("이 옷으로 시작", "Start with this", "Empezar con esta"),
   outputsTitle: L("사진 한 장에서 나오는 것", "What one photo gives you", "Lo que sale de una foto"),
   outputsSub: L(
-    "사진에 안 보이는 곳은 줄자로 잴 곳으로 표시합니다.",
+    "사진에 안 보이는 곳은 직접 측정으로 표시합니다.",
     "Where the photo can't see, the value is marked for the tape.",
     "Donde la foto no llega, el valor queda marcado para la cinta.",
   ),
