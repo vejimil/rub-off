@@ -73,7 +73,7 @@ const T = {
   ),
   garmentsRow: L("옷과 소품 열세 가지, 옆으로 넘기기", "Thirteen things to sew, scroll sideways", "Trece cosas para coser, desliza hacia el lado"),
   startWith: L("이 옷으로 시작", "Start with this", "Empezar con esta"),
-  outputsTitle: L("사진 한 장에서 나오는 것", "What one photo gives you", "Lo que sale de una foto"),
+  outputsTitle: L("사진 한 장으로 해결", "One photo does it", "Con una sola foto"),
   outputsSub: L(
     "사진에 안 보이는 곳은 직접 측정으로 표시합니다.",
     "Where the photo can't see, the value is marked for the tape.",
