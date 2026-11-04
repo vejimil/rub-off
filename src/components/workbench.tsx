@@ -230,6 +230,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
   const [steps, setSteps] = useState(0);
   const [active, setActive] = useState(0);
   const [tab, setTab] = useState<Tab>(initialTab ?? "measure");
+  const [tried, setTried] = useState(false); // another tab was opened: a missing value is now in the way
   const [filled, setFilled] = useState<Record<string, string>>({}); // typical values filled in, until changed
 
 
@@ -410,14 +411,17 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
   const garmentPhoto = measuredShot?.file && measuredShot.run ? { file: measuredShot.file, src: measuredShot.photo.src, word: measuredShot.run.concepts[0] } : undefined;
   const activeIndex = Math.min(active, shots.length - 1);
   const top = isTop(garment);
+  // Before anything has been tried (no photo measured, no other tab opened), a missing value is
+  // simply not there yet: no red until a photo or another tab asks for it.
+  const pressing = okRuns.length > 0 || tried;
   const tabs = [
     {
       value: "measure" as const,
       label: (
         <>
           {T.tabMeasure[lang]}
-          {missing.length > 0 && (
-            <span className="ml-1.5 rounded-full bg-mark px-1.5 text-xs text-white">
+          {missing.length > 0 && pressing && (
+            <span className="ml-1.5 text-xs font-medium text-mark">
               {lang === "ko" ? `${T.toMeasure.ko} ${missing.length}` : `${missing.length} ${T.toMeasure[lang]}`}
             </span>
           )}
@@ -434,13 +438,15 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
       {rows.map((r) => (
         <div key={r.key} className="flex items-center gap-3 py-3.5">
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-baseline gap-x-2">
               <span className="text-sm font-medium">{MEASURE_NAME[r.key]?.[lang] ?? r.key}</span>
-              {r.source === "photo" && <Badge tone="chalk">{T.photo[lang]}</Badge>}
-              {r.source === "edited" && <Badge tone={filled[r.key] === edits[r.key] ? "warn" : "ink"}>{(initialEdits?.[r.key] === edits[r.key] ? editedLabel : filled[r.key] === edits[r.key] ? filledLabel : T.typed)[lang]}</Badge>}
-              {r.source === "default" && <Badge tone="warn">{T.typical[lang]}</Badge>}
-              {r.source === "missing" && <Badge tone="mark">{T.measureFirst[lang]}</Badge>}
-              {r.conflict && <Badge tone="warn">{T.differs[lang]}</Badge>}
+              <span className={`text-[13px] ${r.source === "missing" && pressing ? "font-medium text-mark" : "text-muted"}`}>
+                {r.source === "photo" && T.photo[lang]}
+                {r.source === "edited" && (initialEdits?.[r.key] === edits[r.key] ? editedLabel : filled[r.key] === edits[r.key] ? filledLabel : T.typed)[lang]}
+                {r.source === "default" && T.typical[lang]}
+                {r.source === "missing" && pressing && T.measureFirst[lang]}
+                {r.conflict && ` · ${T.differs[lang]}`}
+              </span>
             </div>
             <p className="mt-0.5 truncate text-xs text-muted">
               {r.source === "photo" && r.measured && `${r.measured.bound === "max" ? `${T.max[lang]} · ` : r.measured.bound === "min" ? `${T.min[lang]} · ` : ""}± ${r.measured.plusMinusCm.toFixed(1)} cm`}
@@ -457,7 +463,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
                     : T.uploadToMeasure[lang])}
             </p>
           </div>
-          <label className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 ${r.source === "missing" ? "border-mark bg-mark-soft" : "border-line bg-field"}`}>
+          <label className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 ${r.source === "missing" && pressing ? "border-mark bg-mark-soft" : "border-line bg-field"}`}>
             <input
               inputMode="decimal"
               value={edits[r.key] ?? (r.value !== undefined ? String(r.value) : "")}
@@ -681,7 +687,7 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
           <details className="no-print rounded-xl border border-line p-4">
             <summary className="cursor-pointer select-none text-[15px] font-medium">
               {T.garmentMeasures[lang]}
-              {missing.length > 0 && <span className="ml-2 rounded-full bg-mark px-1.5 text-xs text-white">{lang === "ko" ? `${T.toMeasure.ko} ${missing.length}` : `${missing.length} ${T.toMeasure[lang]}`}</span>}
+              {missing.length > 0 && pressing && <span className="ml-2 text-xs font-medium text-mark">{lang === "ko" ? `${T.toMeasure.ko} ${missing.length}` : `${missing.length} ${T.toMeasure[lang]}`}</span>}
             </summary>
             <p className="mb-2 mt-3 text-sm text-muted">{(okRuns.length ? T.measureIntro : T.measureIntroNoPhoto)[lang]}</p>
             {measureList}
@@ -689,7 +695,12 @@ function WorkbenchInner({ live, initial, sampleTable, sampleText, initialEdits, 
         </Card>
       ) : (
       <Card className="space-y-5">
-        <Tabs value={tab} onChange={setTab} options={tabs} />
+        <Tabs
+          value={tab}
+          onChange={(t) => {
+            setTab(t);
+            if (t !== "measure") setTried(true);
+          }} options={tabs} />
 
         {tab === "measure" && (
           <div>
